@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<e-plugin-list>
+	<e-plugin
+	  type="shlib"
+	  id="org.gnome.evolution.eee"
+	  location="@plugindir@/liborg-gnome-evolution-eee@SOEXT@"
+	  load-on-startup="true"
+	  _name="3E sources">
+  		<author name="Ondrej Jirman" email="oss@zonio.net"/>
+		<_description>3E Calendar sources</_description>
+
+		<hook class="org.gnome.evolution.calendar.config:1.0">
+            	<group target="source"
+	     	   id="org.gnome.evolution.calendar.calendarProperties">
+		
+	     	 	<item type="item_table"
+		 		path="00.general/00.source/15.eee"
+		 		factory="oge_eee"/>
+            
+            </group>
+        </hook>
+	</e-plugin>
+	
+</e-plugin-list>
