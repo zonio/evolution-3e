@@ -60,15 +60,15 @@ ensure_caldav_source_group ()
 		return;
 	}
 
-	group = e_source_list_peek_group_by_name (slist, "CalDAV");
+	group = e_source_list_peek_group_by_name (slist, "3E");
 
 	if (group == NULL) {
 		gboolean res;
-		group = e_source_group_new ("CalDAV", "caldav://");
+		group = e_source_group_new ("3E", "eee://");
 		res = e_source_list_add_group (slist, group, -1);
 		
 		if (res == FALSE) {
-			g_warning ("Could not add CalDAV source group!");	
+			g_warning ("Could not add 3E source group!");	
 		} else {
 			e_source_list_sync (slist, NULL);
 		}
@@ -83,7 +83,7 @@ e_plugin_lib_enable (EPluginLib *ep, int enable)
 {
 
 	if (enable) {
-		g_print ("CalDAV Eplugin starting up ...\n");
+		g_print ("3E Eplugin starting up ...\n");
 		ensure_caldav_source_group ();
 	}
 
@@ -213,7 +213,7 @@ oge_eee  (EPlugin                    *epl,
 	widget = NULL;
 	
 	if (!g_str_has_prefix (e_source_group_peek_base_uri (group), 
-			       "caldav")) {
+			       "eee")) {
 		return NULL;
 	}
 	
