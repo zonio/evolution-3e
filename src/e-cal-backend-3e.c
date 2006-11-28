@@ -36,6 +36,8 @@
 #include <libedata-cal/e-cal-backend-sexp.h>
 #include "e-cal-backend-3e.h"
 
+#include "ESClient.xrc.h"
+
 struct _ECalBackend3ePrivate
 {
 	/* URI to get remote calendar data from */
