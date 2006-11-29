@@ -15,7 +15,7 @@
 		
 	     	 	<item type="item_table"
 		 		path="00.general/00.source/15.eee"
-		 		factory="oge_eee"/>
+		 		factory="oge_calendar_properties_eee"/>
             
             </group>
         </hook>
