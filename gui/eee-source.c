@@ -109,7 +109,7 @@ location_changed (GtkEntry *editable, ESource *source)
 }
 
 GtkWidget *
-oge_calendar_properties_eee (EPlugin                    *epl, 
+e_calendar_3e_properties (EPlugin                    *epl, 
 	     EConfigHookItemFactoryData *data)
 {
 	ECalConfigTargetSource *t = (ECalConfigTargetSource *) data->target;
@@ -120,9 +120,10 @@ oge_calendar_properties_eee (EPlugin                    *epl,
 	GtkWidget    *location;
 	char         *uri;
 	int           row;
-	
+
 	source = t->source;
 	group = e_source_peek_group(source);
+        g_warning("factory: grp=%s, uri=%s", e_source_group_peek_base_uri (group), e_source_get_uri (t->source));
 	if (strcmp(e_source_group_peek_base_uri (group), "eee://"))
 		return NULL;
 
@@ -156,4 +157,47 @@ oge_calendar_properties_eee (EPlugin                    *epl,
         g_free (uri);
 	
 	return NULL;	
+}
+
+gboolean
+e_calendar_3e_check (EPlugin *epl, EConfigHookPageCheckData *data)
+{
+	ECalConfigTargetSource *t = (ECalConfigTargetSource *) data->target;
+	ESourceGroup *group = e_source_peek_group (t->source);
+	EUri *uri;
+	char *uri_text;
+	gboolean ok = FALSE;
+
+	if (strcmp (e_source_group_peek_base_uri (group), "eee://"))
+		return TRUE;
+
+	uri_text = e_source_get_uri (t->source);
+	uri = e_uri_new (uri_text);
+	ok = uri->user && uri->path && uri->host && !uri->query && !uri->fragment && strlen(uri->path) > 1;
+	e_uri_free (uri);
+	g_free (uri_text);
+
+	return ok;
+}
+
+void 
+e_calendar_3e_commit (EPlugin *epl, EConfigTarget *target)
+{
+	ECalConfigTargetSource *t = (ECalConfigTargetSource *) target;
+	ESourceGroup *group = e_source_peek_group (t->source);
+	EUri *uri;
+	char *uri_text;
+
+	if (strcmp (e_source_group_peek_base_uri (group), "eee://"))
+		return;
+
+	uri_text = e_source_get_uri (t->source);
+	uri = e_uri_new (uri_text);
+	e_source_set_property(t->source, "username", uri->user);
+	e_uri_free (uri);
+	g_free (uri_text);
+
+	e_source_set_property(t->source, "auth-domain", "EEE");
+	e_source_set_property(t->source, "auth-type", "plain");
+	e_source_set_property(t->source, "auth", "true");
 }
