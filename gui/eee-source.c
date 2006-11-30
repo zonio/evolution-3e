@@ -57,12 +57,55 @@ e_plugin_lib_enable (EPluginLib *ep, int enable)
 /*****************************************************************************/
 /* the URL field for 3e sources */
 
+static gchar *
+print_uri_noproto (EUri *uri)
+{
+	gchar *uri_noproto;
+
+	if (uri->port != 0)
+		uri_noproto = g_strdup_printf (
+			"%s%s%s%s%s%s%s:%d%s%s%s",
+			uri->user ? uri->user : "",
+			uri->authmech ? ";auth=" : "",
+			uri->authmech ? uri->authmech : "",
+			uri->passwd ? ":" : "",
+			uri->passwd ? uri->passwd : "",
+			uri->user ? "@" : "",
+			uri->host ? uri->host : "",
+			uri->port,
+			uri->path ? uri->path : "",
+			uri->query ? "?" : "",
+			uri->query ? uri->query : "");
+	else
+		uri_noproto = g_strdup_printf (
+			"%s%s%s%s%s%s%s%s%s%s",
+			uri->user ? uri->user : "",
+			uri->authmech ? ";auth=" : "",
+			uri->authmech ? uri->authmech : "",
+			uri->passwd ? ":" : "",
+			uri->passwd ? uri->passwd : "",
+			uri->user ? "@" : "",
+			uri->host ? uri->host : "",
+			uri->path ? uri->path : "",
+			uri->query ? "?" : "",
+			uri->query ? uri->query : "");
+	return uri_noproto;
+}
+
 static void
 location_changed (GtkEntry *editable, ESource *source)
 {
+	EUri       *euri;
+	char       *ruri;
 	const char *uri;
-	uri = gtk_entry_get_text(GTK_ENTRY(editable));
-	e_source_set_absolute_uri(source, uri);
+
+	uri = gtk_entry_get_text (GTK_ENTRY (editable));
+	
+	euri = e_uri_new (uri);
+	ruri = print_uri_noproto (euri);
+	e_source_set_relative_uri (source, ruri);
+	g_free (ruri);
+	e_uri_free (euri);
 }
 
 GtkWidget *
@@ -83,7 +126,7 @@ oge_calendar_properties_eee (EPlugin                    *epl,
 	if (strcmp(e_source_group_peek_base_uri (group), "eee://"))
 		return NULL;
 
-	uri = e_source_get_uri (source);
+	uri = e_source_get_uri(source);
 
 	parent = data->parent;
 	row = GTK_TABLE (parent)->nrows;
