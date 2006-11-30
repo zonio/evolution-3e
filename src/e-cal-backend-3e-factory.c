@@ -23,7 +23,7 @@ e_cal_backend_3e_factory_instance_init (ECalBackend3eFactory *factory)
 static const char *
 _get_protocol (ECalBackendFactory *factory)
 {
-	return "3e";
+	return "eee";
 }
 
 static ECalBackend*
