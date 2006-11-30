@@ -26,8 +26,6 @@
 
 G_BEGIN_DECLS
 
-
-
 #define E_TYPE_CAL_BACKEND_3E            (e_cal_backend_3e_get_type ())
 #define E_CAL_BACKEND_3E(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), E_TYPE_CAL_BACKEND_3E,		\
 					  ECalBackend3e))
@@ -53,8 +51,6 @@ struct _ECalBackend3eClass {
 };
 
 GType       e_cal_backend_3e_get_type      (void);
-
-
 
 G_END_DECLS
 
