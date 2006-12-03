@@ -295,7 +295,7 @@ static CalMode e_cal_backend_3e_get_mode(ECalBackend * backend)
     ECalBackend3e *cb;
     ECalBackend3ePrivate *priv;
 
-    T("backend=%p");
+    T("backend=%p", backend);
 
     cb = E_CAL_BACKEND_3E(backend);
     priv = cb->priv;
