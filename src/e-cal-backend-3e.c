@@ -235,6 +235,12 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
         }
     }
 
+    if (priv->is_open)
+    {
+        xr_client_close(priv->conn);
+        priv->is_open = FALSE;
+    }
+
     if (priv->mode == CAL_MODE_LOCAL)
         return GNOME_Evolution_Calendar_Success;
 
