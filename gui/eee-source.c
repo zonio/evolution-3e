@@ -122,12 +122,11 @@ GtkWidget *e_calendar_3e_properties(EPlugin * epl, EConfigHookItemFactoryData * 
 
     location = gtk_entry_new();
     gtk_widget_show(location);
+    g_signal_connect(G_OBJECT(location), "changed", G_CALLBACK(location_changed), source);
     gtk_entry_set_text(GTK_ENTRY(location), uri);
     gtk_table_attach(GTK_TABLE(parent), location, 1, 2, row, row + 1, GTK_EXPAND | GTK_FILL, 0, 0, 0);
 
     gtk_label_set_mnemonic_widget(GTK_LABEL(lurl), location);
-
-    g_signal_connect(G_OBJECT(location), "changed", G_CALLBACK(location_changed), source);
 
     g_free(uri);
 
