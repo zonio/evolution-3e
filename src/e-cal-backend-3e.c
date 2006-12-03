@@ -165,8 +165,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
 {
     ECalBackend3e *cb;
     ECalBackend3ePrivate *priv;
-    const char *uri;
-    EUri *euri;
     int rs;
 
     T("backend=%p, cal=%p, only_if_exists=%d, username=%s, password=%s", backend, cal, only_if_exists, username, password);
@@ -174,40 +172,34 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     cb = E_CAL_BACKEND_3E(backend);
     priv = cb->priv;
 
-    /*
-     * parse URI and authentication info 
-     */
-
-    uri = e_cal_backend_get_uri(E_CAL_BACKEND(backend));
-    euri = e_uri_new(uri);
-
-    g_free(priv->server_uri);
-    priv->server_uri = g_strdup_printf("http://%s:4444/ESClient");
-
-    D("3es uri=%s\n", priv->server_uri);
-
-    /*
-     * first char of the path is / 
-     */
-    g_free(priv->calname);
-    priv->calname = (euri->path && strlen(euri->path) > 1) ? g_strdup(euri->path + 1) : NULL;
-
-    D("3es calname=%s\n", priv->calname);
-
-    g_free(priv->username);
-    priv->username = g_strdup(username);
-
-    g_free(priv->password);
-    priv->password = g_strdup(password);
-
-    e_uri_free(euri);
-
-    /*
-     * create/load cache 
-     */
-
     if (!priv->is_loaded)
     {
+        const char *uri;
+        EUri *euri;
+
+        /*
+         * parse URI and authentication info 
+         */
+
+        uri = e_cal_backend_get_uri(E_CAL_BACKEND(backend));
+        euri = e_uri_new(uri);
+        g_free(priv->server_uri);
+        priv->server_uri = g_strdup_printf("https://%s:4444/ESClient", euri->host);
+        g_free(priv->calname);
+        priv->calname = (euri->path && strlen(euri->path) > 1) ? g_strdup(euri->path + 1) : NULL;
+        g_free(priv->username);
+        priv->username = g_strdup(username);
+        g_free(priv->password);
+        priv->password = g_strdup(password);
+        e_uri_free(euri);
+
+        D("3es uri=%s\n", priv->server_uri);
+        D("3es calname=%s\n", priv->calname);
+
+        /*
+         * create/load cache 
+         */
+
         priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(backend)), E_CAL_SOURCE_TYPE_EVENT);
         if (!priv->cache)
         {
