@@ -283,7 +283,43 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
      * check for calendar and create it if necessary
      */
 
-//    rs = ESClient_(priv->conn, priv->username, priv->password);
+    rs = ESClient_hasCalendar(priv->conn, priv->calname);
+    if (xr_client_get_error_code(priv->conn))
+    {
+        e_cal_backend_notify_xmlrpc_error(E_CAL_BACKEND(backend), "XML-RPC method call failed");
+        xr_client_reset_error(priv->conn);
+        xr_client_close(priv->conn);
+        priv->is_open = FALSE;
+        return GNOME_Evolution_Calendar_OtherError;
+    }
+
+    if (rs)
+    {
+        return GNOME_Evolution_Calendar_Success;
+    }
+
+    if (only_if_exists)
+    {
+        e_cal_backend_notify_error(E_CAL_BACKEND(backend), "Calendar does not exist on the server");
+        xr_client_reset_error(priv->conn);
+        xr_client_close(priv->conn);
+        priv->is_open = FALSE;
+        return GNOME_Evolution_Calendar_NoSuchCal;
+    }
+
+    /*
+     * create new calendar on the server 
+     */
+
+    ESClient_newCalendar(priv->conn, priv->calname);
+    if (xr_client_get_error_code(priv->conn))
+    {
+        e_cal_backend_notify_xmlrpc_error(E_CAL_BACKEND(backend), "XML-RPC method call failed");
+        xr_client_reset_error(priv->conn);
+        xr_client_close(priv->conn);
+        priv->is_open = FALSE;
+        return GNOME_Evolution_Calendar_OtherError;
+    }
 
     return GNOME_Evolution_Calendar_Success;
 }
