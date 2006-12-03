@@ -75,15 +75,22 @@ static gchar *print_uri_noproto(EUri * uri)
 static void location_changed(GtkEntry * editable, ESource * source)
 {
     EUri *euri;
-    char *ruri;
     const char *uri;
+    char *ruri;
 
     uri = gtk_entry_get_text(GTK_ENTRY(editable));
 
     euri = e_uri_new(uri);
-    ruri = print_uri_noproto(euri);
-    e_source_set_relative_uri(source, ruri);
-    g_free(ruri);
+    if (euri->path && euri->host && !euri->query && !euri->fragment && strlen(euri->path) > 1)
+    {
+        ruri = print_uri_noproto(euri);
+        e_source_set_relative_uri(source, ruri);
+        g_free(ruri);
+    }
+
+    e_source_set_property(source, "username", euri->user);
+    e_source_set_property(source, "auth", euri->user ? "1" : NULL);
+    e_source_set_property(source, "auth-type", euri->user ? "plain" : NULL);
     e_uri_free(euri);
 }
 
@@ -141,30 +148,9 @@ gboolean e_calendar_3e_check(EPlugin * epl, EConfigHookPageCheckData * data)
 
     uri_text = e_source_get_uri(t->source);
     uri = e_uri_new(uri_text);
-    ok = uri->user && uri->path && uri->host && !uri->query && !uri->fragment && strlen(uri->path) > 1;
+    ok = uri->path && uri->host && !uri->query && !uri->fragment && strlen(uri->path) > 1;
     e_uri_free(uri);
     g_free(uri_text);
 
     return ok;
-}
-
-void e_calendar_3e_commit(EPlugin * epl, EConfigTarget * target)
-{
-    ECalConfigTargetSource *t = (ECalConfigTargetSource *) target;
-    ESourceGroup *group = e_source_peek_group(t->source);
-    EUri *uri;
-    char *uri_text;
-
-    if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
-        return;
-
-    uri_text = e_source_get_uri(t->source);
-    uri = e_uri_new(uri_text);
-    e_source_set_property(t->source, "username", uri->user);
-    e_uri_free(uri);
-    g_free(uri_text);
-
-    e_source_set_property(t->source, "auth-domain", "EEE");
-    e_source_set_property(t->source, "auth-type", "plain");
-    e_source_set_property(t->source, "auth", "true");
 }

@@ -12,8 +12,7 @@
 		<hook class="org.gnome.evolution.calendar.config:1.0">
             	<group target="source"
 	     	   id="org.gnome.evolution.calendar.calendarProperties"
-                   check="e_calendar_3e_check"
-                   commit="e_calendar_3e_commit">
+                   check="e_calendar_3e_check">
 		
 	     	 	<item type="item_table"
 		 		path="00.general/00.source/40.eee"
