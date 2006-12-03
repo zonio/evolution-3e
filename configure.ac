@@ -19,7 +19,7 @@ AC_HEADER_STDC
 
 # Get packages for EDS 3e backend
 PKG_CHECK_MODULES(EDS3E, [
-  lib3es
+  lib3es-client
   libecal-1.2
   libedata-cal-1.2
   libedataserver-1.2
