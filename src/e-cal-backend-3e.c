@@ -14,9 +14,14 @@
 #include <libedata-cal/e-cal-backend-sexp.h>
 #include "e-cal-backend-3e.h"
 
+#ifdef DEBUG
 #include <syslog.h>
-#define D(fmt, args...) syslog(LOG_DEBUG, "DEBUG: %s: " fmt, __PRETTY_FUNCTION__, ## args)
-#define T(fmt, args...) syslog(LOG_DEBUG, "TRACE: %s(" fmt ")", __PRETTY_FUNCTION__, ## args)
+#define D(fmt, args...) syslog(LOG_DEBUG, "DEBUG: %s " fmt, G_STRLOC, ## args)
+#define T(fmt, args...) syslog(LOG_DEBUG, "TRACE: %s(" fmt ")", G_STRFUNC, ## args)
+#else
+#define D(fmt, args...)
+#define T(fmt, args...)
+#endif
 
 #include "ESClient.xrc.h"
 
