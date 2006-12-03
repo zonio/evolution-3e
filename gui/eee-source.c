@@ -107,7 +107,6 @@ GtkWidget *e_calendar_3e_properties(EPlugin * epl, EConfigHookItemFactoryData * 
 
     source = t->source;
     group = e_source_peek_group(source);
-    g_warning("factory: grp=%s, uri=%s", e_source_group_peek_base_uri(group), e_source_get_uri(t->source));
     if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
         return NULL;
 
