@@ -14,6 +14,7 @@
 #include <libedata-cal/e-cal-backend-sexp.h>
 #include "e-cal-backend-3e.h"
 
+#define DEBUG 1
 #ifdef DEBUG
 #include <syslog.h>
 #define D(fmt, args...) syslog(LOG_DEBUG, "DEBUG: %s " fmt, G_STRLOC, ## args)
