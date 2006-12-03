@@ -752,6 +752,8 @@ static ECalBackendSyncClass *parent_class;
 
 static void e_cal_backend_3e_init(ECalBackend3e * cb, ECalBackend3eClass * klass)
 {
+    T("cb=%p, klass=%p", cb, klass);
+
     cb->priv = g_new0(ECalBackend3ePrivate, 1);
 
     e_cal_backend_sync_set_lock(E_CAL_BACKEND_SYNC(cb), TRUE);
@@ -759,6 +761,8 @@ static void e_cal_backend_3e_init(ECalBackend3e * cb, ECalBackend3eClass * klass
 
 static void e_cal_backend_3e_dispose(GObject * object)
 {
+    T("object=%p", object);
+
     if (G_OBJECT_CLASS(parent_class)->dispose)
         G_OBJECT_CLASS(parent_class)->dispose(object);
 }
@@ -767,6 +771,8 @@ static void e_cal_backend_3e_finalize(GObject * object)
 {
     ECalBackend3e *cb;
     ECalBackend3ePrivate *priv;
+
+    T("object=%p", object);
 
     g_return_if_fail(object != NULL);
     g_return_if_fail(E_IS_CAL_BACKEND_3E(object));
