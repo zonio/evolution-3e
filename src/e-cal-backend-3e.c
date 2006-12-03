@@ -545,6 +545,9 @@ static void e_cal_backend_3e_start_query(ECalBackend * backend, EDataCalView * q
     cb = E_CAL_BACKEND_3E(backend);
     priv = cb->priv;
 
+    e_data_cal_view_notify_done(query, GNOME_Evolution_Calendar_NoSuchCal);
+
+#if 0
     if (!priv->cache)
     {
         e_data_cal_view_notify_done(query, GNOME_Evolution_Calendar_NoSuchCal);
@@ -575,6 +578,7 @@ static void e_cal_backend_3e_start_query(ECalBackend * backend, EDataCalView * q
     g_object_unref(cbsexp);
 
     e_data_cal_view_notify_done(query, GNOME_Evolution_Calendar_Success);
+#endif
 }
 
 static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy(ECalBackendSync * backend, EDataCal * cal, GList * users, time_t start, time_t end, GList ** freebusy)
