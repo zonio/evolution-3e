@@ -146,7 +146,7 @@ gboolean e_calendar_3e_check(EPlugin * epl, EConfigHookPageCheckData * data)
 
     uri_text = e_source_get_uri(t->source);
     uri = e_uri_new(uri_text);
-    ok = uri->path && uri->host && !uri->query && !uri->fragment && strlen(uri->path) > 1;
+    ok = uri->user && uri->path && uri->host && !uri->query && !uri->fragment && strlen(uri->path) > 1;
     e_uri_free(uri);
     g_free(uri_text);
 
