@@ -1,5 +1,6 @@
-INCLUDES = \
-	$(EVO3E_CFLAGS)
+AM_CFLAGS = \
+	$(EVO3E_CFLAGS) \
+	-Wall -Wextra -Wno-unused-parameter -Wno-unused-variable
 
 plugin_DATA = org-gnome-evolution-eee.eplug
 plugin_LTLIBRARIES = liborg-gnome-evolution-eee.la

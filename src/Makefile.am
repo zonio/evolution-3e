@@ -1,6 +1,7 @@
-INCLUDES = \
+AM_CFLAGS = \
 	-DG_LOG_DOMAIN=\"libecalbackend3e\" \
-	$(EDS3E_CFLAGS)
+	$(EDS3E_CFLAGS) \
+	-Wall -Wextra -Wno-unused-parameter -Wno-unused-variable
 
 extension_LTLIBRARIES = libecalbackend3e.la
 
