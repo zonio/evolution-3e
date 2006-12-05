@@ -405,14 +405,12 @@ static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *
     return GNOME_Evolution_Calendar_Success;
 }
 
-/* not yet implemented functions */
-
 static ECalBackendSyncStatus e_cal_backend_3e_remove(ECalBackendSync * backend, EDataCal * cal)
 {
     ECalBackend3e *cb;
     ECalBackend3ePrivate *priv;
 
-    T("");
+    T("backend=%p, cal=%p", backend, cal);
 
     cb = E_CAL_BACKEND_3E(backend);
     priv = cb->priv;
@@ -420,9 +418,22 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove(ECalBackendSync * backend, 
     if (!priv->cache)
         return GNOME_Evolution_Calendar_OtherError;
 
+    if (priv->is_open)
+    {
+        ESClient_deleteCalendar(priv->conn, priv->calname);
+        if (xr_client_get_error_code(priv->conn))
+        {
+            e_cal_backend_notify_xmlrpc_error(E_CAL_BACKEND(backend), "XML-RPC method call failed");
+            xr_client_reset_error(priv->conn);
+            return GNOME_Evolution_Calendar_OtherError;
+        }
+    }
+
     e_file_cache_remove(E_FILE_CACHE(priv->cache));
     return GNOME_Evolution_Calendar_Success;
 }
+
+/* not yet implemented functions */
 
 static ECalBackendSyncStatus e_cal_backend_3e_get_cal_address(ECalBackendSync * backend, EDataCal * cal, char **address)
 {
