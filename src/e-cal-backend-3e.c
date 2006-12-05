@@ -574,7 +574,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_add_timezone(ECalBackendSync * bac
     return GNOME_Evolution_Calendar_Success;
 }
 
-
 static ECalBackendSyncStatus e_cal_backend_3e_get_object_list(ECalBackendSync * backend, EDataCal * cal, const char *sexp, GList ** objects)
 {
     ECalBackend3e *cb;
