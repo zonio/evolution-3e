@@ -74,6 +74,25 @@ static void e_cal_backend_notify_xmlrpc_error(ECalBackend * backend, char *messa
     g_free(error_message);
 }
 
+static void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GError* err)
+{
+    ECalBackend3e *cb;
+    ECalBackend3ePrivate *priv;
+
+    if (err == NULL)
+        return;
+
+    T("backend=%p, message=%s, err=%p", backend, message, err);
+
+    cb = E_CAL_BACKEND_3E(backend);
+    priv = cb->priv;
+
+    char *error_message = g_strdup_printf("%s (%d: %s).", message, err->code, err->message);
+
+    e_cal_backend_notify_error(backend, error_message);
+    g_free(error_message);
+}
+
 /* calendar backend functions */
 
 static ECalBackendSyncStatus e_cal_backend_3e_get_static_capabilities(ECalBackendSync * backend, EDataCal * cal, char **capabilities)
@@ -169,6 +188,7 @@ static void e_cal_backend_3e_set_mode(ECalBackend * backend, CalMode mode)
 
 static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, EDataCal * cal, gboolean only_if_exists, const char *username, const char *password)
 {
+    GError* err = NULL;
     ECalBackend3e *cb;
     ECalBackend3ePrivate *priv;
     int rs;
@@ -227,10 +247,10 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
 
     if (priv->conn == NULL)
     {
-        priv->conn = xr_client_new();
-        if (priv->conn == NULL)
+        priv->conn = xr_client_new(&err);
+        if (err != NULL)
         {
-            e_cal_backend_notify_error(E_CAL_BACKEND(backend), "Failed to initialize XML-RPC client library.");
+            e_cal_backend_notify_gerror_error(E_CAL_BACKEND(backend), "Failed to initialize XML-RPC client library.", err);
             return GNOME_Evolution_Calendar_OtherError;
         }
     }
@@ -248,10 +268,10 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
      * connect 
      */
 
-    if (xr_client_open(priv->conn, priv->server_uri))
+    xr_client_open(priv->conn, priv->server_uri, &err);
+    if (err != NULL)
     {
-        e_cal_backend_notify_xmlrpc_error(E_CAL_BACKEND(backend), "Failed to estabilish connection to the server");
-        xr_client_reset_error(priv->conn);
+        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(backend), "Failed to estabilish connection to the server", err);
         return GNOME_Evolution_Calendar_OtherError;
     }
 
