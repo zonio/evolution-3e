@@ -86,7 +86,8 @@ events_backend_factory_get_type (GTypeModule *module)
 		NULL, /* class_data */
 		sizeof (ECalBackend),
 		0,    /* n_preallocs */
-		(GInstanceInitFunc) e_cal_backend_3e_factory_instance_init
+		(GInstanceInitFunc) e_cal_backend_3e_factory_instance_init,
+                NULL
 	};
 
 	type = g_type_module_register_type (module,
@@ -111,7 +112,8 @@ todos_backend_factory_get_type (GTypeModule *module)
 		NULL, /* class_data */
 		sizeof (ECalBackend),
 		0,    /* n_preallocs */
-		(GInstanceInitFunc) e_cal_backend_3e_factory_instance_init
+		(GInstanceInitFunc) e_cal_backend_3e_factory_instance_init,
+                NULL
 	};
 
 	type = g_type_module_register_type (module,

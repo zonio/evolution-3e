@@ -942,7 +942,8 @@ GType e_cal_backend_3e_get_type(void)
             NULL, NULL,
             sizeof(ECalBackend3e),
             0,
-            (GInstanceInitFunc) e_cal_backend_3e_init
+            (GInstanceInitFunc) e_cal_backend_3e_init,
+            NULL
         };
         e_cal_backend_3e_type = g_type_register_static(E_TYPE_CAL_BACKEND_SYNC, "ECalBackend3e", &info, 0);
     }
