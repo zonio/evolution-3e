@@ -57,23 +57,6 @@ struct _ECalBackend3ePrivate {
 
 /* helper functions */
 
-static void e_cal_backend_notify_xmlrpc_error(ECalBackend * backend, char *message)
-{
-    ECalBackend3e *cb;
-    ECalBackend3ePrivate *priv;
-
-    T("backend=%p, message=%s", backend, message);
-
-    cb = E_CAL_BACKEND_3E(backend);
-    priv = cb->priv;
-
-    char *error_message = g_strdup_printf("%s (%d: %s).", message,
-                                          xr_client_get_error_code(priv->conn), xr_client_get_error_message(priv->conn));
-
-    e_cal_backend_notify_error(backend, error_message);
-    g_free(error_message);
-}
-
 static void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GError* err)
 {
     ECalBackend3e *cb;
@@ -272,6 +255,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     if (err != NULL)
     {
         e_cal_backend_notify_gerror_error(E_CAL_BACKEND(backend), "Failed to estabilish connection to the server", err);
+        g_clear_error(&err);
         return GNOME_Evolution_Calendar_OtherError;
     }
 
@@ -281,11 +265,11 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
      * authenticate to the server 
      */
 
-    rs = ESClient_auth(priv->conn, priv->username, priv->password);
-    if (xr_client_get_error_code(priv->conn))
+    rs = ESClient_auth(priv->conn, priv->username, priv->password, &err);
+    if (err != NULL)
     {
-        e_cal_backend_notify_xmlrpc_error(E_CAL_BACKEND(backend), "Authentication failed");
-        xr_client_reset_error(priv->conn);
+        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(backend), "Authentication failed", err);
+        g_clear_error(&err);
         xr_client_close(priv->conn);
         priv->is_open = FALSE;
         return GNOME_Evolution_Calendar_OtherError;
@@ -303,11 +287,11 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
      * check for calendar and create it if necessary
      */
 
-    rs = ESClient_hasCalendar(priv->conn, priv->calname);
-    if (xr_client_get_error_code(priv->conn))
+    rs = ESClient_hasCalendar(priv->conn, priv->calname, &err);
+    if (err != NULL)
     {
-        e_cal_backend_notify_xmlrpc_error(E_CAL_BACKEND(backend), "XML-RPC method call failed");
-        xr_client_reset_error(priv->conn);
+        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(backend), "Calendar presence check failed", err);
+        g_clear_error(&err);
         xr_client_close(priv->conn);
         priv->is_open = FALSE;
         return GNOME_Evolution_Calendar_OtherError;
@@ -321,7 +305,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     if (only_if_exists)
     {
         e_cal_backend_notify_error(E_CAL_BACKEND(backend), "Calendar does not exist on the server");
-        xr_client_reset_error(priv->conn);
         xr_client_close(priv->conn);
         priv->is_open = FALSE;
         return GNOME_Evolution_Calendar_NoSuchCal;
@@ -331,11 +314,11 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
      * create new calendar on the server 
      */
 
-    ESClient_newCalendar(priv->conn, priv->calname);
-    if (xr_client_get_error_code(priv->conn))
+    ESClient_newCalendar(priv->conn, priv->calname, &err);
+    if (err != NULL)
     {
-        e_cal_backend_notify_xmlrpc_error(E_CAL_BACKEND(backend), "XML-RPC method call failed");
-        xr_client_reset_error(priv->conn);
+        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(backend), "Calendar creation failed", err);
+        g_clear_error(&err);
         xr_client_close(priv->conn);
         priv->is_open = FALSE;
         return GNOME_Evolution_Calendar_OtherError;
@@ -407,6 +390,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *
 
 static ECalBackendSyncStatus e_cal_backend_3e_remove(ECalBackendSync * backend, EDataCal * cal)
 {
+    GError* err = NULL;
     ECalBackend3e *cb;
     ECalBackend3ePrivate *priv;
 
@@ -420,11 +404,11 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove(ECalBackendSync * backend, 
 
     if (priv->is_open)
     {
-        ESClient_deleteCalendar(priv->conn, priv->calname);
-        if (xr_client_get_error_code(priv->conn))
+        ESClient_deleteCalendar(priv->conn, priv->calname, &err);
+        if (err != NULL)
         {
-            e_cal_backend_notify_xmlrpc_error(E_CAL_BACKEND(backend), "XML-RPC method call failed");
-            xr_client_reset_error(priv->conn);
+            e_cal_backend_notify_gerror_error(E_CAL_BACKEND(backend), "Calendar removal failed", err);
+            g_clear_error(&err);
             return GNOME_Evolution_Calendar_OtherError;
         }
     }
