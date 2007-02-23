@@ -14,6 +14,8 @@
 
 #include <string.h>
 
+#include "eee-accounts-manager.h"
+
 /*****************************************************************************/
 /* plugin intialization */
 
@@ -48,12 +50,19 @@ static void ensure_3e_source_group()
     g_object_unref(slist);
 }
 
+static EeeAccountsManager* _eee_accounts_mgr = NULL;
+
+static void _free_eee_accounts_manager()
+{
+    eee_accounts_manager_free(_eee_accounts_mgr);
+}
+
 int e_plugin_lib_enable(EPluginLib * ep, int enable)
 {
-    if (enable)
+    if (_eee_accounts_mgr == NULL)
     {
-        g_print("3E Eplugin starting up ...\n");
-        ensure_3e_source_group();
+        _eee_accounts_mgr = eee_accounts_manager_new();  
+        g_atexit(_free_eee_accounts_manager);
     }
     return 0;
 }

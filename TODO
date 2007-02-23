@@ -2,3 +2,10 @@ GUI Plugin:
 - write EeeAccountsManager
   - dns txt record extraction
   - 
+
+add this to your dnsmasq.conf
+
+txt-record=qwe,s1
+txt-record=qwe,s2
+txt-record=qwe,s3
+txt-record=qwe,s4
