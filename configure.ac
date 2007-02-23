@@ -17,14 +17,24 @@ PKG_PROG_PKG_CONFIG
 # Checks for header files.
 AC_HEADER_STDC
 
+# libxr is required
+PKG_CHECK_MODULES(LIBXR, [
+  libxr >= 0.9.3
+])
+
+AC_SUBST(LIBXR_CFLAGS)
+AC_SUBST(LIBXR_LIBS)
+
 # Get packages for EDS 3e backend
 PKG_CHECK_MODULES(EDS3E, [
-  lib3es-client
   libecal-1.2
   libedata-cal-1.2
   libedataserver-1.2
   evolution-data-server-1.2
 ])
+
+XDL_COMPILER=xdl-compiler
+AC_SUBST(XDL_COMPILER)
 
 AC_SUBST(EDS3E_CFLAGS)
 AC_SUBST(EDS3E_LIBS)
@@ -46,10 +56,13 @@ AC_SUBST(plugindir)
 SOEXT='.so'
 AC_SUBST(SOEXT)
 
+CFLAGS="$CFLAGS -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable"
+
 # Output
 AC_OUTPUT([
-	Makefile
-	src/Makefile
-	gui/Makefile
-    gui/org-gnome-evolution-eee.eplug
+    Makefile
+    interface/Makefile
+    eds-plugin/Makefile
+    evolution-plugin/Makefile
+    evolution-plugin/org-gnome-evolution-eee.eplug
 ])

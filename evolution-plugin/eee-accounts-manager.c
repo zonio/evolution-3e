@@ -7,6 +7,8 @@
 #include "eee-accounts-manager.h"
 #include "dns-txt-search.h"
 
+#include "interface/ESClient.xrc.h"
+
 #define EEE_URI_PREFIX   "eee://" 
 #define EEE_PREFIX_LENGTH (sizeof(EEE_URI_PREFIX)-1)
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"

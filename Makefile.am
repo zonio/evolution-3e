@@ -1,3 +1,3 @@
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = gui src
+SUBDIRS = interface evolution-plugin eds-plugin

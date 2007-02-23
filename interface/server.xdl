@@ -1,0 +1,57 @@
+/* vim: set ft=c : */
+
+namespace ES;
+
+struct Calendar
+{
+  string owner;
+  string name;
+  string settings;
+  string perm;
+}
+
+struct Permission
+{
+  string user;
+  string perm;
+}
+
+servlet Client
+{
+  boolean auth(string username, string password);
+  array<Calendar> getCalendars();
+  boolean upadteCalendarSettings(string calspec, string settings);
+  boolean subscribeCalendar(string calspec);
+  boolean unsubscribeCalendar(string calspec);
+  array<Permission> getPermissions(string calname);
+  boolean setPermission(string calname, string for_username, string perm);
+  array<string> getUsers(string prefix);
+  array<Calendar> getSharedCalendars(string calsowner);
+  boolean newCalendar(string calname);
+  boolean deleteCalendar(string calname);
+  string queryObjects(string calspec, string query);
+  boolean addObject(string calspec, string object);
+  boolean updateObject(string calspec, string object);
+  boolean deleteObject(string calspec, string oid);
+  array<string> getMessages(string username);
+  boolean sendMessages(array<string> users, string message);
+  array<string> freeBusy(array<string> users, string query);
+}
+
+servlet Server
+{
+    array<string> getUsers();
+    boolean sendMessages(array<string> users, string message);
+    array<string> freeBusy(array<string> users, string query);
+}
+
+servlet Admin
+{
+    struct User
+    {
+        string uid;
+        string name;
+        boolean is_connected;
+    }
+    array<User> getUsersInfo();
+}

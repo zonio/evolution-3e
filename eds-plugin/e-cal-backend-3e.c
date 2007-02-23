@@ -24,7 +24,7 @@
 #define T(fmt, args...)
 #endif
 
-#include "ESClient.xrc.h"
+#include "interface/ESClient.xrc.h"
 
 struct _ECalBackend3ePrivate {
     /*
