@@ -65,6 +65,64 @@ struct EeeAccountsManager
 
 static int load_calendar_list_from_server(EeeAccount* a)
 {
+  xr_client_conn* conn;
+  GError* err = NULL;
+  int rs;
+  char* server_uri;
+  GSList *cals, *iter;
+
+  g_debug("** EEE ** Loading calendar list from the 3E server: server=%s user=%s", a->eee_server, a->email);
+
+  conn = xr_client_new(&err);
+  if (err)
+  {
+    g_debug("** EEE ** Can't create client interface. (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+    return -1;
+  }
+
+  server_uri = g_strdup_printf("https://%s/ESClient", a->eee_server);
+  xr_client_open(conn, server_uri, &err);
+  g_free(server_uri);
+  if (err)
+  {
+    g_debug("** EEE ** Can't open connection to the server. (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+    xr_client_free(conn);
+    return -1;
+  }
+  
+  //XXX: ask for password
+  rs = ESClient_auth(conn, a->email, "qwe", &err);
+  if (err)
+  {
+    g_debug("** EEE ** Authentization failed for user '%s'. (%d:%s)", a->email, err->code, err->message);
+    g_clear_error(&err);
+    xr_client_free(conn);
+    return -1;
+  }
+
+  cals = ESClient_getCalendars(conn, &err);
+  if (err)
+  {
+    g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", a->email, err->code, err->message);
+    g_clear_error(&err);
+    xr_client_free(conn);
+    return -1;
+  }
+
+  //XXX: process calendars
+
+  for (iter = cals; iter; iter = iter->next)
+  {
+    ESCalendar* cal = iter->data;
+    g_debug("** EEE ** %s: found calendar (%s:%s:%s:%s)", a->email, cal->owner, cal->name, cal->perm, cal->settings);
+  }
+  
+  g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
+  g_slist_free(cals);
+
+  xr_client_free(conn);
   return 0;
 }
 
