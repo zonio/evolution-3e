@@ -5,8 +5,10 @@ Makefile.in
 
 *.o
 *.lo
+*.loT
 *.la
 *.eplug
+*.swp
 
 /aclocal.m4
 /autom4te.cache
@@ -22,3 +24,7 @@ Makefile.in
 /ylwrap
 /libtool
 /ltmain.sh
+
+/.vimrc
+/tags
+/.misc
