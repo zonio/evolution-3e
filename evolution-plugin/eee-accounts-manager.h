@@ -1,6 +1,9 @@
 #ifndef EEE_ACCOUNTS_H
 #define EEE_ACCOUNTS_H
 
+#include <libedataserver/e-account-list.h>
+#include <libedataserver/e-source-list.h>
+
 typedef struct EeeAccountsManager EeeAccountsManager;
 typedef struct EeeCalendar EeeCalendar;
 typedef struct EeeAccount EeeAccount;
@@ -10,6 +13,24 @@ struct EeeSettings
 {
   char* title;
   int color;
+};
+
+struct EeeCalendar
+{
+  char* name;
+  char* perm;
+  EeeAccount* login_account;
+  ESource* source;
+  EeeSettings* settings;
+};
+
+struct EeeAccount
+{
+  char* uid; // may be null for subscription "accounts"
+  char* email;
+  char* eee_server; // may be null for subscription "accounts"
+  ESourceGroup* group;
+  GSList* calendars;                     /**< EeeCalendar */
 };
 
 G_BEGIN_DECLS

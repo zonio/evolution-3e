@@ -42,23 +42,6 @@
  * consistency of our local calendar list.
  */
 
-struct EeeCalendar
-{
-  char* name;
-  char* perm;
-  EeeAccount* login_account;
-  ESource* source;
-  EeeSettings* settings;
-};
-
-struct EeeAccount
-{
-  char* uid; // may be null for subscription "accounts"
-  char* email;
-  char* eee_server; // may be null for subscription "accounts"
-  ESourceGroup* group;
-  GSList* calendars;                     /**< EeeCalendar */
-};
 
 struct EeeAccountsManager
 {
