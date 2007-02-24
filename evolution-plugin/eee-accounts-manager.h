@@ -4,6 +4,8 @@
 #include <libedataserver/e-account-list.h>
 #include <libedataserver/e-source-list.h>
 
+#define EEE_URI_PREFIX "eee://" 
+
 typedef struct EeeAccountsManager EeeAccountsManager;
 typedef struct EeeCalendar EeeCalendar;
 typedef struct EeeAccount EeeAccount;

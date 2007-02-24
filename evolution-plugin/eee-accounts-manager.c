@@ -9,8 +9,6 @@
 
 #include "interface/ESClient.xrc.h"
 
-#define EEE_URI_PREFIX   "eee://" 
-#define EEE_PREFIX_LENGTH (sizeof(EEE_URI_PREFIX)-1)
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
 #define SELECTED_CALENDARS "/apps/evolution/calendar/display/selected_calendars"
 
@@ -41,7 +39,6 @@
  * instead of directly playing with ESourceList content. This will assure
  * consistency of our local calendar list.
  */
-
 
 struct EeeAccountsManager
 {
@@ -289,6 +286,8 @@ void eee_accounts_manager_free(EeeAccountsManager* mgr)
 	g_object_unref(mgr->eaccount_list);
   g_free(mgr);
 }
+
+/* EeeSettings parser impelementation */
 
 EeeSettings* eee_settings_new(const char* string)
 {

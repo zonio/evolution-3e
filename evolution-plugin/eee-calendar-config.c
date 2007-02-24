@@ -46,7 +46,7 @@ GtkWidget *eee_calendar_properties_items(EPlugin* epl, EConfigHookItemFactoryDat
   ESourceGroup *group;
 
   group = e_source_peek_group(target->source);
-  if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
+  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return NULL;
   g_debug("** EEE ** Properties Dialog Items Hook Call (source=%s)", e_source_peek_name(target->source));
 
@@ -85,7 +85,7 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(target->source);
 
-  if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
+  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return TRUE;
   g_debug("** EEE ** Properties Dialog Check Hook Call (source=%s)", e_source_peek_name(target->source));
 
@@ -95,7 +95,7 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
 void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target)
 {
   ESourceGroup *group = e_source_peek_group(target->source);
-  if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
+  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return;
   g_debug("** EEE ** Properties Dialog Commit Hook Call (source=%s)", e_source_peek_name(target->source));
 
@@ -173,7 +173,7 @@ void eee_calendar_popup_source_factory(EPlugin* ep, ECalPopupTargetSource* targe
   GSList* menus = NULL;
   guint i;
 
-  if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
+  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return;
 
   // get EeeCalendar and fillup menu for shared or user calendar
