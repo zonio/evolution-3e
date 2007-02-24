@@ -2,11 +2,9 @@
 #include <config.h>
 #endif
 #include <string.h>
-#include <libedataserver/e-account-list.h>
-#include <libedataserver/e-source-list.h>
+
 #include "eee-accounts-manager.h"
 #include "dns-txt-search.h"
-
 #include "interface/ESClient.xrc.h"
 
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
