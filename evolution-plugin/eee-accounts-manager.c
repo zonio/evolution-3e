@@ -46,6 +46,7 @@ struct EeeCalendar
 {
   char* name;
   char* perm;
+  EeeAccount* login_account;
   ESource* source;
   EeeSettings* settings;
 };
@@ -123,6 +124,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
     EeeCalendar* ecal = g_new0(EeeCalendar, 1);
     ecal->name = g_strdup(cal->name);
     ecal->perm = g_strdup(cal->perm);
+    ecal->login_account = a;
     ecal->settings = eee_settings_new(cal->settings);
 
     // find existing EeeAccount or create new 
@@ -280,10 +282,11 @@ EeeAccountsManager* eee_accounts_manager_new()
     {
       EeeCalendar* c = iter2->data;
 
-      char* relative_uri = g_strdup_printf("%s/%s/%s", a->eee_server, a->email, c->name);
+      char* relative_uri = g_strdup_printf("%s/%s/%s", a->eee_server, c->login_account->email, c->name);
       c->source = e_source_new(c->settings->title ? c->settings->title : c->name, relative_uri);
+      g_free(relative_uri);
       e_source_set_property(c->source, "auth", "1");
-      e_source_set_property(c->source, "username", a->email);
+      e_source_set_property(c->source, "username", c->login_account->email);
       e_source_set_property(c->source, "auth-domain", "3E Accounts");
       e_source_set_color(c->source, c->settings->color > 0 ? c->settings->color : 0xEEBC60);
       e_source_group_add_source(a->group, c->source, -1);
