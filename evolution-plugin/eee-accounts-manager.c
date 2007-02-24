@@ -10,41 +10,6 @@
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
 #define SELECTED_CALENDARS "/apps/evolution/calendar/display/selected_calendars"
 
-/** Role of the EeeAccountsManager is to keep calendar ESourceList in sync with
- * EAccountList (each account must have it's own ESourceGroup) and ESource in
- * each group in sync with list of calendars on the 3e server.
- *
- * First we load list of EAccount objects (email accounts in evolution), then we
- * determine hostnames of the 3e servers for each email account (and if it has
- * one) and automatically load list of calendars from the 3e server.
- *
- * Then we load existing ESourceGroup objects with eee:// URI prefix (i.e. list
- * of eee accounts in the calendar view) and their associated ESources.
- *
- * Last step is to compare lists of ESource obejcts (eee accounts list in
- * calendar view) with list of calendars stored on the server and update list of
- * ESource obejcts to match list of calendars stored on the server.
- *
- * After this initial sync, our local list of EeeAccount and EeeCalendar obejcts
- * will be in sync with either list of calendar sources in gconf (what is shown
- * in calendar view) and list of existing email accounts (EAccount objects).
- *
- * Now we will setup notification mechanism for EAccount and calendar list
- * changes. We will also periodically fetch list of calendars from the 3e server
- * and update list of calendars in the calendars source list.
- *
- * GUI for adding/removing callendars will call methods of EeeAccountsManager
- * instead of directly playing with ESourceList content. This will assure
- * consistency of our local calendar list.
- */
-
-struct EeeAccountsManager
-{
-  GConfClient* gconf_client;
-  EAccountList* eaccount_list;
-  GSList* accounts;                      /**< EeeAccount */
-};
-
 static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a)
 {
   xr_client_conn* conn;
@@ -53,7 +18,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
   char* server_uri;
   GSList *cals, *iter;
 
-  g_debug("** EEE ** Loading calendar list from the 3E server: server=%s user=%s", a->eee_server, a->email);
+  g_debug("** EEE ** Loading calendar list from the 3E server: server=%s user=%s", a->server, a->email);
 
   conn = xr_client_new(&err);
   if (err)
@@ -63,7 +28,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
     return -1;
   }
 
-  server_uri = g_strdup_printf("https://%s/ESClient", a->eee_server);
+  server_uri = g_strdup_printf("https://%s/ESClient", a->server);
   xr_client_open(conn, server_uri, &err);
   g_free(server_uri);
   if (err)
@@ -102,7 +67,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
     EeeCalendar* ecal = g_new0(EeeCalendar, 1);
     ecal->name = g_strdup(cal->name);
     ecal->perm = g_strdup(cal->perm);
-    ecal->login_account = a;
+    ecal->account = a;
     ecal->settings = eee_settings_new(cal->settings);
 
     // find existing EeeAccount or create new 
@@ -111,7 +76,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
     {
       acc = g_new0(EeeAccount, 1);
       acc->email = g_strdup(cal->owner);
-      acc->eee_server = g_strdup(a->eee_server); // inherit eee server
+      acc->server = g_strdup(a->server); // inherit eee server
       mgr->accounts = g_slist_append(mgr->accounts, acc);
     }
 
@@ -162,13 +127,13 @@ EeeAccountsManager* eee_accounts_manager_new()
   EIterator *eiter;
        
   mgr = g_new0(EeeAccountsManager, 1);
-  mgr->gconf_client = gconf_client_get_default();
-  mgr->eaccount_list = e_account_list_new(mgr->gconf_client);
+  mgr->gconf = gconf_client_get_default();
+  mgr->ealist = e_account_list_new(mgr->gconf);
   g_print("\n\n");
   g_debug("** EEE ** Starting EeeAccountsManager %p", mgr);
 
   // go through all EAccount objects
-  for (eiter = e_list_get_iterator(E_LIST(mgr->eaccount_list));
+  for (eiter = e_list_get_iterator(E_LIST(mgr->ealist));
        e_iterator_is_valid(eiter);
        e_iterator_next(eiter))
   {
@@ -197,14 +162,14 @@ EeeAccountsManager* eee_accounts_manager_new()
       if (g_str_has_prefix(txt_list[i], "eee server="))
       {
         EeeAccount* account;
-        char* eee_server = g_strstrip(g_strdup(txt_list[i]+sizeof("eee server=")-1)); // expected to be in format hostname:port
-        g_debug("** EEE ** Found 3E server enabled account '%s'! (%s)", email, eee_server);
+        char* server = g_strstrip(g_strdup(txt_list[i]+sizeof("eee server=")-1)); // expected to be in format hostname:port
+        g_debug("** EEE ** Found 3E server enabled account '%s'! (%s)", email, server);
 
         account = g_new0(EeeAccount, 1);
         mgr->accounts = g_slist_append(mgr->accounts, account);
         account->uid = g_strdup(eaccount->uid);
         account->email = g_strdup(email); 
-        account->eee_server = eee_server;
+        account->server = server;
         load_calendar_list_from_server(mgr, account);
         break;
       }
@@ -212,13 +177,13 @@ EeeAccountsManager* eee_accounts_manager_new()
     g_strfreev(txt_list);
   }
 
-  g_signal_connect(mgr->eaccount_list, "account_added", G_CALLBACK(e_account_added), mgr);
-  g_signal_connect(mgr->eaccount_list, "account_changed", G_CALLBACK(e_account_changed), mgr);
-  g_signal_connect(mgr->eaccount_list, "account_removed", G_CALLBACK(e_account_removed), mgr);    
+  g_signal_connect(mgr->ealist, "account_added", G_CALLBACK(e_account_added), mgr);
+  g_signal_connect(mgr->ealist, "account_changed", G_CALLBACK(e_account_changed), mgr);
+  g_signal_connect(mgr->ealist, "account_removed", G_CALLBACK(e_account_removed), mgr);    
 
   g_debug("** EEE ** Updating calendar source list.");
   // synchronize calendar source list with the server
-  list = e_source_list_new_for_gconf(mgr->gconf_client, CALENDAR_SOURCES);
+  list = e_source_list_new_for_gconf(mgr->gconf, CALENDAR_SOURCES);
   GSList* dup_list = g_slist_copy(e_source_list_peek_groups(list));
   for (iter1 = dup_list; iter1; iter1 = iter1->next)
   {
@@ -245,29 +210,31 @@ EeeAccountsManager* eee_accounts_manager_new()
   for (iter1 = mgr->accounts; iter1; iter1 = iter1->next)
   {
     EeeAccount* a = iter1->data;
+    ESourceGroup* group;
 
     char* group_name = g_strdup_printf("3E: %s", a->email);
-    a->group = e_source_group_new(group_name,  EEE_URI_PREFIX);
+    group = e_source_group_new(group_name,  EEE_URI_PREFIX);
     g_free(group_name);
-    if (!e_source_list_add_group(list, a->group, -1))
+    if (!e_source_list_add_group(list, group, -1))
     {
-      g_object_unref(a->group);
-      a->group = NULL;
+      g_object_unref(group);
+      group = NULL;
       continue;
     }
 
     for (iter2 = a->calendars; iter2; iter2 = iter2->next)
     {
       EeeCalendar* c = iter2->data;
+      ESource* source;
 
-      char* relative_uri = g_strdup_printf("%s/%s/%s", a->eee_server, c->login_account->email, c->name);
-      c->source = e_source_new(c->settings->title ? c->settings->title : c->name, relative_uri);
+      char* relative_uri = g_strdup_printf("%s/%s/%s", a->server, c->account->email, c->name);
+      source = e_source_new(c->settings->title ? c->settings->title : c->name, relative_uri);
       g_free(relative_uri);
-      e_source_set_property(c->source, "auth", "1");
-      e_source_set_property(c->source, "username", c->login_account->email);
-      e_source_set_property(c->source, "auth-domain", "3E Accounts");
-      e_source_set_color(c->source, c->settings->color > 0 ? c->settings->color : 0xEEBC60);
-      e_source_group_add_source(a->group, c->source, -1);
+      e_source_set_property(source, "auth", "1");
+      e_source_set_property(source, "username", c->account->email);
+      e_source_set_property(source, "auth-domain", "3E Accounts");
+      e_source_set_color(source, c->settings->color > 0 ? c->settings->color : 0xEEBC60);
+      e_source_group_add_source(group, source, -1);
     }
   }
   e_source_list_sync(list, NULL);
@@ -280,8 +247,8 @@ EeeAccountsManager* eee_accounts_manager_new()
 void eee_accounts_manager_free(EeeAccountsManager* mgr)
 {
   g_debug("** EEE ** Stoppping EeeAccountsManager %p", mgr);
-	g_object_unref(mgr->gconf_client);
-	g_object_unref(mgr->eaccount_list);
+	g_object_unref(mgr->gconf);
+	g_object_unref(mgr->ealist);
   g_free(mgr);
 }
 
