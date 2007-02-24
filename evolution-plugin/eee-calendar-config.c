@@ -39,42 +39,9 @@ int e_plugin_lib_enable(EPluginLib * ep, int enable)
 /*****************************************************************************/
 /* the URL field for 3e sources */
 
-static gchar *print_uri_noproto(EUri * uri)
+GtkWidget *e_calendar_3e_properties(EPlugin* epl, EConfigHookItemFactoryData* data)
 {
-  gchar *uri_noproto;
-
-  if (uri->port != 0)
-    uri_noproto = g_strdup_printf("%s%s%s%s%s%s%s:%d%s%s%s", uri->user ? uri->user : "", uri->authmech ? ";auth=" : "", uri->authmech ? uri->authmech : "", uri->passwd ? ":" : "", uri->passwd ? uri->passwd : "", uri->user ? "@" : "", uri->host ? uri->host : "", uri->port, uri->path ? uri->path : "", uri->query ? "?" : "", uri->query ? uri->query : "");
-  else
-    uri_noproto = g_strdup_printf("%s%s%s%s%s%s%s%s%s%s", uri->user ? uri->user : "", uri->authmech ? ";auth=" : "", uri->authmech ? uri->authmech : "", uri->passwd ? ":" : "", uri->passwd ? uri->passwd : "", uri->user ? "@" : "", uri->host ? uri->host : "", uri->path ? uri->path : "", uri->query ? "?" : "", uri->query ? uri->query : "");
-  return uri_noproto;
-}
-
-static void location_changed(GtkEntry * editable, ESource * source)
-{
-  EUri *euri;
-  const char *uri;
-  char *ruri;
-
-  uri = gtk_entry_get_text(GTK_ENTRY(editable));
-
-  euri = e_uri_new(uri);
-  if (euri->path && euri->host && !euri->query && !euri->fragment && strlen(euri->path) > 1)
-  {
-    ruri = print_uri_noproto(euri);
-    e_source_set_relative_uri(source, ruri);
-    g_free(ruri);
-  }
-
-  e_source_set_property(source, "username", euri->user);
-  e_source_set_property(source, "auth", euri->user ? "1" : NULL);
-  e_source_set_property(source, "auth-type", euri->user ? "plain" : NULL);
-  e_uri_free(euri);
-}
-
-GtkWidget *e_calendar_3e_properties(EPlugin * epl, EConfigHookItemFactoryData * data)
-{
-  ECalConfigTargetSource *t = (ECalConfigTargetSource *) data->target;
+  ECalConfigTargetSource *t = (ECalConfigTargetSource*)data->target;
   ESource *source;
   ESourceGroup *group;
   GtkWidget *parent;
@@ -88,6 +55,7 @@ GtkWidget *e_calendar_3e_properties(EPlugin * epl, EConfigHookItemFactoryData * 
   if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
     return NULL;
 
+#if 0
   uri = e_source_get_uri(source);
 
   parent = data->parent;
@@ -107,26 +75,17 @@ GtkWidget *e_calendar_3e_properties(EPlugin * epl, EConfigHookItemFactoryData * 
   gtk_label_set_mnemonic_widget(GTK_LABEL(lurl), location);
 
   g_free(uri);
-
+#endif
   return NULL;
 }
 
-gboolean e_calendar_3e_check(EPlugin * epl, EConfigHookPageCheckData * data)
+gboolean e_calendar_3e_check(EPlugin* epl, EConfigHookPageCheckData* data)
 {
-  ECalConfigTargetSource *t = (ECalConfigTargetSource *) data->target;
+  ECalConfigTargetSource *t = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(t->source);
-  EUri *uri;
-  char *uri_text;
-  gboolean ok = FALSE;
 
   if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
     return TRUE;
 
-  uri_text = e_source_get_uri(t->source);
-  uri = e_uri_new(uri_text);
-  ok = uri->user && uri->path && uri->host && !uri->query && !uri->fragment && strlen(uri->path) > 1;
-  e_uri_free(uri);
-  g_free(uri_text);
-
-  return ok;
+  return TRUE;
 }
