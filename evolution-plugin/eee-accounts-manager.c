@@ -18,24 +18,24 @@
  * EAccountList (each account must have it's own ESourceGroup) and ESource in
  * each group in sync with list of calendars on the 3e server.
  *
- * First we load list of EAccount objects (email accounts in evolution), then
- * we determine hostnames of the 3e servers for each email account (and if it 
- * has one) and automatically load list of calendars from the 3e server.
+ * First we load list of EAccount objects (email accounts in evolution), then we
+ * determine hostnames of the 3e servers for each email account (and if it has
+ * one) and automatically load list of calendars from the 3e server.
  *
- * Then we load existing ESourceGroup objects with eee:// URI prefix (i.e. list of
- * eee accounts in the calendar view) and their associated ESources.
+ * Then we load existing ESourceGroup objects with eee:// URI prefix (i.e. list
+ * of eee accounts in the calendar view) and their associated ESources.
  *
  * Last step is to compare lists of ESource obejcts (eee accounts list in
- * calendar view) with list of calendars stored on the server and update
- * list of ESource obejcts to match list of calendars stored on the server.
+ * calendar view) with list of calendars stored on the server and update list of
+ * ESource obejcts to match list of calendars stored on the server.
  *
  * After this initial sync, our local list of EeeAccount and EeeCalendar obejcts
  * will be in sync with either list of calendar sources in gconf (what is shown
  * in calendar view) and list of existing email accounts (EAccount objects).
  *
- * Now we will setup notification mechanism for EAccount and calendar list changes.
- * We will also periodically fetch list of calendars from the 3e server and
- * update list of calendars in the calendars source list.
+ * Now we will setup notification mechanism for EAccount and calendar list
+ * changes. We will also periodically fetch list of calendars from the 3e server
+ * and update list of calendars in the calendars source list.
  *
  * GUI for adding/removing callendars will call methods of EeeAccountsManager
  * instead of directly playing with ESourceList content. This will assure
