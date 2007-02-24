@@ -6,56 +6,57 @@
 #include <gtk/gtk.h>
 
 #include <e-util/e-config.h>
-#include <e-util/e-plugin.h>
+#include <e-util/e-error.h>
 #include <calendar/gui/e-cal-config.h>
+#include <calendar/gui/e-cal-popup.h>
+#include <shell/es-event.h>
 #include <libedataserver/e-url.h>
 #include <libedataserver/e-account-list.h>
+#include <libedataserverui/e-source-selector.h>
 #include <libecal/e-cal.h>
 
 #include <string.h>
 
 #include "eee-accounts-manager.h"
 
-/*****************************************************************************/
 /* plugin intialization */
 
-static EeeAccountsManager* _eee_accounts_mgr = NULL;
-
-static void _free_eee_accounts_manager()
+static EeeAccountsManager* _mgr = NULL;
+static void eee_accounts_manager_destroy()
 {
-  eee_accounts_manager_free(_eee_accounts_mgr);
+  eee_accounts_manager_free(_mgr);
 }
 
-int e_plugin_lib_enable(EPluginLib * ep, int enable)
+int e_plugin_lib_enable(EPluginLib* ep, int enable)
 {
-  if (_eee_accounts_mgr == NULL)
+  /* create EeeAccountsManager singleton and register it for destruction */
+  if (_mgr == NULL)
   {
-    _eee_accounts_mgr = eee_accounts_manager_new();  
-    g_atexit(_free_eee_accounts_manager);
+    _mgr = eee_accounts_manager_new();  
+    g_atexit(eee_accounts_manager_destroy);
   }
   return 0;
 }
 
-/*****************************************************************************/
-/* the URL field for 3e sources */
+/* calendar add/properties dialog */
 
-GtkWidget *e_calendar_3e_properties(EPlugin* epl, EConfigHookItemFactoryData* data)
+GtkWidget *eee_calendar_properties_items(EPlugin* epl, EConfigHookItemFactoryData* data)
 {
-  ECalConfigTargetSource *t = (ECalConfigTargetSource*)data->target;
-  ESource *source;
+  ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group;
+
+  group = e_source_peek_group(target->source);
+  if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
+    return NULL;
+  g_debug("** EEE ** Properties Dialog Items Hook Call (source=%s)", e_source_peek_name(target->source));
+
+#if 0
   GtkWidget *parent;
   GtkWidget *lurl;
   GtkWidget *location;
   char *uri;
   int row;
 
-  source = t->source;
-  group = e_source_peek_group(source);
-  if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
-    return NULL;
-
-#if 0
   uri = e_source_get_uri(source);
 
   parent = data->parent;
@@ -79,13 +80,118 @@ GtkWidget *e_calendar_3e_properties(EPlugin* epl, EConfigHookItemFactoryData* da
   return NULL;
 }
 
-gboolean e_calendar_3e_check(EPlugin* epl, EConfigHookPageCheckData* data)
+gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* data)
 {
-  ECalConfigTargetSource *t = (ECalConfigTargetSource*)data->target;
-  ESourceGroup *group = e_source_peek_group(t->source);
+  ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
+  ESourceGroup *group = e_source_peek_group(target->source);
 
   if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
     return TRUE;
+  g_debug("** EEE ** Properties Dialog Check Hook Call (source=%s)", e_source_peek_name(target->source));
 
   return TRUE;
+}
+
+void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target)
+{
+  ESourceGroup *group = e_source_peek_group(target->source);
+  if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
+    return;
+  g_debug("** EEE ** Properties Dialog Commit Hook Call (source=%s)", e_source_peek_name(target->source));
+
+//  if (e_source_get_property (source, "default"))
+//    e_book_set_default_source (source, NULL);
+  return;
+}
+
+/* calendar source list popup menu items */
+
+static void on_permissions_cb(EPopup *ep, EPopupItem *pitem, void *data)
+{
+  ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
+  ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+  ESourceGroup* group = e_source_peek_group(source);
+
+  g_debug("** EEE ** on_permissions_cb: (source=%s)", e_source_peek_name(source));
+}
+
+static void on_subscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
+{
+  ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
+  ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+  ESourceGroup* group = e_source_peek_group(source);
+
+  g_debug("** EEE ** on_subscribe_cb: (source=%s)", e_source_peek_name(source));
+}
+
+static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
+{
+  ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
+  ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+  ESourceGroup* group = e_source_peek_group(source);
+
+  g_debug("** EEE ** on_unsubscribe_cb: (source=%s)", e_source_peek_name(source));
+}
+
+static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
+{
+  ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
+  ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+  ESourceGroup* group = e_source_peek_group(source);
+
+  g_debug("** EEE ** on_delete_cb: This shouldn't happen! (source=%s)", e_source_peek_name(source));
+}
+
+static EPopupItem popup_items_shared_cal[] = {
+  { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
+  { E_POPUP_ITEM, "12.eee.01", "Subscribe to shared calendar...", on_subscribe_cb, NULL, "stock_new-dir", 0, E_CAL_POPUP_SOURCE_PRIMARY },
+  { E_POPUP_ITEM, "12.eee.03", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, 0xffff },
+  { E_POPUP_ITEM, "12.eee.02", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_PRIMARY },
+  { E_POPUP_BAR,  "12.eee.03", NULL, NULL, NULL, NULL, 0, 0 },
+  { E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, 0xffff },
+};
+
+static EPopupItem popup_items_user_cal[] = {
+  { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
+  { E_POPUP_ITEM, "12.eee.01", "Subscribe to shared calendar...", on_subscribe_cb, NULL, "stock_new-dir", 0, E_CAL_POPUP_SOURCE_PRIMARY }, 
+  { E_POPUP_ITEM, "12.eee.03", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, E_CAL_POPUP_SOURCE_PRIMARY },
+  { E_POPUP_ITEM, "12.eee.02", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
+  { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
+  //{ E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_USER|E_CAL_POPUP_SOURCE_PRIMARY },
+};
+
+static void popup_free(EPopup *ep, GSList *items, void *data)
+{
+  g_slist_free(items);
+}
+
+void eee_calendar_popup_source_factory(EPlugin* ep, ECalPopupTargetSource* target)
+{
+  // get selected source (which was right-clciked on)
+  ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+  ESourceGroup* group = e_source_peek_group(source);
+  GSList* menus = NULL;
+  guint i;
+
+  if (strcmp(e_source_group_peek_base_uri(group), "eee://"))
+    return;
+
+  // get EeeCalendar and fillup menu for shared or user calendar
+  for (i = 0; i < G_N_ELEMENTS(popup_items_user_cal); i++)
+    menus = g_slist_prepend(menus, &popup_items_user_cal[i]);
+
+  e_popup_add_items(target->target.popup, menus, NULL, popup_free, NULL);
+}
+
+/* watch evolution state (online/offline) */
+
+void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
+{
+  int online = target->state;
+  if (online)
+  {
+  }
+  else
+  {
+  }
 }
