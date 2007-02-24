@@ -1,11 +1,21 @@
-GUI Plugin:
+Evolution Plugin
+~~~~~~~~~~~~~~~~
+
 - write EeeAccountsManager
-  - dns txt record extraction
-  - 
+  - ask for account password if not in keyring
+  - use this password for calendars
+  - implement subscribe/remove buttons
+  - implement add calendar
+  - implement calendar properties
+    - updated calname and color
+    - manage calendar acls
 
-add this to your dnsmasq.conf
+add this to your dnsmasq.conf:
 
-txt-record=qwe,s1
-txt-record=qwe,s2
-txt-record=qwe,s3
-txt-record=qwe,s4
+  txt-record=megous.com,eee server=localhost:4444
+
+
+EDS Plugin
+~~~~~~~~~~
+
+- make it work with updated Evolution Plugin
