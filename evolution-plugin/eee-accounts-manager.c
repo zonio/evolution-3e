@@ -10,7 +10,9 @@
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
 #define SELECTED_CALENDARS "/apps/evolution/calendar/display/selected_calendars"
 
-static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a)
+/* 3e server access methods */
+
+static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* access_account)
 {
   xr_client_conn* conn;
   GError* err = NULL;
@@ -18,7 +20,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
   char* server_uri;
   GSList *cals, *iter;
 
-  g_debug("** EEE ** Loading calendar list from the 3E server: server=%s user=%s", a->server, a->email);
+  g_debug("** EEE ** Loading calendar list from the 3E server: server=%s user=%s", access_account->server, access_account->email);
 
   conn = xr_client_new(&err);
   if (err)
@@ -28,7 +30,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
     return -1;
   }
 
-  server_uri = g_strdup_printf("https://%s/ESClient", a->server);
+  server_uri = g_strdup_printf("https://%s/ESClient", access_account->server);
   xr_client_open(conn, server_uri, &err);
   g_free(server_uri);
   if (err)
@@ -40,10 +42,10 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
   }
   
   //XXX: ask for password
-  rs = ESClient_auth(conn, a->email, "qwe", &err);
+  rs = ESClient_auth(conn, access_account->email, "qwe", &err);
   if (err)
   {
-    g_debug("** EEE ** Authentization failed for user '%s'. (%d:%s)", a->email, err->code, err->message);
+    g_debug("** EEE ** Authentization failed for user '%s'. (%d:%s)", access_account->email, err->code, err->message);
     g_clear_error(&err);
     xr_client_free(conn);
     return -1;
@@ -52,7 +54,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
   cals = ESClient_getCalendars(conn, &err);
   if (err)
   {
-    g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", a->email, err->code, err->message);
+    g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", access_account->email, err->code, err->message);
     g_clear_error(&err);
     xr_client_free(conn);
     return -1;
@@ -62,12 +64,12 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
   for (iter = cals; iter; iter = iter->next)
   {
     ESCalendar* cal = iter->data;
-    g_debug("** EEE ** %s: Found calendar on the server (%s:%s:%s:%s)", a->email, cal->owner, cal->name, cal->perm, cal->settings);
+    g_debug("** EEE ** %s: Found calendar on the server (%s:%s:%s:%s)", access_account->email, cal->owner, cal->name, cal->perm, cal->settings);
 
     EeeCalendar* ecal = g_new0(EeeCalendar, 1);
     ecal->name = g_strdup(cal->name);
     ecal->perm = g_strdup(cal->perm);
-    ecal->account = a;
+    ecal->account = access_account;
     ecal->settings = eee_settings_new(cal->settings);
 
     // find existing EeeAccount or create new 
@@ -76,7 +78,7 @@ static int load_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
     {
       acc = g_new0(EeeAccount, 1);
       acc->email = g_strdup(cal->owner);
-      acc->server = g_strdup(a->server); // inherit eee server
+      acc->server = g_strdup(access_account->server); // inherit eee server
       mgr->accounts = g_slist_append(mgr->accounts, acc);
     }
 
