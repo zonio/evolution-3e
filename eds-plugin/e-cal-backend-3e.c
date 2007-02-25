@@ -294,9 +294,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
    * check for calendar and create it if necessary
    */
 
-#if 0
-  rs = ESClient_hasCalendar(priv->conn, priv->calname, &err);
-  if (err != NULL)
+  GSList* cals = ESClient_getCalendars(priv->conn, &err);
+  if (err)
   {
     e_cal_backend_notify_gerror_error(E_CAL_BACKEND(backend), "Calendar presence check failed", err);
     g_clear_error(&err);
@@ -305,11 +304,25 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     return GNOME_Evolution_Calendar_OtherError;
   }
 
+  // process retrieved calendars
+  GSList* iter;
+  rs = FALSE;
+  for (iter = cals; iter; iter = iter->next)
+  {
+    ESCalendar* cal = iter->data;
+    if (!strcmp(cal->name, priv->calname) && !strcmp(cal->owner, priv->username))
+    {
+      rs = TRUE;
+      break;
+    }
+  }
+  g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
+  g_slist_free(cals);
+
   if (rs)
   {
     return GNOME_Evolution_Calendar_Success;
   }
-#endif
 
   if (only_if_exists)
   {
