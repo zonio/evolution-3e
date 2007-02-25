@@ -23,12 +23,13 @@ struct EeeSettings
  */
 struct EeeCalendar
 {
-  char* uid;                  /**< Calendar's ESource UID. */
   char* name;                 /**< Calendar name. */
   char* perm;                 /**< Calendar permissions. (read, write, none) */
+  char* relative_uri;         /**< Relative URI of the calendar. Feeded to the backend. */
   EeeSettings* settings;      /**< Calendar settings. (title, color) */
-  EeeAccount* account;        /**< 3E account that is used to access this calendar. */
+  EeeAccount* access_account; /**< 3E account that is used to access this calendar. */
   EeeAccount* owner_account;  /**< 3E account that this calendar is assigned to (owner's). */
+  int synced;
 };
 
 /** 3E user's account.
@@ -41,11 +42,13 @@ struct EeeCalendar
  */
 struct EeeAccount
 {
-  char* uid;                  /**< ESourceGroup UID. */
+  int accessible;             /**< Account is accessible (we can login). */
   char* email;                /**< Username of the account owner. Used to login to the 3E server.
                                    This string is used to match EeeAccount against EAccount. */
+  char* password;             /**< This is password used to authenticate to an account. */
   char* server;               /**< 3E server hostname:port. */
   GSList* calendars;          /**< List of EeeCalendar objects owned by this account. */
+  int synced;
 };
 
 /** 3E account manager.
@@ -83,6 +86,7 @@ struct EeeAccountsManager
 {
   GConfClient* gconf;         /**< Gconf client. */
   EAccountList* ealist;       /**< EAccountList instance used internally to watch for changes. */
+  ESourceList* eslist;        /**< Source list for calendar. */
   GSList* accounts;           /**< List of EeeAccount obejcts managed by this EeeAccountsManager. */
 };
 
@@ -102,14 +106,45 @@ EeeAccountsManager* eee_accounts_manager_new();
  */
 void eee_accounts_manager_free(EeeAccountsManager* mgr);
 
-/** Find EeeAccount object by ESourceGroup name.
+/** Release EeeCalendar.
+ *
+ * @param mgr EeeCalendar object.
+ */
+void eee_calendar_free(EeeCalendar* c);
+
+/** Release EeeAccount.
+ *
+ * @param mgr EeeAccount object.
+ */
+void eee_account_free(EeeAccount* a);
+
+/** Synchrinize source lists in evolution from the 3e server.
+ *
+ * Adter this call everything should be in sync.
+ *
+ * @param mgr EeeAccountsManager object.
+ *
+ * @return TRUE on success, FALSE on failure.
+ */
+gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr);
+
+/** Find EeeAccount object by ESourceGroup name/EAccount email.
  *
  * @param mgr EeeAccountsManager object.
  * @param email E-mail of the account.
  *
  * @return Matching EeeAccount object or NULL.
  */
-EeeAccount* eee_accounts_manager_find_account(EeeAccountsManager* mgr, const char* email);
+EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, const char* email);
+
+/** Find EeeCalendar object by name.
+ *
+ * @param acc EeeAccount object.
+ * @param name Name.
+ *
+ * @return Matching EeeCalendar object or NULL.
+ */
+EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const char* name);
 
 /* EeeSettings parser. */
 EeeSettings* eee_settings_new(const char* string);
