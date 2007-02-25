@@ -108,13 +108,13 @@ void eee_accounts_manager_free(EeeAccountsManager* mgr);
 
 /** Release EeeCalendar.
  *
- * @param mgr EeeCalendar object.
+ * @param c EeeCalendar object.
  */
 void eee_calendar_free(EeeCalendar* c);
 
 /** Release EeeAccount.
  *
- * @param mgr EeeAccount object.
+ * @param a EeeAccount object.
  */
 void eee_account_free(EeeAccount* a);
 
@@ -145,6 +145,24 @@ EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, 
  * @return Matching EeeCalendar object or NULL.
  */
 EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const char* name);
+
+/** Find EeeCalendar object by ESource.
+ *
+ * @param mgr EeeAccountsManager object.
+ * @param source ESource object.
+ *
+ * @return Matching EeeCalendar object or NULL.
+ */
+EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source);
+
+/** Find EeeAccount object by ESourceGroup.
+ *
+ * @param mgr EeeAccountsManager object.
+ * @param group ESourceGroup object.
+ *
+ * @return Matching EeeAccount object or NULL.
+ */
+EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group);
 
 /* EeeSettings parser. */
 EeeSettings* eee_settings_new(const char* string);

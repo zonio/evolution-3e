@@ -407,10 +407,12 @@ EeeAccountsManager* eee_accounts_manager_new()
 EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const char* name)
 {
   GSList* iter;
+  if (acc == NULL || name == NULL)
+    return NULL;
   for (iter = acc->calendars; iter; iter = iter->next)
   {
     EeeCalendar* c = iter->data;
-    if (c->name && name && !strcmp(c->name, name))
+    if (c->name && !strcmp(c->name, name))
       return c;
   }
   return NULL;
@@ -419,13 +421,29 @@ EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const c
 EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, const char* email)
 {
   GSList* iter;
+  if (mgr == NULL || email == NULL)
+    return NULL;
   for (iter = mgr->accounts; iter; iter = iter->next)
   {
     EeeAccount* a = iter->data;
-    if (a->email && email && !strcmp(a->email, email))
+    if (a->email && !strcmp(a->email, email))
       return a;
   }
   return NULL;
+}
+
+EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source)
+{
+  EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr, e_source_peek_group(source));
+  return eee_accounts_manager_find_calendar_by_name(account, e_source_get_property(source, "eee-calendar-name"));
+}
+
+EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group)
+{
+  const char* name = e_source_group_peek_name(group);
+  if (!g_str_has_prefix(name, "3E: "))
+    return eee_accounts_manager_find_account_by_email(mgr, name);
+  return eee_accounts_manager_find_account_by_email(mgr, name+4);
 }
 
 void eee_calendar_free(EeeCalendar* c)
