@@ -164,6 +164,9 @@ EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mg
  */
 EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group);
 
+/* server comm methods */
+gboolean eee_server_store_calendar_settings(EeeCalendar* cal);
+
 /* EeeSettings parser. */
 EeeSettings* eee_settings_new(const char* string);
 char* eee_settings_get_string(EeeSettings* s);

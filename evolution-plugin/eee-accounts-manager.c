@@ -72,7 +72,7 @@ static void store_passwords_for_all_calendars(EeeAccountsManager* mgr, EeeAccoun
 }
 #endif
 
-static gboolean authenticate_to_account(EeeAccountsManager* mgr, EeeAccount* acc, xr_client_conn* conn)
+static gboolean authenticate_to_account(EeeAccount* acc, xr_client_conn* conn)
 {
   GError* err = NULL;
 	guint32 flags = E_PASSWORDS_REMEMBER_FOREVER|E_PASSWORDS_SECRET;
@@ -134,22 +134,20 @@ static gboolean authenticate_to_account(EeeAccountsManager* mgr, EeeAccount* acc
 	return FALSE;
 }
 
-static int sync_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* access_account)
+static xr_client_conn* eee_server_connect_to_account(EeeAccount* acc)
 {
   xr_client_conn* conn;
   GError* err = NULL;
   char* server_uri;
-  GSList *cals, *iter;
-  int rs;
 
-  g_debug("** EEE ** Loading calendar list from the 3E server: server=%s user=%s", access_account->server, access_account->email);
+  g_debug("** EEE ** Connecting to 3E server: server=%s user=%s", acc->server, acc->email);
   conn = xr_client_new(&err);
   if (err)
   {
     g_debug("** EEE ** Can't create client interface. (%d:%s)", err->code, err->message);
     goto err0;
   }
-  server_uri = g_strdup_printf("https://%s/ESClient", access_account->server);
+  server_uri = g_strdup_printf("https://%s/ESClient", acc->server);
   xr_client_open(conn, server_uri, &err);
   g_free(server_uri);
   if (err)
@@ -157,13 +155,36 @@ static int sync_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
     g_debug("** EEE ** Can't open connection to the server. (%d:%s)", err->code, err->message);
     goto err1;
   }
-  if (!authenticate_to_account(mgr, access_account, conn))
+  if (!authenticate_to_account(acc, conn))
     goto err1;
+
+  return conn;
+
+ err1:
+  xr_client_free(conn);
+ err0:
+  g_clear_error(&err);
+  return NULL;
+}
+
+static gboolean sync_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* access_account)
+{
+  xr_client_conn* conn;
+  GError* err = NULL;
+  GSList *cals, *iter;
+  int rs;
+
+  conn = eee_server_connect_to_account(access_account);
+  if (conn == NULL)
+    return FALSE;
+
   cals = ESClient_getCalendars(conn, &err);
   if (err)
   {
     g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", access_account->email, err->code, err->message);
-    goto err1;
+    xr_client_free(conn);
+    g_clear_error(&err);
+    return FALSE;
   }
   xr_client_free(conn);
 
@@ -198,12 +219,6 @@ static int sync_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* a
   g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
   g_slist_free(cals);
   return 0;
-
- err1:
-  xr_client_free(conn);
- err0:
-  g_clear_error(&err);
-  return -1;
 }
 
 static ESource* e_source_group_peek_source_by_cal_name(ESourceGroup *group, const char *name)
@@ -404,6 +419,32 @@ EeeAccountsManager* eee_accounts_manager_new()
   return mgr;
 }
 
+gboolean eee_server_store_calendar_settings(EeeCalendar* cal)
+{
+  xr_client_conn* conn;
+  GError* err = NULL;
+
+  conn = eee_server_connect_to_account(cal->access_account);
+  if (conn == NULL)
+    return FALSE;
+
+  char* settings_str = eee_settings_get_string(cal->settings);
+  char* calspec = g_strdup_printf("%s:%s", cal->owner_account->email, cal->name);
+  ESClient_upadteCalendarSettings(conn, calspec, settings_str, &err);
+  g_free(settings_str);
+  g_free(calspec);
+  xr_client_free(conn);
+
+  if (err)
+  {
+    g_debug("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", cal->settings->title, err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
 EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const char* name)
 {
   GSList* iter;
@@ -486,6 +527,8 @@ EeeSettings* eee_settings_new(const char* string)
 {
   guint i;
   EeeSettings* s = g_new0(EeeSettings, 1);
+  if (string == NULL)
+    return s;
 
   char** pairs = g_strsplit(string, ";", 0);
   for (i=0; i<g_strv_length(pairs); i++)
@@ -510,7 +553,7 @@ EeeSettings* eee_settings_new(const char* string)
 
 char* eee_settings_get_string(EeeSettings* s)
 {
-  return g_strdup_printf("title=%s;color=#%06x;", s->title, s->color);
+  return g_strdup_printf("title=%s;color=#%06x;", s->title ? s->title : "", s->color);
 }
 
 void eee_settings_free(EeeSettings* s)

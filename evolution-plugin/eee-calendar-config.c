@@ -84,10 +84,18 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
 {
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(target->source);
+  const char* source_name = e_source_peek_name(target->source);
 
   if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return TRUE;
-  g_debug("** EEE ** Properties Dialog Check Hook Call (source=%s)", e_source_peek_name(target->source));
+  g_debug("** EEE ** Properties Dialog Check Hook Call (source=%s)", source_name);
+
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, target->source);
+  if (cal == NULL)
+  {
+    g_debug("** EEE ** Can't get EeeCalendar for ESource. (%s)", source_name);
+    return FALSE;
+  }
 
   return TRUE;
 }
@@ -95,13 +103,26 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
 void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target)
 {
   ESourceGroup *group = e_source_peek_group(target->source);
+  const char* source_name = e_source_peek_name(target->source);
+
   if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return;
-  g_debug("** EEE ** Properties Dialog Commit Hook Call (source=%s)", e_source_peek_name(target->source));
+  g_debug("** EEE ** Properties Dialog Commit Hook Call (source=%s)", source_name);
 
-//  if (e_source_get_property (source, "default"))
-//    e_book_set_default_source (source, NULL);
-  return;
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, target->source);
+  if (cal == NULL)
+  {
+    g_debug("** EEE ** Can't get EeeCalendar for ESource. (%s)", source_name);
+    return;
+  }
+
+  if (cal->settings == NULL)
+    cal->settings = eee_settings_new(NULL);
+  e_source_get_color(target->source, &cal->settings->color);
+  g_free(cal->settings->title);
+  cal->settings->title = g_strdup(source_name);
+
+  eee_server_store_calendar_settings(cal);
 }
 
 /* calendar source list popup menu items */
