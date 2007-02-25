@@ -202,6 +202,8 @@ void eee_calendar_popup_source_factory(EPlugin* ep, ECalPopupTargetSource* targe
 void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 {
   int online = target->state;
+
+  g_debug("** EEE ** State changed to: %s", online ? "online" : "offline");
   if (online)
   {
   }
