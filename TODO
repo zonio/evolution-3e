@@ -2,13 +2,14 @@ Evolution Plugin
 ~~~~~~~~~~~~~~~~
 
 - write EeeAccountsManager
-  - ask for account password if not in keyring
-  - use this password for calendars
-  - implement subscribe/remove buttons
-  - implement add calendar
+  - handle online/offline state
+  - check for crossubscription in evolution (two EAccounts both with 3e support,
+    one is subscribing from other)
   - implement calendar properties
     - updated calname and color
-    - manage calendar acls
+  - implement subscribe/remove buttons
+  - implement add calendar
+  - manage calendar acls
 
 add this to your dnsmasq.conf:
 
@@ -18,4 +19,3 @@ add this to your dnsmasq.conf:
 EDS Plugin
 ~~~~~~~~~~
 
-- make it work with updated Evolution Plugin
