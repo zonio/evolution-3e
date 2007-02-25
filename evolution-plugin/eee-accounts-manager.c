@@ -245,6 +245,7 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
       e_source_set_relative_uri(source, cal->relative_uri);
       e_source_set_property(source, "auth", "1");
       e_source_set_property(source, "eee-calendar-name", cal->name);
+      e_source_set_property(source, "eee-server", cal->access_account->server);
       e_source_set_property(source, "username", cal->access_account->email);
       e_source_set_property(source, "auth-key", cal->access_account->email);
       e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
@@ -269,6 +270,7 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
     source = e_source_new(source_name, cal->relative_uri);
     e_source_set_property(source, "auth", "1");
     e_source_set_property(source, "eee-calendar-name", cal->name);
+    e_source_set_property(source, "eee-server", cal->access_account->server);
     e_source_set_property(source, "username", cal->access_account->email);
     e_source_set_property(source, "auth-key", cal->access_account->email);
     e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
