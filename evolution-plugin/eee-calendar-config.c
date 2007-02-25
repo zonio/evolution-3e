@@ -145,17 +145,17 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
 static EPopupItem popup_items_shared_cal[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "12.eee.01", "Subscribe to shared calendar...", on_subscribe_cb, NULL, "stock_new-dir", 0, E_CAL_POPUP_SOURCE_PRIMARY },
-  { E_POPUP_ITEM, "12.eee.03", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, 0xffff },
-  { E_POPUP_ITEM, "12.eee.02", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_PRIMARY },
-  { E_POPUP_BAR,  "12.eee.03", NULL, NULL, NULL, NULL, 0, 0 },
+  { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, 0xffff },
+  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_PRIMARY },
+  { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, 0xffff },
 };
 
 static EPopupItem popup_items_user_cal[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "12.eee.01", "Subscribe to shared calendar...", on_subscribe_cb, NULL, "stock_new-dir", 0, E_CAL_POPUP_SOURCE_PRIMARY }, 
-  { E_POPUP_ITEM, "12.eee.03", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, E_CAL_POPUP_SOURCE_PRIMARY },
-  { E_POPUP_ITEM, "12.eee.02", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
+  { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, E_CAL_POPUP_SOURCE_PRIMARY },
+  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
   { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
   //{ E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_USER|E_CAL_POPUP_SOURCE_PRIMARY },
 };
@@ -176,11 +176,25 @@ void eee_calendar_popup_source_factory(EPlugin* ep, ECalPopupTargetSource* targe
   if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return;
 
-  // get EeeCalendar and fillup menu for shared or user calendar
-  for (i = 0; i < G_N_ELEMENTS(popup_items_user_cal); i++)
-    menus = g_slist_prepend(menus, &popup_items_user_cal[i]);
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
+  if (cal == NULL)
+  {
+    g_debug("** EEE ** Can't get EeeCalendar for ESource. (%s)", e_source_peek_name(source));
+    return;
+  }
 
-  e_popup_add_items(target->target.popup, menus, NULL, popup_free, NULL);
+  if (cal->owner_account->accessible)
+  {
+    for (i = 0; i < G_N_ELEMENTS(popup_items_user_cal); i++)
+      menus = g_slist_prepend(menus, &popup_items_user_cal[i]);
+    e_popup_add_items(target->target.popup, menus, NULL, popup_free, NULL);
+  }
+  else
+  {
+    for (i = 0; i < G_N_ELEMENTS(popup_items_shared_cal); i++)
+      menus = g_slist_prepend(menus, &popup_items_shared_cal[i]);
+    e_popup_add_items(target->target.popup, menus, NULL, popup_free, NULL);
+  }
 }
 
 /* watch evolution state (online/offline) */
