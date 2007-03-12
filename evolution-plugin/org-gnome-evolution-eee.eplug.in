@@ -76,6 +76,13 @@
         target="state" />
     </hook>
 
+    <hook class="org.gnome.evolution.shell.events:1.0">
+      <event 
+        id="component.activated" 
+        handle="eee_calendar_component_activated" 
+        target="component" />
+    </hook>
+
     <hook class="org.gnome.evolution.calendar.config:1.0">
       <group 
         target="source" 

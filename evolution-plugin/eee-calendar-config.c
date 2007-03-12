@@ -22,19 +22,9 @@
 /* plugin intialization */
 
 static EeeAccountsManager* _mgr = NULL;
-static void eee_accounts_manager_destroy()
-{
-  eee_accounts_manager_free(_mgr);
-}
 
 int e_plugin_lib_enable(EPluginLib* ep, int enable)
 {
-  /* create EeeAccountsManager singleton and register it for destruction */
-  if (_mgr == NULL)
-  {
-    _mgr = eee_accounts_manager_new();  
-    g_atexit(eee_accounts_manager_destroy);
-  }
   return 0;
 }
 
@@ -230,5 +220,21 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
   }
   else
   {
+  }
+}
+
+/* watch for evolution calendar component activation */
+
+void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *target)
+{
+  g_debug("** EEE ** Component changed to: %s", target->name);
+  if (strcmp(target->name, "OAFIID:GNOME_Evolution_Calendar_Component:2.8"))
+    return;
+
+  /* create EeeAccountsManager singleton and register it for destruction */
+  if (_mgr == NULL)
+  {
+    _mgr = eee_accounts_manager_new();  
+    //g_atexit(eee_accounts_manager_destroy);
   }
 }
