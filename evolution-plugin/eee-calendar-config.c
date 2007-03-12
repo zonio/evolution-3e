@@ -225,6 +225,13 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 
 /* watch for evolution calendar component activation */
 
+static gint activation_cb(gpointer data)
+{
+  if (_mgr == NULL)
+    _mgr = eee_accounts_manager_new();  
+  return FALSE;
+}
+
 void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *target)
 {
   g_debug("** EEE ** Component changed to: %s", target->name);
@@ -232,9 +239,5 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
     return;
 
   /* create EeeAccountsManager singleton and register it for destruction */
-  if (_mgr == NULL)
-  {
-    _mgr = eee_accounts_manager_new();  
-    //g_atexit(eee_accounts_manager_destroy);
-  }
+  g_idle_add(activation_cb, NULL);	
 }
