@@ -235,7 +235,7 @@ static gint activation_cb(gpointer data)
 void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *target)
 {
   g_debug("** EEE ** Component changed to: %s", target->name);
-  if (strcmp(target->name, "OAFIID:GNOME_Evolution_Calendar_Component:2.8"))
+  if (strstr(target->name, "OAFIID:GNOME_Evolution_Calendar_Component") == NULL)
     return;
 
   /* create EeeAccountsManager singleton and register it for destruction */
