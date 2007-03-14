@@ -44,13 +44,13 @@ AC_SUBST(extensiondir)
 
 # Get packages for Evolution 3e plugin
 PKG_CHECK_MODULES(EVO3E, [
-  evolution-plugin-2.8
+  evolution-plugin-2.10
 ])
 
 AC_SUBST(EVO3E_CFLAGS)
 AC_SUBST(EVO3E_LIBS)
 
-plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin-2.8`
+plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin-2.10`
 AC_SUBST(plugindir)
 
 SOEXT='.so'
