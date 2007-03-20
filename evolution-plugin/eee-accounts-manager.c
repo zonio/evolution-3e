@@ -430,7 +430,7 @@ gboolean eee_server_store_calendar_settings(EeeCalendar* cal)
 
   char* settings_str = eee_settings_get_string(cal->settings);
   char* calspec = g_strdup_printf("%s:%s", cal->owner_account->email, cal->name);
-  ESClient_upadteCalendarSettings(conn, calspec, settings_str, &err);
+  ESClient_updateCalendarSettings(conn, calspec, settings_str, &err);
   g_free(settings_str);
   g_free(calspec);
   xr_client_free(conn);

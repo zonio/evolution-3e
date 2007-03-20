@@ -20,7 +20,7 @@ servlet Client
 {
   boolean auth(string username, string password);
   array<Calendar> getCalendars();
-  boolean upadteCalendarSettings(string calspec, string settings);
+  boolean updateCalendarSettings(string calspec, string settings);
   boolean subscribeCalendar(string calspec);
   boolean unsubscribeCalendar(string calspec);
   array<Permission> getPermissions(string calname);
