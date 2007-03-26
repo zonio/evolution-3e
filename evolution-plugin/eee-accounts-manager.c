@@ -48,30 +48,6 @@ static char* get_eee_server_hostname(const char* email)
   return NULL;
 }
 
-#if 0
-static void store_passwords_for_all_calendars(EeeAccountsManager* mgr, EeeAccount* acc, const char* password)
-{
-  GSList *iter1, *iter2;
-  for (iter1 = mgr->accounts; iter1; iter1 = iter1->next)
-  {
-    EeeAccount* acc = iter1->data;
-    for (iter2 = mgr->accounts; iter2; iter2 = iter2->next)
-    {
-      EeeCalendar* cal = iter2->data;
-
-      if (cal->access_account == acc)
-      {
-        // key used by the ECal is absolute URI of the calendar
-        char* key = g_strdup_printf("%s%s", EEE_URI_PREFIX, cal->relative_uri);
-        e_passwords_add_password(key, password);
-        e_passwords_remember_password(EEE_PASSWORD_COMPONENT, key);
-        g_free(key);
-      }
-    }
-  }
-}
-#endif
-
 static gboolean authenticate_to_account(EeeAccount* acc, xr_client_conn* conn)
 {
   GError* err = NULL;
