@@ -155,6 +155,15 @@ EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const c
  */
 EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source);
 
+/** Remove Calendar or Calendar subscription.
+ *
+ * @param mgr EeeAccountsManager object.
+ * @param cal ESource object of the calendar.
+ *
+ * @return TRUE on success, FALSE on failure.
+ */
+gboolean eee_accounts_manager_remove_calendar(EeeAccountsManager* mgr, ESource* source);
+
 /** Find EeeAccount object by ESourceGroup.
  *
  * @param mgr EeeAccountsManager object.

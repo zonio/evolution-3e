@@ -5,6 +5,7 @@
 
 #include <libedataserverui/e-passwords.h>
 #include <e-util/e-error.h>
+#include <libecal/e-cal.h>
 #include "eee-accounts-manager.h"
 #include "dns-txt-search.h"
 #include "interface/ESClient.xrc.h"
@@ -453,6 +454,24 @@ EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mg
 {
   EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr, e_source_peek_group(source));
   return eee_accounts_manager_find_calendar_by_name(account, e_source_get_property(source, "eee-calendar-name"));
+}
+
+gboolean eee_accounts_manager_remove_calendar(EeeAccountsManager* mgr, ESource* source)
+{
+  GError* err = NULL;
+  EeeCalendar* calendar = eee_accounts_manager_find_calendar_by_source(mgr, source);
+  if (calendar == NULL)
+    return FALSE;
+
+  // get ECal and remove calendar from the server
+  ECal* cal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
+  if (!e_cal_remove(cal, &err))
+  {
+    // failure
+  }
+  g_object_unref(cal);
+
+  return eee_accounts_manager_sync(mgr);
 }
 
 EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group)
