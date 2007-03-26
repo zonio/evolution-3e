@@ -28,9 +28,7 @@
 
 struct _ECalBackend3ePrivate
 {
-  /*
-   * Remote connection info 
-   */
+  /* Remote connection info */
   char *server_uri;
   xr_client_conn *conn;
   gboolean is_open;
@@ -39,14 +37,10 @@ struct _ECalBackend3ePrivate
   char *password;
   char *calname;
 
-  /*
-   * Local/remote mode 
-   */
+  /* Local/remote mode */
   CalMode mode;
 
-  /*
-   * The file cache 
-   */
+  /* The file cache */
   ECalBackendCache *cache;
 
   /*
@@ -170,7 +164,8 @@ static void e_cal_backend_3e_set_mode(ECalBackend * backend, CalMode mode)
   }
 }
 
-static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, EDataCal * cal, gboolean only_if_exists, const char *username, const char *password)
+static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync* backend, EDataCal* cal, gboolean only_if_exists,
+  const char *username, const char *password)
 {
   GError* err = NULL;
   ECalBackend3e *cb;
@@ -212,9 +207,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     D("3es uri=%s\n", priv->server_uri);
     D("3es calname=%s\n", priv->calname);
 
-    /*
-     * create/load cache 
-     */
+    /* create/load cache */
 
     priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(backend)), E_CAL_SOURCE_TYPE_EVENT);
     if (!priv->cache)
@@ -231,9 +224,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     priv->is_loaded = TRUE;
   }
 
-  /*
-   * prepare client connection object 
-   */
+  /* prepare client connection object */
 
   if (priv->conn == NULL)
   {
@@ -254,9 +245,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
   if (priv->mode == CAL_MODE_LOCAL)
     return GNOME_Evolution_Calendar_Success;
 
-  /*
-   * connect 
-   */
+  /* connect */
 
   xr_client_open(priv->conn, priv->server_uri, &err);
   if (err != NULL)
@@ -268,9 +257,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
 
   priv->is_open = TRUE;
 
-  /*
-   * authenticate to the server 
-   */
+  /* authenticate to the server */
 
   rs = ESClient_auth(priv->conn, priv->username, priv->password, &err);
   if (err != NULL)
@@ -290,9 +277,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     return GNOME_Evolution_Calendar_AuthenticationFailed;
   }
 
-  /*
-   * check for calendar and create it if necessary
-   */
+  /* check for calendar and create it if necessary */
 
   GSList* cals = ESClient_getCalendars(priv->conn, &err);
   if (err)
@@ -304,7 +289,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     return GNOME_Evolution_Calendar_OtherError;
   }
 
-  // process retrieved calendars
+  /* process retrieved calendars */
   GSList* iter;
   rs = FALSE;
   for (iter = cals; iter; iter = iter->next)
@@ -332,9 +317,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync * backend, ED
     return GNOME_Evolution_Calendar_NoSuchCal;
   }
 
-  /*
-   * create new calendar on the server 
-   */
+  /* create new calendar on the server */
 
   ESClient_newCalendar(priv->conn, priv->calname, &err);
   if (err != NULL)
@@ -356,10 +339,10 @@ static ECalBackendSyncStatus e_cal_backend_3e_is_read_only(ECalBackendSync * bac
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
-
-  T("backend=%p, cal=%p, read_only=%p", backend, cal, read_only);
-
   *read_only = !priv->is_open;
+
+  T("backend=%p, cal=%p, read_only=%s", backend, cal, *read_only ? "true" : "false");
+
   return GNOME_Evolution_Calendar_Success;
 }
 
@@ -383,7 +366,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *
   ECalBackend3ePrivate *priv;
   icaltimezone *zone;
 
-  T("backend=%p, cal=%p, tzobj=%p", backend, cal, tzobj);
+  T("backend=%p, cal=%p, tzobj=%s", backend, cal, tzobj);
 
   cb = (ECalBackend3e *) backend;
 
@@ -439,30 +422,32 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove(ECalBackendSync * backend, 
   return GNOME_Evolution_Calendar_Success;
 }
 
-/* not yet implemented functions */
-
 static ECalBackendSyncStatus e_cal_backend_3e_get_cal_address(ECalBackendSync * backend, EDataCal * cal, char **address)
 {
-  *address = NULL;
+  ECalBackend3e *cb;
+  ECalBackend3ePrivate *priv;
 
-  T("");
+  cb = E_CAL_BACKEND_3E(backend);
+  priv = cb->priv;
 
-  return GNOME_Evolution_Calendar_Success;
-}
+  *address = g_strdup(priv->username);
 
-static ECalBackendSyncStatus e_cal_backend_3e_get_ldap_attribute(ECalBackendSync * backend, EDataCal * cal, char **attribute)
-{
-  *attribute = NULL;
-
-  T("");
+  T("backend=%p, cal=%p, address=%s", backend, cal, *address);
 
   return GNOME_Evolution_Calendar_Success;
 }
 
 static ECalBackendSyncStatus e_cal_backend_3e_get_alarm_email_address(ECalBackendSync * backend, EDataCal * cal, char **address)
 {
-  *address = NULL;
-  T("");
+  ECalBackend3e *cb;
+  ECalBackend3ePrivate *priv;
+
+  cb = E_CAL_BACKEND_3E(backend);
+  priv = cb->priv;
+
+  *address = g_strdup(priv->username);
+
+  T("backend=%p, cal=%p, address=%s", backend, cal, *address);
 
   return GNOME_Evolution_Calendar_Success;
 }
@@ -474,8 +459,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_default_object(ECalBackendSync
   icalcomponent *icalcomp;
   icalcomponent_kind kind;
 
-  T("");
-
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
 
@@ -483,6 +466,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_default_object(ECalBackendSync
   icalcomp = e_cal_util_new_component(kind);
   *object = g_strdup(icalcomponent_as_ical_string(icalcomp));
   icalcomponent_free(icalcomp);
+
+  T("backend=%p, cal=%p, object=%s", backend, cal, *object);
 
   return GNOME_Evolution_Calendar_Success;
 }
@@ -493,7 +478,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object(ECalBackendSync * backe
   ECalBackend3ePrivate *priv;
   ECalComponent *comp = NULL;
 
-  T("");
+  T("backend=%p, cal=%p, uid=%s, rid=%s", backend, cal, uid, rid);
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
@@ -520,16 +505,14 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_timezone(ECalBackendSync * bac
   const icaltimezone *zone;
   icalcomponent *icalcomp;
 
-  T("");
+  T("backend=%p, cal=%p, tzid=%s", backend, cal, tzid);
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
 
   g_return_val_if_fail(tzid != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
 
-  /*
-   * first try to get the timezone from the cache 
-   */
+  /* first try to get the timezone from the cache */
   zone = e_cal_backend_cache_get_timezone(priv->cache, tzid);
   if (!zone)
   {
@@ -547,6 +530,13 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_timezone(ECalBackendSync * bac
   return GNOME_Evolution_Calendar_Success;
 }
 
+static ECalBackendSyncStatus e_cal_backend_3e_get_ldap_attribute(ECalBackendSync * backend, EDataCal * cal, char **attribute)
+{
+  *attribute = NULL;
+  T("backend=%p, cal=%p", backend, cal);
+  return GNOME_Evolution_Calendar_OtherError;
+}
+
 static ECalBackendSyncStatus e_cal_backend_3e_add_timezone(ECalBackendSync * backend, EDataCal * cal, const char *tzobj)
 {
   ECalBackend3e *cb;
@@ -554,7 +544,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_add_timezone(ECalBackendSync * bac
   icalcomponent *tz_comp;
   icaltimezone *zone;
 
-  T("");
+  T("backend=%p, cal=%p, tzobj=%s", backend, cal, tzobj);
 
   cb = (ECalBackend3e *) backend;
 
@@ -587,7 +577,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object_list(ECalBackendSync * 
   GList *components, *l;
   ECalBackendSExp *cbsexp;
 
-  T("");
+  T("backend=%p, cal=%p, sexp=%s", backend, cal, sexp);
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
@@ -595,9 +585,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object_list(ECalBackendSync * 
   if (!priv->cache)
     return GNOME_Evolution_Calendar_NoSuchCal;
 
-  /*
-   * process all components in the cache 
-   */
+  /* process all components in the cache */
   cbsexp = e_cal_backend_sexp_new(sexp);
 
   *objects = NULL;
@@ -624,24 +612,21 @@ static void e_cal_backend_3e_start_query(ECalBackend * backend, EDataCalView * q
   GList *components, *l, *objects = NULL;
   ECalBackendSExp *cbsexp;
 
-  T("");
+  T("backend=%p, query=%p", backend, query);
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
 
-  e_data_cal_view_notify_done(query, GNOME_Evolution_Calendar_NoSuchCal);
-
-#if 0
   if (!priv->cache)
   {
     e_data_cal_view_notify_done(query, GNOME_Evolution_Calendar_NoSuchCal);
     return;
   }
 
-  /*
-   * process all components in the cache 
-   */
-  cbsexp = e_cal_backend_sexp_new(e_data_cal_view_get_text(query));
+  /* process all components in the cache */
+  const char* text = e_data_cal_view_get_text(query);
+  D("start_query() = %s", text);
+  cbsexp = e_cal_backend_sexp_new(text);
 
   objects = NULL;
   components = e_cal_backend_cache_get_components(priv->cache);
@@ -662,8 +647,62 @@ static void e_cal_backend_3e_start_query(ECalBackend * backend, EDataCalView * q
   g_object_unref(cbsexp);
 
   e_data_cal_view_notify_done(query, GNOME_Evolution_Calendar_Success);
-#endif
 }
+
+static ECalBackendSyncStatus e_cal_backend_3e_create_object(ECalBackendSync * backend, EDataCal * cal, char **calobj, char **uid)
+{
+  ECalBackend3e *cb;
+  ECalBackend3ePrivate *priv;
+  cb = E_CAL_BACKEND_3E(backend);
+  priv = cb->priv;
+	ECalComponent* comp;
+
+  T("backend=%p, cal=%p, calobj=%s, uid=%s", backend, cal, *calobj, *uid);
+
+	comp = e_cal_component_new_from_string(*calobj);
+	if (comp == NULL)
+		return GNOME_Evolution_Calendar_InvalidObject;
+	
+	e_cal_backend_cache_put_component(priv->cache, comp); //XXX: check errs
+	*calobj = e_cal_component_get_as_string(comp);
+  g_object_unref(comp);
+	
+  return GNOME_Evolution_Calendar_Success;
+}
+
+static ECalBackendSyncStatus e_cal_backend_3e_modify_object(ECalBackendSync * backend, EDataCal * cal, const char *calobj, CalObjModType mod, char **old_object, char **new_object)
+{
+  ECalBackend3e *cb;
+  ECalBackend3ePrivate *priv;
+
+  T("");
+
+  cb = E_CAL_BACKEND_3E(backend);
+  priv = cb->priv;
+
+  g_return_val_if_fail(calobj != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
+
+  return GNOME_Evolution_Calendar_PermissionDenied;
+}
+
+static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync * backend, EDataCal * cal, const char *uid, const char *rid, CalObjModType mod, char **old_object, char **object)
+{
+  ECalBackend3e *cb;
+  ECalBackend3ePrivate *priv;
+
+  T("");
+
+  cb = E_CAL_BACKEND_3E(backend);
+  priv = cb->priv;
+
+  g_return_val_if_fail(uid != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
+
+  *old_object = *object = NULL;
+
+  return GNOME_Evolution_Calendar_PermissionDenied;
+}
+
+/* not yet implemented functions */
 
 static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy(ECalBackendSync * backend, EDataCal * cal, GList * users, time_t start, time_t end, GList ** freebusy)
 {
@@ -719,51 +758,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_discard_alarm(ECalBackendSync * ba
    * FIXME 
    */
   return GNOME_Evolution_Calendar_Success;
-}
-
-static ECalBackendSyncStatus e_cal_backend_3e_create_object(ECalBackendSync * backend, EDataCal * cal, char **calobj, char **uid)
-{
-  ECalBackend3e *cb;
-  ECalBackend3ePrivate *priv;
-
-  T("");
-
-  cb = E_CAL_BACKEND_3E(backend);
-  priv = cb->priv;
-
-  return GNOME_Evolution_Calendar_PermissionDenied;
-}
-
-static ECalBackendSyncStatus e_cal_backend_3e_modify_object(ECalBackendSync * backend, EDataCal * cal, const char *calobj, CalObjModType mod, char **old_object, char **new_object)
-{
-  ECalBackend3e *cb;
-  ECalBackend3ePrivate *priv;
-
-  T("");
-
-  cb = E_CAL_BACKEND_3E(backend);
-  priv = cb->priv;
-
-  g_return_val_if_fail(calobj != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
-
-  return GNOME_Evolution_Calendar_PermissionDenied;
-}
-
-static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync * backend, EDataCal * cal, const char *uid, const char *rid, CalObjModType mod, char **old_object, char **object)
-{
-  ECalBackend3e *cb;
-  ECalBackend3ePrivate *priv;
-
-  T("");
-
-  cb = E_CAL_BACKEND_3E(backend);
-  priv = cb->priv;
-
-  g_return_val_if_fail(uid != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
-
-  *old_object = *object = NULL;
-
-  return GNOME_Evolution_Calendar_PermissionDenied;
 }
 
 static ECalBackendSyncStatus e_cal_backend_3e_receive_objects(ECalBackendSync * backend, EDataCal * cal, const char *calobj)
@@ -841,8 +835,6 @@ static ECalBackendSyncClass *parent_class;
 static void e_cal_backend_3e_init(ECalBackend3e * cb, ECalBackend3eClass * klass)
 {
   T("cb=%p, klass=%p", cb, klass);
-
-  cb->priv = g_new0(ECalBackend3ePrivate, 1);
 
   e_cal_backend_sync_set_lock(E_CAL_BACKEND_SYNC(cb), TRUE);
 }
