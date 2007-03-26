@@ -71,6 +71,12 @@ struct _ECalBackend3ePrivate
   /* The file cache */
   ECalBackendCache *cache;
 
+  /* synch thread variables */
+  GCond* sync_cond;
+  GMutex* sync_mutex;
+  GThread* sync_thread;
+  gboolean sync_stop;
+
   /*
    * The calendar's default timezone, used for resolving DATE and
    * floating DATE-TIME values. 
@@ -97,6 +103,125 @@ static void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *messa
 
   e_cal_backend_notify_error(backend, error_message);
   g_free(error_message);
+}
+
+typedef enum
+{
+	E_CAL_COMPONENT_IN_SYNCH,
+	E_CAL_COMPONENT_LOCALLY_CREATED,
+	E_CAL_COMPONENT_LOCALLY_DELETED,
+	E_CAL_COMPONENT_LOCALLY_MODIFIED,	
+	E_CAL_COMPONENT_REMOTELY_CREATED,
+	E_CAL_COMPONENT_REMOTELY_DELETED,
+	E_CAL_COMPONENT_REMOTELY_MODIFIED,	
+} ECalComponentSyncState;
+
+static void icomp_x_prop_set(icalcomponent *comp, const char *key, const char *value)
+{
+	icalproperty *iter;
+  for (iter = icalcomponent_get_first_property(comp, ICAL_X_PROPERTY); iter; iter = icalcomponent_get_next_property(comp, ICAL_X_PROPERTY))
+  {
+		const char *str = icalproperty_get_x_name (iter);
+		if (!strcmp (str, key))
+    {
+			icalcomponent_remove_property(comp, iter);
+			icalproperty_free(iter);
+			break;
+		}
+	}
+	iter = icalproperty_new_x(value);
+	icalproperty_set_x_name(iter, key);
+	icalcomponent_add_property(comp, iter);
+}
+
+static void e_cal_component_set_sync_state(ECalComponent *comp, ECalComponentSyncState state)
+{
+	icalcomponent *icomp;
+	char *state_string;
+	icomp = e_cal_component_get_icalcomponent(comp);
+	state_string = g_strdup_printf ("%d", state);
+	icomp_x_prop_set(icomp, "X-EEE-SYNC-STATE", state_string);
+	g_free (state_string);
+}
+
+/* Backend plugin design
+ * ~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Goals:
+ * - synchronize between calendar contents on the server and in the cache on
+ *   the client.
+ * - perform periodical checks for changes in the calendar on the server
+ * - handle switches between online and offline mode
+ * - synchronize changes on the client when in offline mode to the server on
+ *   transition to online mode
+ *
+ * Principles:
+ * - ccache: client cache
+ * - syncthread: synchronization thread
+ * - scal: server calendar
+ *
+ */
+
+static void server_sync_signal(ECalBackend3e* cb, gboolean stop)
+{
+  ECalBackend3ePrivate* priv = cb->priv;
+
+  g_mutex_lock(priv->sync_mutex);
+  priv->sync_stop = stop;
+  g_cond_signal(priv->sync_cond);
+  g_mutex_unlock(priv->sync_mutex);
+}
+
+static gboolean server_sync_wait(ECalBackend3e* cb)
+{
+  ECalBackend3ePrivate* priv = cb->priv;
+
+  g_mutex_lock(priv->sync_mutex);
+  g_cond_wait(priv->sync_cond, priv->sync_mutex);
+  return priv->sync_stop;
+}
+
+static void server_sync_cache(ECalBackend3e* cb)
+{
+  GError* err = NULL;
+  ECalBackend3ePrivate* priv = cb->priv;
+
+  if (priv->conn == NULL)
+    return;
+
+  xr_client_open(priv->conn, priv->server_uri, &err);
+  if (err)
+  {
+    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Failed to estabilish connection to the server", err);
+    g_clear_error(&err);
+    return;
+  }
+
+  /*
+   * got through cache and check marked changes and perform updates on the
+   * server.
+   */
+  
+  xr_client_close(priv->conn);
+}
+
+static gpointer server_sync_thread(gpointer data)
+{
+  GError *err = NULL;
+  ECalBackend3e *cb = E_CAL_BACKEND_3E(data);
+  ECalBackend3ePrivate* priv = cb->priv;
+  D("sync thread started");
+
+  while (server_sync_wait(cb))
+  {
+    D("sync thread runs");
+    server_sync_cache(cb);
+    g_mutex_unlock(priv->sync_mutex);
+  }
+  g_mutex_unlock(priv->sync_mutex);
+  D("sync thread stops");
+
+  return NULL;
 }
 
 /* calendar backend functions */
@@ -691,8 +816,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object(ECalBackendSync * ba
   if (comp == NULL)
     return GNOME_Evolution_Calendar_InvalidObject;
   
-  e_cal_backend_cache_put_component(priv->cache, comp); //XXX: check errs
-  *calobj = e_cal_component_get_as_string(comp);
+  e_cal_component_set_sync_state(comp, E_CAL_COMPONENT_LOCALLY_CREATED);
+	e_cal_backend_cache_put_component(priv->cache, comp); //XXX: check errs
+	*calobj = e_cal_component_get_as_string(comp);
   g_object_unref(comp);
   
   return GNOME_Evolution_Calendar_Success;
@@ -864,7 +990,13 @@ static void e_cal_backend_3e_init(ECalBackend3e * cb, ECalBackend3eClass * klass
 {
   T("cb=%p, klass=%p", cb, klass);
 
+  if (!g_thread_supported())
+    g_thread_init(NULL);
+
   cb->priv = g_new0(ECalBackend3ePrivate, 1);
+  cb->priv->sync_cond = g_cond_new();
+  cb->priv->sync_mutex = g_mutex_new();
+  cb->priv->sync_thread = g_thread_create(server_sync_thread, cb, TRUE, NULL); //XXX: check for errors
 
   e_cal_backend_sync_set_lock(E_CAL_BACKEND_SYNC(cb), TRUE);
 }
@@ -890,7 +1022,12 @@ static void e_cal_backend_3e_finalize(GObject * object)
   cb = E_CAL_BACKEND_3E(object);
   priv = cb->priv;
 
-//xr_client_free(priv->conn);
+  server_sync_signal(cb, TRUE);
+  g_thread_join(priv->sync_thread);
+  g_cond_free(priv->sync_cond);
+  g_mutex_free(priv->sync_mutex);
+
+  //xr_client_free(priv->conn);
   priv->conn = NULL;
 
   g_object_unref(priv->cache);
