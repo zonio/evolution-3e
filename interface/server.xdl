@@ -2,6 +2,22 @@
 
 namespace ES;
 
+/* Error definitions. */
+error NOT_AUTHORIZED = 1;
+error AUTH_FAILED = 2;
+error USER_EXISTS = 3;
+error UNKNOWN_USER = 4;
+error INVALID_PASSWORD = 5;
+error NO_PERMISSION = 6;
+error CALENDAR_EXISTS = 7;
+error UNKNOWN_CALENDAR = 8;
+error ALREADY_SUBSCRIBED = 9;
+error NOT_SUBSCRIBED = 10;
+error COMPONENT_EXISTS = 11;
+error UNKNOWN_COMPONENT = 12;
+error INTERNAL_SERVER_ERROR = 20;
+error CLIENT_ERROR = 21;
+
 struct Calendar
 {
   string owner;
@@ -16,9 +32,18 @@ struct Permission
   string perm;
 }
 
+struct Message
+{
+  int id;
+  string sender;
+  string date;
+  string content;
+}
+
 servlet Client
 {
   boolean auth(string username, string password);
+  boolean changePassword(string new_password);
   array<Calendar> getCalendars();
   boolean updateCalendarSettings(string calspec, string settings);
   boolean subscribeCalendar(string calspec);
@@ -29,29 +54,12 @@ servlet Client
   array<Calendar> getSharedCalendars(string calsowner);
   boolean newCalendar(string calname);
   boolean deleteCalendar(string calname);
-  string queryObjects(string calspec, string query);
   boolean addObject(string calspec, string object);
   boolean updateObject(string calspec, string object);
-  boolean deleteObject(string calspec, string oid);
-  array<string> getMessages(string username);
-  boolean sendMessages(array<string> users, string message);
-  array<string> freeBusy(array<string> users, string query);
-}
-
-servlet Server
-{
-    array<string> getUsers();
-    boolean sendMessages(array<string> users, string message);
-    array<string> freeBusy(array<string> users, string query);
-}
-
-servlet Admin
-{
-    struct User
-    {
-        string uid;
-        string name;
-        boolean is_connected;
-    }
-    array<User> getUsersInfo();
+  boolean deleteObject(string calspec, string uid);
+  string queryObjects(string calspec, string query);
+  array<Message> getMessages();
+  boolean deleteMessage(int msgid);
+  boolean sendMessage(array<string> recipients, string message);
+  string freeBusy(string attendee, string from_date, string to_date);
 }
