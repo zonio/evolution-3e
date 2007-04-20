@@ -19,7 +19,7 @@ AC_HEADER_STDC
 
 # libxr is required
 PKG_CHECK_MODULES(LIBXR, [
-  libxr >= 0.9.4
+  libxr >= 0.9.7
 ])
 
 AC_SUBST(LIBXR_CFLAGS)
