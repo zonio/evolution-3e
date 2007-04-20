@@ -63,3 +63,8 @@ servlet Client
   boolean sendMessage(array<string> recipients, string message);
   string freeBusy(string attendee, string from_date, string to_date);
 }
+
+servlet Admin
+{
+  boolean createUser(string username, string password, string settings);
+}

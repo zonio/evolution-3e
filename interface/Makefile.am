@@ -2,15 +2,11 @@ BUILT_SOURCES = \
   ESCommon.c \
   ESClient.xrc.c \
   ESClient.c \
-  ESServer.xrc.c \
-  ESServer.c \
   ESAdmin.xrc.c \
   ESAdmin.c \
   ESCommon.h \
   ESClient.xrc.h \
   ESClient.h \
-  ESServer.xrc.h \
-  ESServer.h \
   ESAdmin.xrc.h \
   ESAdmin.h
 
@@ -37,7 +33,5 @@ libinterface_la_SOURCES = \
   ESCommon.c \
   ESClient.xrc.c \
   ESClient.c \
-  ESServer.xrc.c \
-  ESServer.c \
   ESAdmin.xrc.c \
   ESAdmin.c
