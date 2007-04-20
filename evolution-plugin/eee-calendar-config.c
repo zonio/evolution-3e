@@ -18,6 +18,8 @@
 
 #include <string.h>
 
+#include "subscribe.h"
+#include "acl.h"
 #include "eee-accounts-manager.h"
 
 /* plugin intialization */
@@ -126,6 +128,8 @@ static void on_permissions_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ESourceGroup* group = e_source_peek_group(source);
 
   g_debug("** EEE ** on_permissions_cb: (source=%s)", e_source_peek_name(source));
+
+  acl_gui_create();
 }
 
 static void on_subscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
@@ -135,6 +139,8 @@ static void on_subscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ESourceGroup* group = e_source_peek_group(source);
 
   g_debug("** EEE ** on_subscribe_cb: (source=%s)", e_source_peek_name(source));
+
+  subscribe_gui_create();
 }
 
 static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)

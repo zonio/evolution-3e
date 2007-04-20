@@ -45,6 +45,7 @@ AC_SUBST(extensiondir)
 # Get packages for Evolution 3e plugin
 PKG_CHECK_MODULES(EVO3E, [
   evolution-plugin-2.10
+  libglade-2.0
 ])
 
 AC_SUBST(EVO3E_CFLAGS)
