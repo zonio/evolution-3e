@@ -16,7 +16,7 @@ typedef struct EeeSettings EeeSettings;
 struct EeeSettings
 {
   char* title;                /**< Calendar title. */
-  int color;                  /**< Calendar color. */
+  guint32 color;              /**< Calendar color. */
 };
 
 /** 3E calendar info structure.
