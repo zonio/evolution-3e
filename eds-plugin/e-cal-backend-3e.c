@@ -836,6 +836,8 @@ static void e_cal_backend_3e_init(ECalBackend3e * cb, ECalBackend3eClass * klass
 {
   T("cb=%p, klass=%p", cb, klass);
 
+  cb->priv = g_new0(ECalBackend3ePrivate, 1);
+
   e_cal_backend_sync_set_lock(E_CAL_BACKEND_SYNC(cb), TRUE);
 }
 
