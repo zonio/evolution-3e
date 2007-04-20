@@ -52,31 +52,31 @@ static char* get_eee_server_hostname(const char* email)
 static gboolean authenticate_to_account(EeeAccount* acc, xr_client_conn* conn)
 {
   GError* err = NULL;
-	guint32 flags = E_PASSWORDS_REMEMBER_FOREVER|E_PASSWORDS_SECRET;
-	gboolean remember = TRUE;
-	char *fail_msg = ""; 
-	char *password;
+  guint32 flags = E_PASSWORDS_REMEMBER_FOREVER|E_PASSWORDS_SECRET;
+  gboolean remember = TRUE;
+  char *fail_msg = ""; 
+  char *password;
   int retry_limit = 3;
   gboolean rs;
 
-	while (retry_limit--)
+  while (retry_limit--)
   {
     // get password
-		password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, acc->email);
-		if (!password)
+    password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, acc->email);
+    if (!password)
     {
       // no?, ok ask for it
-			char* prompt = g_strdup_printf("%sEnter password for your 3E calendar account (%s).", fail_msg, acc->email);
+      char* prompt = g_strdup_printf("%sEnter password for your 3E calendar account (%s).", fail_msg, acc->email);
       // key must have uri format or unpatched evolution segfaults in
       // ep_get_password_keyring()
       char* key = g_strdup_printf("eee://%s", acc->email);
       g_debug("e_passwords_ask_password(key=%s)", key);
-			password = e_passwords_ask_password(prompt, EEE_PASSWORD_COMPONENT, key, prompt, flags, &remember, NULL);
+      password = e_passwords_ask_password(prompt, EEE_PASSWORD_COMPONENT, key, prompt, flags, &remember, NULL);
       g_free(key);
-			g_free(prompt);
-			if (!password) 
-				goto err;
-		}
+      g_free(prompt);
+      if (!password) 
+        goto err;
+    }
 
     // try to authenticate
     rs = ESClient_auth(conn, acc->email, password, &err);
@@ -86,7 +86,7 @@ static gboolean authenticate_to_account(EeeAccount* acc, xr_client_conn* conn)
       acc->password = password;
       return TRUE;
     }
-		g_free(password);
+    g_free(password);
 
     // process error
     if (err)
@@ -106,14 +106,14 @@ static gboolean authenticate_to_account(EeeAccount* acc, xr_client_conn* conn)
 
     // forget password and retry
     e_passwords_forget_password(EEE_PASSWORD_COMPONENT, acc->email);
-		flags |= E_PASSWORDS_REPROMPT;
-	}
+    flags |= E_PASSWORDS_REPROMPT;
+  }
 
-	e_error_run(NULL, "mail:eee-auth-error", acc->email, NULL);
+  e_error_run(NULL, "mail:eee-auth-error", acc->email, NULL);
  err:
   g_free(acc->password);
   acc->password = NULL;
-	return FALSE;
+  return FALSE;
 }
 
 static xr_client_conn* eee_server_connect_to_account(EeeAccount* acc)
@@ -205,14 +205,14 @@ static gboolean sync_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccou
 
 static ESource* e_source_group_peek_source_by_cal_name(ESourceGroup *group, const char *name)
 {
-	GSList *p;
-	for (p = e_source_group_peek_sources(group); p != NULL; p = p->next)
+  GSList *p;
+  for (p = e_source_group_peek_sources(group); p != NULL; p = p->next)
   {
     const char* cal_name = e_source_get_property(E_SOURCE(p->data), "eee-calendar-name");
-		if (cal_name && !strcmp(cal_name, name))
-			return E_SOURCE(p->data);
+    if (cal_name && !strcmp(cal_name, name))
+      return E_SOURCE(p->data);
   }
-	return NULL;
+  return NULL;
 }
 
 static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAccount* acc)
@@ -515,9 +515,9 @@ void eee_accounts_manager_free(EeeAccountsManager* mgr)
   g_debug("** EEE ** Stoppping EeeAccountsManager %p", mgr);
   g_slist_foreach(mgr->accounts, (GFunc)eee_account_free, NULL);
   g_slist_free(mgr->accounts);
-	g_object_unref(mgr->gconf);
-	g_object_unref(mgr->ealist);
-	g_object_unref(mgr->eslist);
+  g_object_unref(mgr->gconf);
+  g_object_unref(mgr->ealist);
+  g_object_unref(mgr->eslist);
   g_free(mgr);
 }
 

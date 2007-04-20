@@ -247,5 +247,5 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
     return;
 
   /* create EeeAccountsManager singleton and register it for destruction */
-  g_idle_add(activation_cb, NULL);	
+  g_idle_add(activation_cb, NULL);  
 }
