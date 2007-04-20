@@ -67,7 +67,12 @@ static gboolean authenticate_to_account(EeeAccount* acc, xr_client_conn* conn)
     {
       // no?, ok ask for it
 			char* prompt = g_strdup_printf("%sEnter password for your 3E calendar account (%s).", fail_msg, acc->email);
-			password = e_passwords_ask_password(prompt, EEE_PASSWORD_COMPONENT, acc->email, prompt, flags, &remember, NULL);
+      // key must have uri format or unpatched evolution segfaults in
+      // ep_get_password_keyring()
+      char* key = g_strdup_printf("eee://%s", acc->email);
+      g_debug("e_passwords_ask_password(key=%s)", key);
+			password = e_passwords_ask_password(prompt, EEE_PASSWORD_COMPONENT, key, prompt, flags, &remember, NULL);
+      g_free(key);
 			g_free(prompt);
 			if (!password) 
 				goto err;
