@@ -14,6 +14,7 @@
 #include <libedataserver/e-account-list.h>
 #include <libedataserverui/e-source-selector.h>
 #include <libecal/e-cal.h>
+#include <xr-lib.h>
 
 #include <string.h>
 
@@ -25,6 +26,7 @@ static EeeAccountsManager* _mgr = NULL;
 
 int e_plugin_lib_enable(EPluginLib* ep, int enable)
 {
+  xr_debug_enabled = XR_DEBUG_ALL;
   return 0;
 }
 
