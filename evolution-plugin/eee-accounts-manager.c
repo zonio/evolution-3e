@@ -6,9 +6,9 @@
 #include <libedataserverui/e-passwords.h>
 #include <e-util/e-error.h>
 #include <libecal/e-cal.h>
+
 #include "eee-accounts-manager.h"
 #include "dns-txt-search.h"
-#include "interface/ESClient.xrc.h"
 
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
 #define SELECTED_CALENDARS "/apps/evolution/calendar/display/selected_calendars"
@@ -116,7 +116,7 @@ static gboolean authenticate_to_account(EeeAccount* acc, xr_client_conn* conn)
   return FALSE;
 }
 
-static xr_client_conn* eee_server_connect_to_account(EeeAccount* acc)
+xr_client_conn* eee_server_connect_to_account(EeeAccount* acc)
 {
   xr_client_conn* conn;
   GError* err = NULL;

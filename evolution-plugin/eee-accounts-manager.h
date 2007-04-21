@@ -3,6 +3,7 @@
 
 #include <libedataserver/e-account-list.h>
 #include <libedataserver/e-source-list.h>
+#include "interface/ESClient.xrc.h"
 
 #define EEE_URI_PREFIX "eee://" 
 
@@ -175,6 +176,8 @@ EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, 
 
 /* server comm methods */
 gboolean eee_server_store_calendar_settings(EeeCalendar* cal);
+
+xr_client_conn* eee_server_connect_to_account(EeeAccount* acc);
 
 /* EeeSettings parser. */
 EeeSettings* eee_settings_new(const char* string);
