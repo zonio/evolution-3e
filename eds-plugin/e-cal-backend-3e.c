@@ -26,6 +26,34 @@
 
 #include "interface/ESClient.xrc.h"
 
+/** Backend design:
+ *
+ * - xr_client_conn is not kept only for a short time
+ * - synchronization of client cache to server is initiated by the client
+ *   - when switching from offline to online mode
+ *   - on any modification
+ * - synchronization of server to client is initiated
+ *   - by the client when switching from offline mode
+ *   - periodically in online mode to get changes from the server
+ * - synchronization always runs in separate thread, it is possible to perform
+ *   it asynchronously or to wait for it to complete
+ *
+ * - calendar creation:
+ *   - calendar is created/subscribed by the GUI part of the code
+ *   - backend only logs in to user account and checks if calendar exists
+ *   - each calendar and calendar subscription has own backend
+ * - calendar removal:
+ *   - e_cal_backend_3e_remove is called, it checks whether subscription is
+ *   being removed or owned calendar and performs required steps
+ *   - gui synchronizes calendar list with the server
+ *
+ * - object manipulation:
+ *   - all operations are performed on local cache and appropriate flags
+ *     are set (modified/added/removed)
+ *   - client -> server synchronization is then initiated
+ *
+ */
+
 struct _ECalBackend3ePrivate
 {
   /* Remote connection info */
