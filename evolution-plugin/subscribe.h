@@ -3,7 +3,8 @@
 
 #include <glib.h>
 #include <gtk/gtk.h>
+#include "eee-accounts-manager.h"
 
-void subscribe_gui_create();
+void subscribe_gui_create(EeeAccount* acc);
 
 #endif

@@ -137,10 +137,11 @@ static void on_subscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
 
   g_debug("** EEE ** on_subscribe_cb: (source=%s)", e_source_peek_name(source));
 
-  subscribe_gui_create();
+  subscribe_gui_create(cal->access_account);
 }
 
 static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
