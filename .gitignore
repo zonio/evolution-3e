@@ -7,7 +7,6 @@ Makefile.in
 *.lo
 *.loT
 *.la
-*.eplug
 *.swp
 
 /aclocal.m4
@@ -43,3 +42,6 @@ Makefile.in
 /interface/ESCommon.h
 /interface/ESServer.h
 /interface/ESServer.xrc.h
+
+/evolution-plugin/org-gnome-evolution-eee.eplug
+/evolution-plugin/org-gnome-eee-cal-subscription.xml
