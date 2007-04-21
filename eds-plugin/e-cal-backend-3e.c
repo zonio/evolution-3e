@@ -683,18 +683,18 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object(ECalBackendSync * ba
   ECalBackend3ePrivate *priv;
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
-	ECalComponent* comp;
+  ECalComponent* comp;
 
   T("backend=%p, cal=%p, calobj=%s, uid=%s", backend, cal, *calobj, *uid);
 
-	comp = e_cal_component_new_from_string(*calobj);
-	if (comp == NULL)
-		return GNOME_Evolution_Calendar_InvalidObject;
-	
-	e_cal_backend_cache_put_component(priv->cache, comp); //XXX: check errs
-	*calobj = e_cal_component_get_as_string(comp);
+  comp = e_cal_component_new_from_string(*calobj);
+  if (comp == NULL)
+    return GNOME_Evolution_Calendar_InvalidObject;
+  
+  e_cal_backend_cache_put_component(priv->cache, comp); //XXX: check errs
+  *calobj = e_cal_component_get_as_string(comp);
   g_object_unref(comp);
-	
+  
   return GNOME_Evolution_Calendar_Success;
 }
 
