@@ -1,20 +1,38 @@
 Evolution Plugin
 ~~~~~~~~~~~~~~~~
 
-- write EeeAccountsManager
+Add this to your dnsmasq.conf for testing:
+
+  txt-record=megous.com,eee server=localhost:4444
+  txt-record=zonio.net,eee server=localhost:4444
+
+GUI Features:
+- automatically setup calendar accounts based on email identities (DONE)
+  - periodical updates
+- modify calendar settings (title, color) (DONE)
+- create calendar (name, title, color)
+- view/modify ACL for a given calendar
+- subscribe to calendar
+- unsubscribe from calendar
+- delete calendar
+- admin module?
+
+TODO:
+- subscription 
+  - selecting and adding subscriptions
+  - merging multiple accounts
+- acl
+  - radio button group in glade howto?
+  - show hide users list
+  - load permissions
+  - modify users list
+  - store permissions
+  - ...
+
+- EeeAccountsManager:
   - handle online/offline state
   - check for crossubscription in evolution (two EAccounts both with 3e support,
     one is subscribing from other)
-  - implement calendar properties
-    - updated calname and color
-  - implement subscribe/remove buttons
-  - implement add calendar
-  - manage calendar acls
-
-add this to your dnsmasq.conf:
-
-  txt-record=megous.com,eee server=localhost:4444
-
 
 EDS Plugin
 ~~~~~~~~~~
