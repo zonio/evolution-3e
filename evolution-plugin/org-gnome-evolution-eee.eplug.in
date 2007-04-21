@@ -100,5 +100,17 @@
       </group>
     </hook>
 
+    <hook class="org.gnome.evolution.calendar.bonobomenu:1.0">
+      <menu id="org.gnome.evolution.calendar.view" target="select">
+      <ui file="@plugindir@/org-gnome-eee-cal-subscription.xml"/>
+      <item
+        type="item"
+        verb="FolderSubscription"
+        path="/commands/FolderSubscription"
+        enable="all"
+        activate="eee_calendar_subscription"/>
+      </menu>
+    </hook>
+
   </e-plugin>
 </e-plugin-list>

@@ -5,7 +5,8 @@ AM_CFLAGS = \
 
 plugin_DATA = \
   org-gnome-evolution-eee.eplug \
-  org-gnome-evolution-eee.glade
+  org-gnome-evolution-eee.glade \
+  org-gnome-eee-cal-subscription.xml
 
 plugin_LTLIBRARIES = \
 	liborg-gnome-evolution-eee.la
@@ -28,5 +29,6 @@ liborg_gnome_evolution_eee_la_LDFLAGS = \
 EXTRA_DIST = \
   org-gnome-evolution-eee.eplug.in \
   org-gnome-evolution-eee.glade \
+  org-gnome-eee-cal-subscription.xml.in \
   eee-accounts-manager.h \
   dns-txt-search.h

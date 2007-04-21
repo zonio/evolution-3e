@@ -9,6 +9,7 @@
 #include <e-util/e-error.h>
 #include <calendar/gui/e-cal-config.h>
 #include <calendar/gui/e-cal-popup.h>
+#include <mail/em-menu.h>
 #include <shell/es-event.h>
 #include <libedataserver/e-url.h>
 #include <libedataserver/e-account-list.h>
@@ -126,22 +127,11 @@ static void on_permissions_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
 
   g_debug("** EEE ** on_permissions_cb: (source=%s)", e_source_peek_name(source));
 
   acl_gui_create();
-}
-
-static void on_subscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
-{
-  ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
-  ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
-  ESourceGroup* group = e_source_peek_group(source);
-  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
-
-  g_debug("** EEE ** on_subscribe_cb: (source=%s)", e_source_peek_name(source));
-
-  subscribe_gui_create(cal->access_account);
 }
 
 static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
@@ -149,6 +139,7 @@ static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
 
   g_debug("** EEE ** on_unsubscribe_cb: (source=%s)", e_source_peek_name(source));
 }
@@ -158,13 +149,13 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
 
   g_debug("** EEE ** on_delete_cb: This shouldn't happen! (source=%s)", e_source_peek_name(source));
 }
 
 static EPopupItem popup_items_shared_cal[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
-  { E_POPUP_ITEM, "12.eee.01", "Subscribe to shared calendar...", on_subscribe_cb, NULL, "stock_new-dir", 0, E_CAL_POPUP_SOURCE_PRIMARY },
   { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, 0xffff },
   { E_POPUP_ITEM, "12.eee.03", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_PRIMARY },
   { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
@@ -173,7 +164,6 @@ static EPopupItem popup_items_shared_cal[] = {
 
 static EPopupItem popup_items_user_cal[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
-  { E_POPUP_ITEM, "12.eee.01", "Subscribe to shared calendar...", on_subscribe_cb, NULL, "stock_new-dir", 0, E_CAL_POPUP_SOURCE_PRIMARY }, 
   { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, E_CAL_POPUP_SOURCE_PRIMARY },
   { E_POPUP_ITEM, "12.eee.03", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
   { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
@@ -249,4 +239,11 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
 
   /* create EeeAccountsManager singleton and register it for destruction */
   g_idle_add(activation_cb, NULL);  
+}
+
+void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
+{
+  g_debug("** EEE ** subscribe");
+
+  subscribe_gui_create(_mgr);
 }

@@ -158,14 +158,14 @@ static void on_subs_window_destroy(GtkObject* object, struct subscribe_context* 
 #define SIGNAL_CONNECT(name) \
   glade_xml_signal_connect_data(c->xml, G_STRINGIFY(name), (GCallback)name, c)
 
-void subscribe_gui_create(EeeAccount* acc)
+void subscribe_gui_create(EeeAccountsManager* mgr)
 {
   int col_offset;
   GtkCellRenderer *renderer;
   GtkTreeViewColumn *column;
 
   struct subscribe_context* c = g_new0(struct subscribe_context, 1);
-  c->acc = acc;
+  c->acc = mgr->accounts->data;
   c->xml = glade_xml_new(PLUGINDIR "/org-gnome-evolution-eee.glade", "subs_window", NULL);
 
   c->win = GTK_WINDOW(gtk_widget_ref(glade_xml_get_widget(c->xml, "subs_window")));
@@ -190,7 +190,7 @@ void subscribe_gui_create(EeeAccount* acc)
 
   // setup autocompletion
   GtkListStore* users_store = gtk_list_store_new(1, G_TYPE_STRING);
-  load_users(acc, "", users_store);
+  load_users(c->acc, "", users_store);
   GtkEntryCompletion *completion;
   completion = gtk_entry_completion_new();
   gtk_entry_set_completion(GTK_ENTRY(glade_xml_get_widget(c->xml, "entry_email")), completion);

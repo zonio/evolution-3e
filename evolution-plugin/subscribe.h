@@ -5,6 +5,6 @@
 #include <gtk/gtk.h>
 #include "eee-accounts-manager.h"
 
-void subscribe_gui_create(EeeAccount* acc);
+void subscribe_gui_create(EeeAccountsManager* mgr);
 
 #endif

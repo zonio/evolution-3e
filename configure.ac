@@ -61,9 +61,10 @@ CFLAGS="$CFLAGS -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable"
 
 # Output
 AC_OUTPUT([
-    Makefile
-    interface/Makefile
-    eds-plugin/Makefile
-    evolution-plugin/Makefile
-    evolution-plugin/org-gnome-evolution-eee.eplug
+  Makefile
+  interface/Makefile
+  eds-plugin/Makefile
+  evolution-plugin/Makefile
+  evolution-plugin/org-gnome-evolution-eee.eplug
+  evolution-plugin/org-gnome-eee-cal-subscription.xml
 ])
