@@ -2,7 +2,6 @@
 #include <glade/glade.h>
 
 #include "subscribe.h"
-#include "eee-accounts-manager.h"
 
 static GSList* subscribe_contexts = NULL;
 
