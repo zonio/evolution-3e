@@ -204,7 +204,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync* backend, EDa
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
-
+#if 0
   if (!priv->is_loaded)
   {
     ESource *source;
@@ -356,7 +356,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync* backend, EDa
     priv->is_open = FALSE;
     return GNOME_Evolution_Calendar_OtherError;
   }
-
+#endif
   return GNOME_Evolution_Calendar_Success;
 }
 
@@ -890,7 +890,7 @@ static void e_cal_backend_3e_finalize(GObject * object)
   cb = E_CAL_BACKEND_3E(object);
   priv = cb->priv;
 
-  xr_client_free(priv->conn);
+//xr_client_free(priv->conn);
   priv->conn = NULL;
 
   g_object_unref(priv->cache);
