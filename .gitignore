@@ -45,3 +45,6 @@ Makefile.in
 
 /evolution-plugin/org-gnome-evolution-eee.eplug
 /evolution-plugin/org-gnome-eee-cal-subscription.xml
+/evolution-plugin/org-gnome-eee-cal-admin.xml
+
+/.log
