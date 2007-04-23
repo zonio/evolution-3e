@@ -78,60 +78,48 @@ static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* mode
   if (conn == NULL)
     return FALSE;
 
-  users = ESClient_getUsers(conn, prefix ? prefix : "", &err);
+  cals = ESClient_getSharedCalendars(conn, prefix ? prefix : "", &err);
   if (err)
   {
-    g_debug("** EEE ** Failed to get users list for user '%s'. (%d:%s)", acc->email, err->code, err->message);
+    g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", acc->email, err->code, err->message);
     xr_client_free(conn);
     g_clear_error(&err);
     return FALSE;
   }
 
   // for each user get his calendars
-  for (iter = users; iter; iter = iter->next)
+  char* prev_owner = NULL;
+  //XXX: probably we shouldn't assume that calendar list is sorted by calendar
+  // owner by the server
+  for (iter = cals; iter; iter = iter->next)
   {
-    char* user = iter->data;
-
-    if (acc->accessible && acc->email && !strcmp(acc->email, user))
+    ESCalendar* cal = iter->data;
+    // skip calendars owned by logegd in user
+    if (acc->accessible && acc->email && !strcmp(acc->email, cal->owner))
       continue;
 
-    cals = ESClient_getSharedCalendars(conn, user, &err);
-    if (err)
-    {
-      g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", acc->email, err->code, err->message);
-      xr_client_free(conn);
-      g_clear_error(&err);
-      return FALSE;
-    }
-
-    if (cals)
+    if (!prev_owner || strcmp(prev_owner, cal->owner))
     {
       gtk_tree_store_append(model, &titer_user, NULL);
       gtk_tree_store_set(model, &titer_user, 
-        SUB_NAME_COLUMN, user, 
+        SUB_NAME_COLUMN, cal->owner, 
         SUB_PERM_COLUMN, "", 
-        SUB_OWNER_COLUMN, user, 
+        SUB_OWNER_COLUMN, cal->owner, 
         SUB_ACCOUNT_COLUMN, acc, 
         SUB_IS_CALENDAR_COLUMN, FALSE, -1);
-      for (iter2 = cals; iter2; iter2 = iter2->next)
-      {
-        ESCalendar* cal = iter2->data;
-        gtk_tree_store_append(model, &titer_cal, &titer_user);
-        gtk_tree_store_set(model, &titer_cal,
-          SUB_NAME_COLUMN, cal->name,
-          SUB_PERM_COLUMN, cal->perm, 
-          SUB_OWNER_COLUMN, user, 
-          SUB_ACCOUNT_COLUMN, acc, 
-          SUB_IS_CALENDAR_COLUMN, TRUE, -1);
-      }
+      prev_owner = cal->owner;
     }
 
-    g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
-    g_slist_free(cals);
+    gtk_tree_store_append(model, &titer_cal, &titer_user);
+    gtk_tree_store_set(model, &titer_cal,
+      SUB_NAME_COLUMN, cal->name,
+      SUB_PERM_COLUMN, cal->perm, 
+      SUB_OWNER_COLUMN, cal->owner, 
+      SUB_ACCOUNT_COLUMN, acc, 
+      SUB_IS_CALENDAR_COLUMN, TRUE, -1);
   }
-
-  g_slist_foreach(users, (GFunc)g_free, NULL);
-  g_slist_free(users);
+  g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
+  g_slist_free(cals);
 
   gtk_tree_view_expand_all(ctx->tview);
 
@@ -273,7 +261,7 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   c->tview = GTK_TREE_VIEW(glade_xml_get_widget(c->xml, "treeview_calendars"));
 
   // create model
-  c->model = gtk_tree_store_new(SUB_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_POINTER, G_TYPE_BOOLEAN, G_TYPE_STRING);
+  c->model = gtk_tree_store_new(SUB_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_OBJECT, G_TYPE_BOOLEAN, G_TYPE_STRING);
   gtk_tree_view_set_model(c->tview, GTK_TREE_MODEL(c->model));
 
   // add columns to the tree view
