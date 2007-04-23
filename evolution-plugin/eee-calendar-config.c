@@ -228,6 +228,8 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
   if (online)
   {
     // force callist synchronization, etc.
+    if (_mgr)
+      eee_accounts_manager_sync(_mgr);
   }
   else
   {
