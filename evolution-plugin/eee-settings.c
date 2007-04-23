@@ -88,31 +88,26 @@ G_DEFINE_TYPE(EeeSettings, eee_settings, G_TYPE_OBJECT);
 
 static void eee_settings_init(EeeSettings *self)
 {
-  self->priv = g_new0(EeeSettingsPriv, 1);
+  self->priv = G_TYPE_INSTANCE_GET_PRIVATE(self, EEE_TYPE_SETTINGS, EeeSettingsPriv);
 }
 
 static void eee_settings_dispose(GObject *object)
 {
   EeeSettings *self = EEE_SETTINGS(object);
-
   G_OBJECT_CLASS(eee_settings_parent_class)->dispose(object);
 }
 
 static void eee_settings_finalize(GObject *object)
 {
   EeeSettings *self = EEE_SETTINGS(object);
-
   g_free(self->priv->title);
-  g_free(self->priv);
-  g_signal_handlers_destroy(object);
-
   G_OBJECT_CLASS(eee_settings_parent_class)->finalize(object);
 }
 
 static void eee_settings_class_init(EeeSettingsClass *klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
-
   gobject_class->dispose = eee_settings_dispose;
   gobject_class->finalize = eee_settings_finalize;
+  g_type_class_add_private(klass, sizeof(EeeSettingsPriv));
 }

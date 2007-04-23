@@ -554,13 +554,12 @@ G_DEFINE_TYPE(EeeAccountsManager, eee_accounts_manager, G_TYPE_OBJECT);
 
 static void eee_accounts_manager_init(EeeAccountsManager *self)
 {
-  self->priv = g_new0(EeeAccountsManagerPriv, 1);
+  self->priv = G_TYPE_INSTANCE_GET_PRIVATE(self, EEE_TYPE_ACCOUNTS_MANAGER, EeeAccountsManagerPriv);
 }
 
 static void eee_accounts_manager_dispose(GObject *object)
 {
   EeeAccountsManager *self = EEE_ACCOUNTS_MANAGER(object);
-
   G_OBJECT_CLASS(eee_accounts_manager_parent_class)->dispose(object);
 }
 
@@ -575,16 +574,13 @@ static void eee_accounts_manager_finalize(GObject *object)
   g_object_unref(self->ealist);
   g_object_unref(self->eslist);
 
-  g_free(self->priv);
-  g_signal_handlers_destroy(object);
-
   G_OBJECT_CLASS(eee_accounts_manager_parent_class)->finalize(object);
 }
 
 static void eee_accounts_manager_class_init(EeeAccountsManagerClass *klass)
 {
   GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
-
   gobject_class->dispose = eee_accounts_manager_dispose;
   gobject_class->finalize = eee_accounts_manager_finalize;
+  g_type_class_add_private(klass, sizeof(EeeAccountsManagerPriv));
 }
