@@ -1,18 +1,22 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#include <string.h>
 
+#include <string.h>
 #include <libedataserverui/e-passwords.h>
 #include <e-util/e-error.h>
 #include <libecal/e-cal.h>
+#include "dns-txt-search.h"
 
 #include "eee-accounts-manager.h"
-#include "dns-txt-search.h"
 
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
 #define SELECTED_CALENDARS "/apps/evolution/calendar/display/selected_calendars"
 #define EEE_PASSWORD_COMPONENT "3E Account"
+
+struct _EeeAccountsManagerPriv
+{
+};
 
 /* 3e server access methods */
 
@@ -235,7 +239,10 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
     }
     else
     {
-      char* source_name = (cal->settings && cal->settings->title) ? cal->settings->title : cal->name;
+      const char* source_name = eee_settings_get_title(cal->settings);
+      if (source_name == NULL)
+        source_name = cal->name;
+
       g_debug("** EEE ** Updating source: group=%s source=%s", e_source_group_peek_name(group), source_name);
 
       e_source_set_name(source, source_name);
@@ -246,8 +253,8 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
       e_source_set_property(source, "username", cal->access_account->email);
       e_source_set_property(source, "auth-key", cal->access_account->email);
       e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
-      if (cal->settings && cal->settings->color > 0)
-        e_source_set_color(source, cal->settings->color);
+      if (eee_settings_get_color(cal->settings) > 0)
+        e_source_set_color(source, eee_settings_get_color(cal->settings));
       cal->synced = 1;
     }
   }
@@ -261,7 +268,10 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
     if (e_source_group_peek_source_by_cal_name(group, cal->name))
       continue;
 
-    char* source_name = (cal->settings && cal->settings->title) ? cal->settings->title : cal->name;
+    const char* source_name = eee_settings_get_title(cal->settings);
+    if (source_name == NULL)
+      source_name = cal->name;
+
     g_debug("** EEE ** Adding source: group=%s source=%s", e_source_group_peek_name(group), source_name);
 
     source = e_source_new(source_name, cal->relative_uri);
@@ -271,8 +281,8 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
     e_source_set_property(source, "username", cal->access_account->email);
     e_source_set_property(source, "auth-key", cal->access_account->email);
     e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
-    if (cal->settings && cal->settings->color > 0)
-      e_source_set_color(source, cal->settings->color);
+    if (eee_settings_get_color(cal->settings) > 0)
+      e_source_set_color(source, eee_settings_get_color(cal->settings));
     e_source_group_add_source(group, source, -1);
   }
 }
@@ -337,13 +347,20 @@ static void sync_group_list(EeeAccountsManager* mgr)
   e_source_list_sync(mgr->eslist, NULL);
 }
 
-/* synchronize account list in evolution with 3e server */
+/** Synchrinize source lists in evolution from the 3e server.
+ *
+ * Adter this call everything should be in sync.
+ *
+ * @param mgr EeeAccountsManager object.
+ *
+ * @return TRUE on success, FALSE on failure.
+ */
 gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr)
 {
   EIterator *iter;
 
   // free all accounts
-  g_slist_foreach(mgr->accounts, (GFunc)eee_account_free, NULL);
+  g_slist_foreach(mgr->accounts, (GFunc)g_object_unref, NULL);
   g_slist_free(mgr->accounts);
 
   // go through the list of EAccount objects and create EeeAccount objects
@@ -381,10 +398,15 @@ static void e_account_list_changed(EAccountList *account_list, EAccount *account
   eee_accounts_manager_sync(mgr);
 }
 
-/* cosntructor */
+/** Create new EeeAccountsManager.
+ *
+ * This function should be called only once per evolution instance.
+ *
+ * @return EeeAccountsManager object.
+ */
 EeeAccountsManager* eee_accounts_manager_new()
 {
-  EeeAccountsManager *mgr;
+  EeeAccountsManager *mgr = g_object_new(EEE_TYPE_ACCOUNTS_MANAGER, NULL);
        
   mgr = g_new0(EeeAccountsManager, 1);
   mgr->gconf = gconf_client_get_default();
@@ -414,7 +436,7 @@ gboolean eee_server_store_calendar_settings(EeeCalendar* cal)
   if (conn == NULL)
     return FALSE;
 
-  char* settings_str = eee_settings_get_string(cal->settings);
+  char* settings_str = eee_settings_encode(cal->settings);
   char* calspec = g_strdup_printf("%s:%s", cal->owner_account->email, cal->name);
   ESClient_updateCalendarSettings(conn, calspec, settings_str, &err);
   g_free(settings_str);
@@ -423,7 +445,7 @@ gboolean eee_server_store_calendar_settings(EeeCalendar* cal)
 
   if (err)
   {
-    g_debug("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", cal->settings->title, err->code, err->message);
+    g_debug("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", eee_settings_get_title(cal->settings), err->code, err->message);
     g_clear_error(&err);
     return FALSE;
   }
@@ -431,6 +453,13 @@ gboolean eee_server_store_calendar_settings(EeeCalendar* cal)
   return TRUE;
 }
 
+/** Find EeeCalendar object by name.
+ *
+ * @param acc EeeAccount object.
+ * @param name Name.
+ *
+ * @return Matching EeeCalendar object or NULL.
+ */
 EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const char* name)
 {
   GSList* iter;
@@ -445,6 +474,13 @@ EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const c
   return NULL;
 }
 
+/** Find EeeAccount object by ESourceGroup name/EAccount email.
+ *
+ * @param mgr EeeAccountsManager object.
+ * @param email E-mail of the account.
+ *
+ * @return Matching EeeAccount object or NULL.
+ */
 EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, const char* email)
 {
   GSList* iter;
@@ -459,12 +495,26 @@ EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, 
   return NULL;
 }
 
+/** Find EeeCalendar object by ESource.
+ *
+ * @param mgr EeeAccountsManager object.
+ * @param source ESource object.
+ *
+ * @return Matching EeeCalendar object or NULL.
+ */
 EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source)
 {
   EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr, e_source_peek_group(source));
   return eee_accounts_manager_find_calendar_by_name(account, e_source_get_property(source, "eee-calendar-name"));
 }
 
+/** Remove Calendar or Calendar subscription.
+ *
+ * @param mgr EeeAccountsManager object.
+ * @param cal ESource object of the calendar.
+ *
+ * @return TRUE on success, FALSE on failure.
+ */
 gboolean eee_accounts_manager_remove_calendar(EeeAccountsManager* mgr, ESource* source)
 {
   GError* err = NULL;
@@ -483,6 +533,13 @@ gboolean eee_accounts_manager_remove_calendar(EeeAccountsManager* mgr, ESource* 
   return eee_accounts_manager_sync(mgr);
 }
 
+/** Find EeeAccount object by ESourceGroup.
+ *
+ * @param mgr EeeAccountsManager object.
+ * @param group ESourceGroup object.
+ *
+ * @return Matching EeeAccount object or NULL.
+ */
 EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group)
 {
   const char* name = e_source_group_peek_name(group);
@@ -491,79 +548,43 @@ EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, 
   return eee_accounts_manager_find_account_by_email(mgr, name+4);
 }
 
-void eee_calendar_free(EeeCalendar* c)
+/* GObject foo */
+
+G_DEFINE_TYPE(EeeAccountsManager, eee_accounts_manager, G_TYPE_OBJECT);
+
+static void eee_accounts_manager_init(EeeAccountsManager *self)
 {
-  if (c == NULL)
-    return;
-  g_free(c->name);
-  g_free(c->perm);
-  g_free(c->relative_uri);
-  eee_settings_free(c->settings);
-  g_free(c);
+  self->priv = g_new0(EeeAccountsManagerPriv, 1);
 }
 
-void eee_account_free(EeeAccount* a)
+static void eee_accounts_manager_dispose(GObject *object)
 {
-  if (a == NULL)
-    return;
-  g_slist_foreach(a->calendars, (GFunc)eee_calendar_free, NULL);
-  g_slist_free(a->calendars);
-  g_free(a->email);
-  g_free(a->password);
-  g_free(a->server);
-  g_free(a);
+  EeeAccountsManager *self = EEE_ACCOUNTS_MANAGER(object);
+
+  G_OBJECT_CLASS(eee_accounts_manager_parent_class)->dispose(object);
 }
 
-void eee_accounts_manager_free(EeeAccountsManager* mgr)
+static void eee_accounts_manager_finalize(GObject *object)
 {
-  g_debug("** EEE ** Stoppping EeeAccountsManager %p", mgr);
-  g_slist_foreach(mgr->accounts, (GFunc)eee_account_free, NULL);
-  g_slist_free(mgr->accounts);
-  g_object_unref(mgr->gconf);
-  g_object_unref(mgr->ealist);
-  g_object_unref(mgr->eslist);
-  g_free(mgr);
+  EeeAccountsManager *self = EEE_ACCOUNTS_MANAGER(object);
+
+  g_debug("** EEE ** Stoppping EeeAccountsManager %p", self);
+  g_slist_foreach(self->accounts, (GFunc)g_object_unref, NULL);
+  g_slist_free(self->accounts);
+  g_object_unref(self->gconf);
+  g_object_unref(self->ealist);
+  g_object_unref(self->eslist);
+
+  g_free(self->priv);
+  g_signal_handlers_destroy(object);
+
+  G_OBJECT_CLASS(eee_accounts_manager_parent_class)->finalize(object);
 }
 
-/* EeeSettings parser impelementation */
-
-EeeSettings* eee_settings_new(const char* string)
+static void eee_accounts_manager_class_init(EeeAccountsManagerClass *klass)
 {
-  guint i;
-  EeeSettings* s = g_new0(EeeSettings, 1);
-  if (string == NULL)
-    return s;
+  GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
 
-  char** pairs = g_strsplit(string, ";", 0);
-  for (i=0; i<g_strv_length(pairs); i++)
-  {
-    pairs[i] = g_strstrip(pairs[i]);
-    if (strlen(pairs[i]) < 1 || strchr(pairs[i], '=') == NULL)
-      continue;
-    char* key = pairs[i];
-    char* val = strchr(key, '=');
-    *val = '\0';
-    ++val;
-    // now we have key and value
-    if (!strcmp(key, "title"))
-      s->title = g_strdup(val);
-    else if (!strcmp(key, "color"))
-      sscanf(val, "#%x", &s->color);
-  }
-  g_strfreev(pairs);
-
-  return s;
-}
-
-char* eee_settings_get_string(EeeSettings* s)
-{
-  return g_strdup_printf("title=%s;color=#%06x;", s->title ? s->title : "", s->color);
-}
-
-void eee_settings_free(EeeSettings* s)
-{
-  if (s == NULL)
-    return;
-  g_free(s->title);
-  g_free(s);
+  gobject_class->dispose = eee_accounts_manager_dispose;
+  gobject_class->finalize = eee_accounts_manager_finalize;
 }

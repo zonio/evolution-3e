@@ -87,9 +87,10 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
 
   if (cal->settings == NULL)
     cal->settings = eee_settings_new(NULL);
-  e_source_get_color(target->source, &cal->settings->color);
-  g_free(cal->settings->title);
-  cal->settings->title = g_strdup(source_name);
+  guint32 color;
+  e_source_get_color(target->source, &color);
+  eee_settings_set_color(cal->settings, color);
+  eee_settings_set_title(cal->settings, source_name);
 
   eee_server_store_calendar_settings(cal);
 }
