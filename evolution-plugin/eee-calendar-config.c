@@ -109,7 +109,7 @@ static void on_permissions_cb(EPopup *ep, EPopupItem *pitem, void *data)
 
   g_debug("** EEE ** on_permissions_cb: (source=%s)", e_source_peek_name(source));
 
-  acl_gui_create();
+  acl_gui_create(cal);
 }
 
 static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)

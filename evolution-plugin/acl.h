@@ -3,7 +3,8 @@
 
 #include <glib.h>
 #include <gtk/gtk.h>
+#include "eee-accounts-manager.h"
 
-void acl_gui_create();
+void acl_gui_create(EeeCalendar* cal);
 
 #endif
