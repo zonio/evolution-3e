@@ -337,6 +337,7 @@ static void sync_group_list(EeeAccountsManager* mgr)
   e_source_list_sync(mgr->eslist, NULL);
 }
 
+/* synchronize account list in evolution with 3e server */
 gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr)
 {
   EIterator *iter;
@@ -373,12 +374,14 @@ gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr)
   return TRUE;
 }
 
+/* callback listening for changes in account list */
 static void e_account_list_changed(EAccountList *account_list, EAccount *account, EeeAccountsManager* mgr)
 {
   g_debug("** EEE ** EAccountList changed (%p)", mgr);
   eee_accounts_manager_sync(mgr);
 }
 
+/* cosntructor */
 EeeAccountsManager* eee_accounts_manager_new()
 {
   EeeAccountsManager *mgr;
@@ -401,6 +404,7 @@ EeeAccountsManager* eee_accounts_manager_new()
   return mgr;
 }
 
+/* store calendar settings on the server */
 gboolean eee_server_store_calendar_settings(EeeCalendar* cal)
 {
   xr_client_conn* conn;

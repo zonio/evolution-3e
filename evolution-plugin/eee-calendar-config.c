@@ -253,6 +253,8 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
   g_idle_add(activation_cb, NULL);  
 }
 
+/* calendar subscription menu item callback */
+
 void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
 {
   g_debug("** EEE ** subscribe");
