@@ -200,7 +200,8 @@ static gboolean sync_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccou
     }
 
     ecal->owner_account = owner_account;
-    owner_account->calendars = g_slist_append(owner_account->calendars, ecal);
+    eee_account_add_calendar(owner_account, ecal);
+    g_object_unref(ecal);
   }
   g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
   g_slist_free(cals);
@@ -231,7 +232,7 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
     const char* cal_name = e_source_get_property(source, "eee-calendar-name");
     EeeCalendar* cal;
 
-    cal = eee_accounts_manager_find_calendar_by_name(acc, cal_name);
+    cal = eee_account_peek_calendar_by_name(acc, cal_name);
     if (cal == NULL || cal->synced)
     {
       g_debug("** EEE ** Removing source: group=%s source=%s", e_source_group_peek_name(group), e_source_peek_name(source));
@@ -260,7 +261,7 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
   }
   g_slist_free(source_list);
 
-  for (iter = acc->calendars; iter; iter = iter->next)
+  for (iter = eee_account_peek_calendars(acc); iter; iter = iter->next)
   {
     EeeCalendar* cal = iter->data;
     ESource* source;
@@ -453,27 +454,6 @@ gboolean eee_server_store_calendar_settings(EeeCalendar* cal)
   return TRUE;
 }
 
-/** Find EeeCalendar object by name.
- *
- * @param acc EeeAccount object.
- * @param name Name.
- *
- * @return Matching EeeCalendar object or NULL.
- */
-EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const char* name)
-{
-  GSList* iter;
-  if (acc == NULL || name == NULL)
-    return NULL;
-  for (iter = acc->calendars; iter; iter = iter->next)
-  {
-    EeeCalendar* c = iter->data;
-    if (c->name && !strcmp(c->name, name))
-      return c;
-  }
-  return NULL;
-}
-
 /** Find EeeAccount object by ESourceGroup name/EAccount email.
  *
  * @param mgr EeeAccountsManager object.
@@ -505,7 +485,7 @@ EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, 
 EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source)
 {
   EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr, e_source_peek_group(source));
-  return eee_accounts_manager_find_calendar_by_name(account, e_source_get_property(source, "eee-calendar-name"));
+  return eee_account_peek_calendar_by_name(account, e_source_get_property(source, "eee-calendar-name"));
 }
 
 /** Remove Calendar or Calendar subscription.

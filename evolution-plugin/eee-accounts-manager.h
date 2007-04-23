@@ -73,7 +73,6 @@ EeeAccountsManager* eee_accounts_manager_new();
 
 gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr);
 EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, const char* email);
-EeeCalendar* eee_accounts_manager_find_calendar_by_name(EeeAccount* acc, const char* name);
 EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source);
 gboolean eee_accounts_manager_remove_calendar(EeeAccountsManager* mgr, ESource* source);
 EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group);

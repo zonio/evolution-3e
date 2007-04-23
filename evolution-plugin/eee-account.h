@@ -35,7 +35,6 @@ struct _EeeAccount
                                    This string is used to match EeeAccount against EAccount. */
   char* password;             /**< This is password used to authenticate to an account. */
   char* server;               /**< 3E server hostname:port. */
-  GSList* calendars;          /**< List of EeeCalendar objects owned by this account. */
   int synced;
 };
 
@@ -47,6 +46,9 @@ struct _EeeAccountClass
 G_BEGIN_DECLS
 
 EeeAccount* eee_account_new();
+void eee_account_add_calendar(EeeAccount* account, EeeCalendar* cal);
+GSList* eee_account_peek_calendars(EeeAccount* account);
+EeeCalendar* eee_account_peek_calendar_by_name(EeeAccount* account, const char* name);
 
 GType eee_account_get_type() G_GNUC_CONST;
 

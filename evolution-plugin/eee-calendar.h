@@ -1,8 +1,7 @@
 #ifndef __EEE_CALENDAR_H__
 #define __EEE_CALENDAR_H__
 
-#include <eee-settings.h>
-#include <eee-account.h>
+#include "eee-settings.h"
 
 /** 3E calendar info object.
  */
@@ -17,6 +16,8 @@
 typedef struct _EeeCalendar EeeCalendar;
 typedef struct _EeeCalendarClass EeeCalendarClass;
 typedef struct _EeeCalendarPriv EeeCalendarPriv;
+
+#include "eee-account.h"
 
 struct _EeeCalendar
 {
