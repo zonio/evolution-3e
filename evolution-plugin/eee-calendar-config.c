@@ -29,7 +29,7 @@ static EeeAccountsManager* _mgr = NULL;
 
 int e_plugin_lib_enable(EPluginLib* ep, int enable)
 {
-  xr_debug_enabled = XR_DEBUG_ALL;
+  xr_debug_enabled = XR_DEBUG_CALL;
   return 0;
 }
 
