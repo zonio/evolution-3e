@@ -107,41 +107,41 @@ static void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *messa
 
 typedef enum
 {
-	E_CAL_COMPONENT_IN_SYNCH,
-	E_CAL_COMPONENT_LOCALLY_CREATED,
-	E_CAL_COMPONENT_LOCALLY_DELETED,
-	E_CAL_COMPONENT_LOCALLY_MODIFIED,	
-	E_CAL_COMPONENT_REMOTELY_CREATED,
-	E_CAL_COMPONENT_REMOTELY_DELETED,
-	E_CAL_COMPONENT_REMOTELY_MODIFIED,	
+  E_CAL_COMPONENT_IN_SYNCH,
+  E_CAL_COMPONENT_LOCALLY_CREATED,
+  E_CAL_COMPONENT_LOCALLY_DELETED,
+  E_CAL_COMPONENT_LOCALLY_MODIFIED, 
+  E_CAL_COMPONENT_REMOTELY_CREATED,
+  E_CAL_COMPONENT_REMOTELY_DELETED,
+  E_CAL_COMPONENT_REMOTELY_MODIFIED,  
 } ECalComponentSyncState;
 
 static void icomp_x_prop_set(icalcomponent *comp, const char *key, const char *value)
 {
-	icalproperty *iter;
+  icalproperty *iter;
   for (iter = icalcomponent_get_first_property(comp, ICAL_X_PROPERTY); iter; iter = icalcomponent_get_next_property(comp, ICAL_X_PROPERTY))
   {
-		const char *str = icalproperty_get_x_name (iter);
-		if (!strcmp (str, key))
+    const char *str = icalproperty_get_x_name (iter);
+    if (!strcmp (str, key))
     {
-			icalcomponent_remove_property(comp, iter);
-			icalproperty_free(iter);
-			break;
-		}
-	}
-	iter = icalproperty_new_x(value);
-	icalproperty_set_x_name(iter, key);
-	icalcomponent_add_property(comp, iter);
+      icalcomponent_remove_property(comp, iter);
+      icalproperty_free(iter);
+      break;
+    }
+  }
+  iter = icalproperty_new_x(value);
+  icalproperty_set_x_name(iter, key);
+  icalcomponent_add_property(comp, iter);
 }
 
 static void e_cal_component_set_sync_state(ECalComponent *comp, ECalComponentSyncState state)
 {
-	icalcomponent *icomp;
-	char *state_string;
-	icomp = e_cal_component_get_icalcomponent(comp);
-	state_string = g_strdup_printf ("%d", state);
-	icomp_x_prop_set(icomp, "X-EEE-SYNC-STATE", state_string);
-	g_free (state_string);
+  icalcomponent *icomp;
+  char *state_string;
+  icomp = e_cal_component_get_icalcomponent(comp);
+  state_string = g_strdup_printf ("%d", state);
+  icomp_x_prop_set(icomp, "X-EEE-SYNC-STATE", state_string);
+  g_free (state_string);
 }
 
 /* Backend plugin design
@@ -817,8 +817,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object(ECalBackendSync * ba
     return GNOME_Evolution_Calendar_InvalidObject;
   
   e_cal_component_set_sync_state(comp, E_CAL_COMPONENT_LOCALLY_CREATED);
-	e_cal_backend_cache_put_component(priv->cache, comp); //XXX: check errs
-	*calobj = e_cal_component_get_as_string(comp);
+  e_cal_backend_cache_put_component(priv->cache, comp); //XXX: check errs
+  *calobj = e_cal_component_get_as_string(comp);
   g_object_unref(comp);
   
   return GNOME_Evolution_Calendar_Success;
