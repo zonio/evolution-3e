@@ -33,18 +33,6 @@
     org.gnome.evolution.calendar.calendarProperties
     org.gnome.evolution.calendar.events
 
-    <hook class="org.gnome.evolution.calendar.bonobomenu:1.0">
-      <menu id="org.gnome.evolution.calendar.view" target="select">
-        <ui file="@plugindir@/org-gnome-folder-permissions.xml"/>
-        <item
-          type="item" 
-          verb="CheckFolderPermission" 
-          path="/commands/CheckFolderPermission" 
-          enable="all" 
-          activate="org_gnome_exchange_menu_tasks_permissions"/>
-      </menu>
-    </hook>
-
     <hook class="org.gnome.evolution.calendar.events:1.0">
       <event 
         target="component" 
