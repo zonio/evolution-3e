@@ -283,7 +283,6 @@ void eee_accounts_manager_remove_accounts(EeeAccountsManager* mgr)
   g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(mgr));
 
   // free all accounts
-  g_debug(">>>>>>>>>>>");
   g_slist_foreach(mgr->priv->accounts, (GFunc)g_object_unref, NULL);
   g_slist_free(mgr->priv->accounts);
   mgr->priv->accounts = NULL;
