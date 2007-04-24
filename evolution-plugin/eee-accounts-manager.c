@@ -6,6 +6,7 @@
 #include <libedataserver/e-account-list.h>
 
 #include "dns-txt-search.h"
+#include "eee-calendar-config.h"
 #include "eee-accounts-manager.h"
 
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
@@ -16,6 +17,7 @@ struct _EeeAccountsManagerPriv
   EAccountList* ealist;       /**< EAccountList instance used internally to watch for changes. */
   ESourceList* eslist;        /**< Source list for calendar. */
   GSList* accounts;           /**< List of EeeAccount obejcts managed by this EeeAccountsManager. */
+  guint timer;
 };
 
 /**
@@ -366,6 +368,14 @@ static void e_account_list_changed(EAccountList *account_list, EAccount *account
   eee_accounts_manager_sync(mgr);
 }
 
+static gboolean update_timer_cb(gpointer data)
+{
+  EeeAccountsManager* mgr = EEE_ACCOUNTS_MANAGER(data);
+  if (eee_plugin_online)
+    eee_accounts_manager_sync(mgr);
+  return TRUE;
+}
+
 /** Create new EeeAccountsManager.
  *
  * This function should be called only once per evolution instance.
@@ -387,6 +397,8 @@ EeeAccountsManager* eee_accounts_manager_new()
   g_signal_connect(mgr->priv->ealist, "account_changed", G_CALLBACK(e_account_list_changed), mgr);
   g_signal_connect(mgr->priv->ealist, "account_removed", G_CALLBACK(e_account_list_changed), mgr);    
 
+  mgr->priv->timer = g_timeout_add(20000, update_timer_cb, mgr);
+
   return mgr;
 }
 
@@ -406,6 +418,7 @@ static void eee_accounts_manager_dispose(GObject *object)
   g_object_unref(self->priv->gconf);
   g_object_unref(self->priv->ealist);
   g_object_unref(self->priv->eslist);
+  g_source_remove(self->priv->timer);
   G_OBJECT_CLASS(eee_accounts_manager_parent_class)->dispose(object);
 }
 
