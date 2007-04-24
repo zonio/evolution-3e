@@ -7,13 +7,12 @@ Add this to your dnsmasq.conf for testing:
   txt-record=zonio.net,eee server=localhost:4444
 
 GUI Features:
-- periodical updates
-- create calendar (name, title, color)
 - subscribe to calendar (cleanup)
 - view/modify ACL for a given calendar
 - admin module?
 
 TODO:
+- server unavailability fixups (don't destroy account list)
 - subscription 
   - selecting and adding subscriptions
   - merging multiple accounts
