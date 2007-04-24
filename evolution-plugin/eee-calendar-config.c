@@ -25,34 +25,137 @@ int e_plugin_lib_enable(EPluginLib* ep, int enable)
 
 /* calendar add/properties dialog */
 
-GtkWidget *eee_calendar_properties_items(EPlugin* epl, EConfigHookItemFactoryData* data)
+static GtkWidget* hidden = NULL;
+static GtkWidget* notice_label = NULL;
+static GtkWidget* offline_label = NULL;
+
+static gboolean is_new_calendar_dialog(ESource* source)
+{
+  // if ESource does not have relative_uri, dialog is for creating new calendar
+  const char *rel_uri = e_source_peek_relative_uri(source);
+  return !(rel_uri && strlen(rel_uri));
+}
+
+/* create toplevel notices in dialog (offline mode notice, iaccessible calendar account notice) */
+GtkWidget *eee_calendar_properties_factory_top(EPlugin* epl, EConfigHookItemFactoryData* data)
 {
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
-  ESourceGroup *group;
+  ESourceGroup *group = e_source_peek_group(target->source);
 
-  group = e_source_peek_group(target->source);
+  // ignore non 3e calendars
   if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
-    return NULL;
-  g_debug("** EEE ** Properties Dialog Items Hook Call (source=%s)", e_source_peek_name(target->source));
+    return gtk_label_new("");
 
-  return NULL;
+  if (!hidden)
+    hidden = gtk_label_new("");
+
+  if (data->old)
+  {
+    //XXX: free widgets? WTF?
+    gtk_widget_destroy(notice_label);
+    gtk_widget_destroy(offline_label);
+    notice_label = NULL;
+    offline_label = NULL;
+  }
+
+  int row = GTK_TABLE(data->parent)->nrows;
+
+  char* msg = g_markup_printf_escaped("<span weight=\"bold\" foreground=\"#ff0000\">%s</span>", 
+    "Evolution is in offline mode. You cannot create or modify calendars now.\n"
+    "Please switch to online mode for such operations.");
+  offline_label = gtk_label_new("");
+  gtk_label_set_markup(GTK_LABEL(offline_label), msg);
+  g_free(msg);
+  gtk_table_attach(GTK_TABLE(data->parent), offline_label, 0, 2, row, row+1, GTK_FILL|GTK_EXPAND, 0, 0, 0);
+
+  row++;
+  msg = g_markup_printf_escaped("<span weight=\"bold\" foreground=\"#ff0000\">%s</span>", 
+    "You cannot create calendars for this account.");
+  notice_label = gtk_label_new("");
+  gtk_label_set_markup(GTK_LABEL(notice_label), msg);
+  g_free(msg);
+  gtk_table_attach(GTK_TABLE(data->parent), notice_label, 0, 2, row, row+1, GTK_FILL|GTK_EXPAND, 0, 0, 0);
+
+  return notice_label;
+}
+
+GtkWidget *eee_calendar_properties_factory(EPlugin* epl, EConfigHookItemFactoryData* data)
+{
+  ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
+  ESourceGroup *group = e_source_peek_group(target->source);
+
+  // ignore non 3e calendars
+  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
+    return gtk_label_new("");
+
+  g_debug("** EEE ** Properties Dialog Items Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
+
+  if (!hidden)
+    hidden = gtk_label_new("");
+
+  // can't do anything in offline mode
+  if (!eee_plugin_online)
+  {
+    gtk_widget_show(offline_label);
+    return hidden;
+  }
+
+  // can't do anything in offline mode
+  if (is_new_calendar_dialog(target->source))
+  {
+    EeeAccount* account = eee_accounts_manager_find_account_by_group(_mgr, group);
+    if (account == NULL)
+    {
+      g_debug("** EEE ** internal error, can't find account");
+      return hidden;
+    }
+
+    if (!account->accessible)
+    {
+      gtk_widget_show(notice_label);
+      return hidden;    
+    }
+  }
+
+  return hidden;
 }
 
 gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* data)
 {
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(target->source);
-  const char* source_name = e_source_peek_name(target->source);
 
+  // ignore non 3e calendars (assume they are OK)
   if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return TRUE;
-  g_debug("** EEE ** Properties Dialog Check Hook Call (source=%s)", source_name);
 
-  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, target->source);
-  if (cal == NULL)
-  {
-    g_debug("** EEE ** Can't get EeeCalendar for ESource. (%s)", source_name);
+  g_debug("** EEE ** Properties Dialog Check Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
+
+  // check if we should bother with detailed checks
+  if (!eee_plugin_online)
     return FALSE;
+
+  if (is_new_calendar_dialog(target->source))
+  {
+    // creating new calendar
+    EeeAccount* account = eee_accounts_manager_find_account_by_group(_mgr, group);
+    if (account == NULL)
+    {
+      g_debug("** EEE ** internal error, can't find account");
+      return FALSE;
+    }
+    if (!account->accessible)
+      return FALSE;   
+  }
+  else
+  {
+    // editting properties of existing calendar
+    EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, target->source);
+    if (cal == NULL)
+    {
+      g_debug("** EEE ** internal error, can't find calendar");
+      return FALSE;
+    }
   }
 
   return TRUE;
@@ -61,25 +164,84 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
 void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target)
 {
   ESourceGroup *group = e_source_peek_group(target->source);
-  const char* source_name = e_source_peek_name(target->source);
 
+  // ignore non 3e calendars
   if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
     return;
-  g_debug("** EEE ** Properties Dialog Commit Hook Call (source=%s)", source_name);
 
-  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, target->source);
-  if (cal == NULL)
-  {
-    g_debug("** EEE ** Can't get EeeCalendar for ESource. (%s)", source_name);
+  g_debug("** EEE ** Properties Dialog Commit Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
+
+  // check if we should bother with commit at all
+  if (!eee_plugin_online)
     return;
+
+  if (is_new_calendar_dialog(target->source))
+  {
+    // creating new calendar
+    EeeAccount* account = eee_accounts_manager_find_account_by_group(_mgr, group);
+    if (account == NULL)
+    {
+      g_debug("** EEE ** internal error, can't find account");
+      return;
+    }
+    if (!account->accessible)
+    {
+      g_debug("** EEE ** internal error, account is not accessible");
+      return;
+    }
+
+    xr_client_conn* conn = eee_account_connect(account);
+    if (conn == NULL)
+    {
+      g_debug("** EEE ** internal error, can't connect to account");
+      return;
+    }
+
+    // create calname and settings string
+    EeeSettings* settings = eee_settings_new(NULL);
+    guint32 color = 0;
+    e_source_get_color(target->source, &color);
+    eee_settings_set_color(settings, color);
+    eee_settings_set_title(settings, e_source_peek_name(target->source));
+    char* settings_string = eee_settings_encode(settings);
+    g_object_unref(settings);
+    const char* calname = e_source_peek_name(target->source);
+
+    GError* err = NULL;
+    ESClient_newCalendar(conn, (char*)calname, &err);
+    if (err == NULL)
+    {
+      if (!ESClient_updateCalendarSettings(conn, (char*)calname, settings_string, NULL))
+        g_debug("** EEE ** failed to update settings on new calendar (%d:%s)", err->code, err->message);
+    }
+    g_free(settings_string);
+    xr_client_free(conn);
+
+    if (err)
+    {
+      g_debug("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
+      g_clear_error(&err);
+    }
+
+    eee_accounts_manager_sync(_mgr);
   }
+  else
+  {
+    // editting properties of existing calendar
+    EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, target->source);
+    if (cal == NULL)
+    {
+      g_debug("** EEE ** internal error, can't find calendar");
+      return;
+    }
 
-  guint32 color;
-  e_source_get_color(target->source, &color);
-  eee_settings_set_color(cal->settings, color);
-  eee_settings_set_title(cal->settings, source_name);
-
-  eee_calendar_store_settings(cal);
+    guint32 color;
+    e_source_get_color(target->source, &color);
+    e_source_set_color(target->source, color);
+    eee_settings_set_color(cal->settings, color);
+    eee_settings_set_title(cal->settings, e_source_peek_name(target->source));
+    eee_calendar_store_settings(cal);
+  }
 }
 
 /* calendar source list popup menu items */
@@ -260,10 +422,16 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
       eee_accounts_manager_sync(_mgr);
     else
       _mgr = eee_accounts_manager_new();
+    
+    // hacky hacky hack hack
+    if (offline_label)
+      gtk_widget_hide(offline_label);
   }
   else
   {
     // shutdown open acl/subscribe dialogs, etc.
+    if (offline_label)
+      gtk_widget_show(offline_label);
   }
 }
 

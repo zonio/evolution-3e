@@ -80,11 +80,11 @@
         <item 
           type="item_table" 
           path="00.general/00.source/00.eee" 
-          factory="eee_calendar_properties_items"/>
+          factory="eee_calendar_properties_factory_top"/>
         <item 
-          type="item_table"
-          path="00.general/00.source/40.eee"
-          factory="eee_calendar_properties_items"/>
+          type="item_table" 
+          path="00.general/00.source/50.eee" 
+          factory="eee_calendar_properties_factory"/>
       </group>
     </hook>
 
