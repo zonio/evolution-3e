@@ -317,6 +317,22 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
   if (cal->access_account != cal->owner_account)
     return;
 
+  GError* err = NULL;
+  xr_client_conn* conn = eee_account_connect(cal->access_account);
+  if (conn == NULL)
+    return;
+
+  ESClient_deleteCalendar(conn, cal->name, &err);
+  xr_client_free(conn);
+
+  if (err)
+  {
+    g_debug("** EEE ** on_delete_cb: delete failed (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+    return;
+  }
+
+#if 0
   // get ECal and remove calendar from the server
   GError* err = NULL;
   ECal* ecal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
@@ -326,6 +342,7 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
     g_clear_error(&err);
   }
   g_object_unref(ecal);
+#endif
 
   if (_mgr)
     eee_accounts_manager_sync(_mgr);
