@@ -171,7 +171,6 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
 
 static EPopupItem popup_items_shared_cal[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
-  { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, 0xffff },
   { E_POPUP_ITEM, "12.eee.03", "Unsubscribe", on_unsubscribe_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_PRIMARY },
   { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, 0xffff },
@@ -180,7 +179,6 @@ static EPopupItem popup_items_shared_cal[] = {
 static EPopupItem popup_items_user_cal[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, E_CAL_POPUP_SOURCE_PRIMARY },
-  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
   { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_USER|E_CAL_POPUP_SOURCE_PRIMARY },
 };
