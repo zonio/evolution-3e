@@ -2,27 +2,16 @@
 # include "config.h"
 #endif
 
-#include <glib.h>
-#include <gtk/gtk.h>
-
-#include <e-util/e-config.h>
-#include <e-util/e-error.h>
+#include <libedataserverui/e-source-selector.h>
 #include <calendar/gui/e-cal-config.h>
 #include <calendar/gui/e-cal-popup.h>
-#include <mail/em-menu.h>
 #include <shell/es-event.h>
-#include <libedataserver/e-url.h>
-#include <libedataserver/e-account-list.h>
-#include <libedataserverui/e-source-selector.h>
-#include <libecal/e-cal.h>
-#include <xr-lib.h>
+#include <mail/em-menu.h>
 
-#include <string.h>
-
-#include "subscribe.h"
-#include "acl.h"
 #include "eee-accounts-manager.h"
 #include "eee-calendar-config.h"
+#include "subscribe.h"
+#include "acl.h"
 
 /* plugin intialization */
 
@@ -85,14 +74,12 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
     return;
   }
 
-  if (cal->settings == NULL)
-    cal->settings = eee_settings_new(NULL);
   guint32 color;
   e_source_get_color(target->source, &color);
   eee_settings_set_color(cal->settings, color);
   eee_settings_set_title(cal->settings, source_name);
 
-  eee_server_store_calendar_settings(cal);
+  eee_calendar_store_settings(cal);
 }
 
 /* calendar source list popup menu items */
@@ -118,12 +105,37 @@ static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
-  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
 
   if (!eee_plugin_online)
     return;
 
-  g_debug("** EEE ** on_unsubscribe_cb: (source=%s)", e_source_peek_name(source));
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
+  if (cal == NULL)
+    return;
+
+  // ignore owned calendars
+  if (cal->access_account == cal->owner_account)
+    return;
+
+  GError* err = NULL;
+  xr_client_conn* conn = eee_account_connect(cal->access_account);
+  if (conn == NULL)
+    return;
+
+  char* calspec = g_strdup_printf("%s:%s", cal->owner_account->email, cal->name);
+  ESClient_unsubscribeCalendar(conn, calspec, &err);
+  g_free(calspec);
+  xr_client_free(conn);
+
+  if (err)
+  {
+    g_debug("** EEE ** on_unsubscribe_cb: unsubscribe failed (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+    return;
+  }
+
+  if (_mgr)
+    eee_accounts_manager_sync(_mgr);
 }
 
 static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
@@ -131,18 +143,36 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
-  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
 
   if (!eee_plugin_online)
     return;
 
-  g_debug("** EEE ** on_delete_cb: This shouldn't happen! (source=%s)", e_source_peek_name(source));
+  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
+  if (cal == NULL)
+    return;
+
+  // ignore subscribed calendars
+  if (cal->access_account != cal->owner_account)
+    return;
+
+  // get ECal and remove calendar from the server
+  GError* err = NULL;
+  ECal* ecal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
+  if (!e_cal_remove(ecal, &err))
+  {
+    g_debug("** EEE ** on_delete_cb: ECal remove failed (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+  }
+  g_object_unref(ecal);
+
+  if (_mgr)
+    eee_accounts_manager_sync(_mgr);
 }
 
 static EPopupItem popup_items_shared_cal[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, 0xffff },
-  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_PRIMARY },
+  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe", on_unsubscribe_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_PRIMARY },
   { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, 0xffff },
 };
@@ -150,15 +180,15 @@ static EPopupItem popup_items_shared_cal[] = {
 static EPopupItem popup_items_user_cal[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, E_CAL_POPUP_SOURCE_PRIMARY },
-  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
+  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
   { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
-  //{ E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_USER|E_CAL_POPUP_SOURCE_PRIMARY },
+  { E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, E_CAL_POPUP_SOURCE_USER|E_CAL_POPUP_SOURCE_PRIMARY },
 };
 
 static EPopupItem popup_items_cal_offline[] = {
   { E_POPUP_BAR,  "12.eee.00", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "12.eee.02", "Configure ACL...", on_permissions_cb, NULL, "stock_calendar", 0, 0xffff },
-  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe this calendar", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
+  { E_POPUP_ITEM, "12.eee.03", "Unsubscribe", on_unsubscribe_cb, NULL, "stock_delete", 0, 0xffff },
   { E_POPUP_BAR,  "12.eee.04", NULL, NULL, NULL, NULL, 0, 0 },
   { E_POPUP_ITEM, "20.delete", "_Delete", on_delete_cb, NULL, "stock_delete", 0, 0xffff },
  	{ E_POPUP_ITEM, "30.properties", "_Properties...", NULL, NULL, "stock_folder-properties", 0, 0xffff },
@@ -227,9 +257,11 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
   eee_plugin_online = !!online;
   if (online)
   {
-    // force callist synchronization, etc.
+    // force calendar list synchronization, etc.
     if (_mgr)
       eee_accounts_manager_sync(_mgr);
+    else
+      _mgr = eee_accounts_manager_new();
   }
   else
   {
@@ -241,14 +273,15 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 
 static gint activation_cb(gpointer data)
 {
+  if (!eee_plugin_online)
+    return FALSE;
   if (_mgr == NULL)
-    _mgr = eee_accounts_manager_new();  
+    _mgr = eee_accounts_manager_new();
   return FALSE;
 }
 
 void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *target)
 {
-  g_debug("** EEE ** Component changed to: %s", target->name);
   if (strstr(target->name, "OAFIID:GNOME_Evolution_Calendar_Component") == NULL)
     return;
 
@@ -260,7 +293,5 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
 
 void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
 {
-  g_debug("** EEE ** subscribe");
-
   subscribe_gui_create(_mgr);
 }

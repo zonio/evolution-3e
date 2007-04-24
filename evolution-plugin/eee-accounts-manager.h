@@ -1,10 +1,8 @@
 #ifndef __EEE_ACCOUNTS_MANAGER_H__
 #define __EEE_ACCOUNTS_MANAGER_H__
 
-#include "eee-account.h"
-#include <libedataserver/e-account-list.h>
 #include <libedataserver/e-source-list.h>
-#include "interface/ESClient.xrc.h"
+#include "eee-account.h"
 
 /** 3E account manager.
  *
@@ -55,11 +53,6 @@ struct _EeeAccountsManager
 {
   GObject parent;
   EeeAccountsManagerPriv* priv;
-
-  GConfClient* gconf;         /**< Gconf client. */
-  EAccountList* ealist;       /**< EAccountList instance used internally to watch for changes. */
-  ESourceList* eslist;        /**< Source list for calendar. */
-  GSList* accounts;           /**< List of EeeAccount obejcts managed by this EeeAccountsManager. */
 };
 
 struct _EeeAccountsManagerClass
@@ -72,14 +65,12 @@ G_BEGIN_DECLS
 EeeAccountsManager* eee_accounts_manager_new();
 
 gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr);
+void eee_accounts_manager_remove_accounts(EeeAccountsManager* mgr);
+GSList* eee_accounts_manager_peek_accounts_list(EeeAccountsManager* mgr);
+void eee_accounts_manager_add_account(EeeAccountsManager* mgr, EeeAccount* account);
 EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, const char* email);
-EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source);
-gboolean eee_accounts_manager_remove_calendar(EeeAccountsManager* mgr, ESource* source);
 EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group);
-
-/* server comm methods */
-gboolean eee_server_store_calendar_settings(EeeCalendar* cal);
-xr_client_conn* eee_server_connect_to_account(EeeAccount* acc);
+EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source);
 
 GType eee_accounts_manager_get_type() G_GNUC_CONST;
 

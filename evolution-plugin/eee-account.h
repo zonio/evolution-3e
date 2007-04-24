@@ -2,6 +2,10 @@
 #define __EEE_ACCOUNT_H__
 
 #include <glib-object.h>
+#include "interface/ESClient.xrc.h"
+#include "interface/ESAdmin.xrc.h"
+
+#define EEE_PASSWORD_COMPONENT "3E Account"
 
 /** 3E user's account.
  *
@@ -49,6 +53,7 @@ EeeAccount* eee_account_new();
 void eee_account_add_calendar(EeeAccount* account, EeeCalendar* cal);
 GSList* eee_account_peek_calendars(EeeAccount* account);
 EeeCalendar* eee_account_peek_calendar_by_name(EeeAccount* account, const char* name);
+xr_client_conn* eee_account_connect(EeeAccount* account);
 
 GType eee_account_get_type() G_GNUC_CONST;
 

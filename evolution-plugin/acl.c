@@ -1,4 +1,5 @@
 #include <string.h>
+#include <gtk/gtk.h>
 #include <glade/glade.h>
 
 #include "acl.h"
@@ -105,7 +106,7 @@ static gboolean load_state(struct acl_context* ctx)
 {
   GError* err = NULL;
 
-  xr_client_conn* conn = eee_server_connect_to_account(ctx->cal->access_account);
+  xr_client_conn* conn = eee_account_connect(ctx->cal->access_account);
   if (conn == NULL)
     return FALSE;
 

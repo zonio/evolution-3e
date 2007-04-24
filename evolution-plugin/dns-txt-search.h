@@ -11,5 +11,12 @@
  */
 char** get_txt_records(const char *name);
 
-#endif
+/** Get 3E server hostname if possible.
+ *
+ * @param email E-mail.
+ *
+ * @return hostname:port or NULL.
+ */
+char* get_eee_server_hostname(const char* email);
 
+#endif

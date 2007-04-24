@@ -30,6 +30,7 @@ struct _EeeCalendar
   EeeSettings* settings;      /**< Calendar settings. (title, color) */
   EeeAccount* access_account; /**< 3E account that is used to access this calendar. */
   EeeAccount* owner_account;  /**< 3E account that this calendar is assigned to (owner's). */
+
   int synced;
 };
 
@@ -41,6 +42,13 @@ struct _EeeCalendarClass
 G_BEGIN_DECLS
 
 EeeCalendar* eee_calendar_new();
+
+void eee_calendar_set_name(EeeCalendar* cal, const char* name);
+void eee_calendar_set_perm(EeeCalendar* cal, const char* perm);
+void eee_calendar_set_relative_uri(EeeCalendar* cal, const char* uri);
+void eee_calendar_set_access_account(EeeCalendar* cal, EeeAccount* account);
+void eee_calendar_set_owner_account(EeeCalendar* cal, EeeAccount* account);
+gboolean eee_calendar_store_settings(EeeCalendar* cal);
 
 GType eee_calendar_get_type() G_GNUC_CONST;
 

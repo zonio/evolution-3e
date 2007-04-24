@@ -1,4 +1,5 @@
 #include <string.h>
+#include <gtk/gtk.h>
 #include <glade/glade.h>
 
 #include "subscribe.h"
@@ -35,7 +36,7 @@ static gboolean load_users(EeeAccount* acc, char* prefix, GtkListStore* model)
 
   g_debug("** EEE ** load_users acc=%s prefix=%s", acc->email, prefix);
 
-  conn = eee_server_connect_to_account(acc);
+  conn = eee_account_connect(acc);
   if (conn == NULL)
     return FALSE;
 
@@ -74,7 +75,7 @@ static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* mode
 
   g_debug("** EEE ** load_users acc=%s prefix=%s", acc->email, prefix);
 
-  conn = eee_server_connect_to_account(acc);
+  conn = eee_account_connect(acc);
   if (conn == NULL)
     return FALSE;
 
@@ -145,7 +146,7 @@ static gboolean user_insert_prefix(GtkEntryCompletion *widget, char* prefix, str
     return FALSE;
   GSList* iter;
   gtk_tree_store_clear(ctx->model);
-  for (iter = ctx->mgr->accounts; iter; iter = iter->next)
+  for (iter = eee_accounts_manager_peek_accounts_list(ctx->mgr); iter; iter = iter->next)
   {
     EeeAccount* acc = iter->data;
     if (acc->accessible)
@@ -205,7 +206,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   if (!is_calendar || acc == NULL || name == NULL)
     goto err1;
 
-  xr_client_conn* conn = eee_server_connect_to_account(acc);
+  xr_client_conn* conn = eee_account_connect(acc);
   if (conn == NULL)
     goto err1;
 
@@ -285,7 +286,7 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   // setup autocompletion (0 == username, 1 == EeeAccount*)
   GtkListStore* users_store = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_POINTER);
   GSList* iter;
-  for (iter = mgr->accounts; iter; iter = iter->next)
+  for (iter = eee_accounts_manager_peek_accounts_list(mgr); iter; iter = iter->next)
   {
     EeeAccount* acc = iter->data;
     if (acc->accessible)

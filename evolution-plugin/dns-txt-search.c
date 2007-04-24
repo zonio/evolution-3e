@@ -190,3 +190,33 @@ char** get_txt_records(const char *name)
 
   return _parse_result(abuf, n);
 }
+
+char* get_eee_server_hostname(const char* email)
+{
+  char* domain = strchr(email, '@');
+  char** txt_list;
+  guint i;
+
+  if (!domain) // invalid email address
+    return NULL;
+
+  txt_list = get_txt_records(++domain);
+  if (txt_list == NULL)
+  {
+    g_debug("** EEE ** 3E server hostname can't be determined for '%s'. Your admin forgot to setup 3E TXT records in DNS?", email);
+    return NULL;
+  }
+
+  for (i = 0; i < g_strv_length(txt_list); i++)
+  {
+    // parse TXT records if any
+    if (g_str_has_prefix(txt_list[i], "eee server="))
+    {
+      char* server = g_strstrip(g_strdup(txt_list[i]+sizeof("eee server=")-1));
+      //XXX: check format (hostname:port)
+      return server;
+    }
+  }
+  g_strfreev(txt_list);
+  return NULL;
+}
