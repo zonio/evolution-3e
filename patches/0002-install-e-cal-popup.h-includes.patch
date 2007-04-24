@@ -1,0 +1,46 @@
+From a8303e48c79eb39aa297ecb391557b57817c7f99 Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <megous@megous.com>
+Date: Sat, 24 Feb 2007 17:21:42 +0100
+Subject: [PATCH] install e-cal-popup.h includes
+
+This is required by some external evolution plugins.
+---
+ calendar/gui/Makefile.am         |    4 +++-
+ calendar/gui/dialogs/Makefile.am |    6 ++++++
+ 2 files changed, 9 insertions(+), 1 deletions(-)
+
+diff --git a/calendar/gui/Makefile.am b/calendar/gui/Makefile.am
+index c9f54cd..18ee218 100644
+--- a/calendar/gui/Makefile.am
++++ b/calendar/gui/Makefile.am
+@@ -49,7 +49,9 @@ component_LTLIBRARIES = libevolution-calendar.la
+ ecalendarincludedir = $(privincludedir)/calendar/gui
+ 
+ ecalendarinclude_HEADERS =	\
+-	e-cal-config.h
++	e-cal-config.h		\
++	e-cal-popup.h		\
++	itip-utils.h
+ 
+ INCLUDES =						\
+ 	-DG_LOG_DOMAIN=\"calendar-gui\"			\
+diff --git a/calendar/gui/dialogs/Makefile.am b/calendar/gui/dialogs/Makefile.am
+index 2ade11e..6dd8a4c 100644
+--- a/calendar/gui/dialogs/Makefile.am
++++ b/calendar/gui/dialogs/Makefile.am
+@@ -13,6 +13,12 @@ INCLUDES = 								\
+ 	-DPREFIX=\""$(prefix)"\"					\
+ 	$(EVOLUTION_CALENDAR_CFLAGS)
+ 
++ecalendarincludedir = $(privincludedir)/calendar/gui/dialogs
++
++ecalendarinclude_HEADERS =	\
++	comp-editor-page.h	\
++	comp-editor.h
++
+ noinst_LTLIBRARIES = libcal-dialogs.la
+ 
+ libcal_dialogs_la_LIBADD =					\
+-- 
+1.5.1.1.GIT-dirty
+
