@@ -7,14 +7,10 @@ Add this to your dnsmasq.conf for testing:
   txt-record=zonio.net,eee server=localhost:4444
 
 GUI Features:
-- automatically setup calendar accounts based on email identities (DONE)
-  - periodical updates
-- modify calendar settings (title, color) (DONE)
+- periodical updates
 - create calendar (name, title, color)
+- subscribe to calendar (cleanup)
 - view/modify ACL for a given calendar
-- subscribe to calendar
-- unsubscribe from calendar
-- delete calendar
 - admin module?
 
 TODO:
@@ -30,7 +26,6 @@ TODO:
   - ...
 
 - EeeAccountsManager:
-  - handle online/offline state
   - check for crossubscription in evolution (two EAccounts both with 3e support,
     one is subscribing from other)
 
