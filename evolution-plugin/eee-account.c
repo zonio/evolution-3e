@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include <e-util/e-error.h>
 #include <libedataserverui/e-passwords.h>
 
@@ -136,7 +137,10 @@ xr_client_conn* eee_account_connect(EeeAccount* account)
     g_debug("** EEE ** Can't create client interface. (%d:%s)", err->code, err->message);
     goto err0;
   }
-  server_uri = g_strdup_printf("https://%s/ESClient", account->server);
+  if (getenv("EEE_EVO_DISABLE_SSL"))
+    server_uri = g_strdup_printf("http://%s/ESClient", account->server);
+  else
+    server_uri = g_strdup_printf("https://%s/ESClient", account->server);
   xr_client_open(conn, server_uri, &err);
   g_free(server_uri);
   if (err)
