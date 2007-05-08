@@ -1,0 +1,409 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage{palatino}
+\usepackage[utf8]{inputenc}
+\usepackage[czech]{babel}
+\usepackage[svgnames]{xcolor}
+\usepackage{vmargin,calc,float,epsfig,multicol,fancyheadings,enumitem,lineno}
+\GetGinDriver
+\usepackage[\GinDriver,a4paper,breaklinks,colorlinks,pdfpagemode=None,pdfstartview=Fit,pdfpagelayout=SinglePage]{hyperref}
+
+% set some basic values
+\setlength{\columnseprule}{0.25mm}
+\setlength{\columnsep}{1cm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2.5mm}
+\setcounter{tocdepth}{2}
+
+% customize environments
+\setdescription{itemsep=0pt,style=nextline,leftmargin=10pt}%inline
+\setitemize{itemsep=0pt,leftmargin=20pt}
+\setenumerate{itemsep=0pt,leftmargin=20pt}
+
+% pageformat
+\normalsize
+\setpapersize{A4}
+\setmarginsrb{10mm}{10mm}{10mm}{10mm}{2\baselineskip}{\baselineskip}{\baselineskip}{2\baselineskip}
+\lhead{\large\doccolor\textbf{\docsubtitle}}
+\rhead{\doccolor\textsc{\textbf{\doctitle}}}
+\lfoot{\doccolor\textbf{Strana \thepage}}
+\rfoot{\doccolor\textbf{\today}}
+\cfoot{\doccolor\textbf{\docauthors}}
+\setlength{\footrulewidth}{0.5mm}
+\setlength{\headrulewidth}{0.5mm}
+\pagestyle{fancy}
+
+%%
+%% Actual Document Follows:
+%%
+
+\newcommand{\doccolor}{\color[HTML]{be192a}}%zonio
+\newcommand{\doctitle}{Zonio --- 3E}
+%\newcommand{\doccolor}{\color[HTML]{4158a3}}%personal
+%\newcommand{\doctitle}{Osobní}
+
+\newcommand{\docsubtitle}{Návrh pluginů 3E do Evolution}
+\newcommand{\docauthors}{Ondřej Jirman}
+
+\begin{document}
+%\frontpage
+%\tocpage
+
+\begin{multicols*}{2}
+
+\section{Přehled}
+
+Cílem tohoto dokumentu je popsat vlastnosti a návrh implementaci podpory pro
+kalendářový systém 3E (Enterprise Event Exchange?\footnote{Nebo jak to je?
+Použít slovíčko \textit{Exchange} může být dobrý nápad, protože může k nasšemu systému
+zavést lidi kteří budou vyhledávat MS Exchange ve vyhledávači. Což je ta správná
+cílová skupina. :)})
+
+Implementace podpory pro 3E kalendářový systém v evolution vyžaduje, díky
+rozdělení evolution na dvě části, dva pluginy:
+\begin{description}
+\item[3E Evolution Plugin] Plugin implementující grafické uživatelské rozhraní.
+\item[3E Evolution Data Server Plugin] Plugin implementjící manipulaci s obsahem
+kalendáře a komunikaci se serverem při plánování meetingů.
+\end{description}
+
+Oba tyto pluginy jsou obsaženy v balíku \textit{evolution-3e}. Tento zdrojový
+balík dále obsahuje popis komunikačního rozhraní 3E serveru. Balík vyžaduje pro
+kompilaci knihovnu \textit{libxr} a nainstalovanou \textit{evolution} a
+\textit{evolution-data-server}.
+
+Pro správnou funkci pluginů je nezbytné aplikovat na \textit{evolution} a
+\textit{evolution-data-server} patche uvedené v závěru. Tyto patche jsou
+obsaženy v balíku \textit{evolution-3e}.
+
+\section{Evolution plugin}
+
+\subsection{Vlastnosti}
+
+\begin{description}
+\item[Automatické nastavení] Plugin projde seznam identit uživatele a pokusí se
+zjistit zda pro dané domény existuje v DNS TXT záznam pro 3E server a zda
+uživatel existuje na daném serveru. Pokud ano pak nabídne přihlášení. Po
+úspěšném přihlášení uloží heslo do klíčenky pro bzudoucí použití. K aktivaci
+pluginu dojde až po prvním přepnutí do kalendářové komponenty.
+\item[Automatická aktualizace nastavení] Plugin periodicky kontaktuje 3E server
+a synchronizuje seznam kalendářů a účtů v Evolution se změnami v seznamu kalendářů
+na serveru.
+\item[Offline režim] Plugin sleduje nastavení online/offline režimu v evolution
+a povoluje/znemožňuje provádět činnosti které nelze provádět v offline režimu.
+Mezi tyto činnosti patří jakákoliv manipulace se seznamem kalendářů, zaspisování
+si sdílených kalendářů, změny práv, atd. Jediné co lze v offline režimu provádět
+jsou manipulace s obsahem kalendáře. V offline režimu nemá prakticky smysl plánovat
+meetingy, protože není možné přistupovat k free/busy informacím na serveru.
+\item[Aktualizace nastavení] Plugin umožňuje aktualizaci nastavení kalendáře, 
+jako je barva a uživatelský název kalendáře.
+\item[Vytvoření nového kalendáře] Plugin umožňuje vytvořit nový kalendář pod
+daným účtem kliknutím na ``New Calendar", následované výběrem účtu z seznamu a
+zadáním názvu a barvy kalendáře. Název kalendáře se stane jeho identifikátorem,
+který už později nepůjde změnit a bude se používat jako součást stabilního globálně
+unikátního řetězece identifikujícího kalendář (URI). Název lze změnit, ale
+identifikátor již zůstane neměnný.
+\item[Odstranění kalendáře] Kalendáře vlastněné uživatelem lze odstranit pomocí
+tlačítka ``Remove". Toto tlačítko není přístupné u nasdílených kalendářů.
+\item[Zápis sdíleného kalendáře] Plugin umožňuje uživateli zapsat si cizí
+kalendáře, pokud jejich vlastník povolil našemu uživateli k nim přístup. 
+Zapsáním kalendáře se kalendář přidá do seznamu kalendářů uživatele. Zápis se
+provádí pomocí položky ``Subscribe to..." v menu ``File". V dialogu který se
+zobrazí musí uživatel vybrat kalendář který si chce zapsat. Uživatel může
+vyhledat vlastníka kalendáře, který si chce zapsat pomocí vstupu s funkcí
+automatického doplňování. Automaticky se vyhledává v seznamu uživatelů ze všech
+kalendářových účtů které má uživatel v Evolution k dispozici.
+\item[Zrušení zápisu sdíleného kalendáře] Plugin umožňuje zrušit zápis kliknutím
+pravým tlačítkem myši na zapsaný kalendář v seznamu kalendářů a výběrem položky
+``Unsubscribe" z menu.
+\item[Modifikace přístupových práv] Plugin umožňuje uživateli nastavovat práva
+na jeho vlastním kalendáři kliknutím pravým tlačítkem myši na kalendář v seznamu
+kalendářů a výběrem položky ``Set permissions..." z menu. Následně se zobrazí
+dialog nabízející tři režimy přístupu ke kalendáři:
+  \begin{description}
+  \item[Privátní kalendář] Kalendář bude přístupný pouze vlastníkovi kalendáře.
+  \item[Veřejný kalendář] Kalendář bude přístupný pro čtení jakémukoliv
+  přihlášenému uživateli.
+  \item[Sdílený kalendář] kalendář bude přístupný vybraným uživatelům s
+  zvolenými právy buď pro zápis nebo jen pro čtení.
+  \end{description}
+Pokud si uživatel vybere třetí možnost, bude mu umožněno upravit seznam
+uživatelů kteří budou mít přístup k jeho kalendáři.
+\end{description}
+
+\subsection{Poznámky k implemetaci}
+
+\subsubsection{Synchronizace seznamu kalendářů}
+
+Seznam identit je v evolution reprezentován objktem EAccountList, což je seznam
+objektů EAccount, které obsahují informace o identitách. Z objektu EAccountList
+server určí seznam emailových adres reprezentujících, možné kalendářové účty,
+které chce uživatel využívat. Tento sezname se dále zredukuje o adresy, k jejimž
+doménovým jménům v DNS neexistuje TXT záznam pro 3E server.
+
+Pro každý účet je seznam kalendářů uložen na serveru a je třeba jej načíst do 
+evolution. Seznam kalendářů je v evolution reprezentován objektem ESourceList,
+který obsahuje skupiny kalendářů reprezentované objekty ESourceGroup, které
+obsahují samotné ESource objekty reprezentující jednotlivé kalendáře.
+Seznam skupin a kalendářů je uložen v gconf a tyto objekty reagují na změny v
+gconf tak že se automaticky synchronizují s novým stavem a upozorňují svého
+uživatele pomocí signálu na to že byla provedena aktualizace.
+
+Tj. lze si vytvořit instanci ESource objektu reprezentujícího určitý kalendář v
+úplně separátním procesu od evolution a provést změny a tyto změny se okamžitě
+projeví v běžící instanci evolution. Samozřejmě to funguje i v rámci jednoho
+procesu čehož využívá 3E Evolution Plugin.
+
+V rámci 3E plugin ESourceGroup reprezentuje uživatele 3E serveru a ESource
+objekty v dané skupině reprezentují jeho kalendáře.
+
+Cílem synchronizace tedy je z EAccountList získat seznam 3E účtů a pro tyto účty
+získat seznam kalendářů ze serveru a z těchto informací aktualizovat současnou
+hierarchii ESourceGroup a ESource objektů.
+
+Nejen výše popsanou synchronizaci ale obecně manipulaci s 3E kalendáři má na
+starosti objekt EeeAccountsManager, což je singleton vytvářený při inicializaci
+pluginu.
+
+EeeAccountsManager obsahuje seznam EeeAccount objektů, které reprezentují jak
+účty našeho uživatele získané z identit v EAccountList, tak účty vlastníků
+zapsaných kalendářů, ke kterým má uživatel přístup skrze své vlastní účty.
+
+Toto rozdělení je zde proto, protože ESourceGroup objekty jsou přímo mapované
+na EeeAccount objekty. To znamená, že zapsané kalendáře cizích uživatelů se
+zobrazují jakoby pod cizím uživatelem v seznamu kalendářů.
+
+EeeAccount objekty pak obsahují seznam EeeCalendar objektů, které jsou mapovány
+na ESource objekty.
+
+Samotná synchronizace pak probíhá tak, že se vytvoří hierarchie EeeAccount a
+EeeCalendar objektů načtením ze serveru a pak se seznam EeeAccount objetů srovná
+se seznamem ESourceGroup objektů vztažených k 3E pluginu a ESourceGroup objekty
+které tam jsou navíc se vyhází a pro EeeAccount objekty bez odpovídajících
+ESourceGroup objektů se ESourceGroup objekty vytvoří. Čili se nejedná o tupé
+odstranění všech ESourceGroup a vytvoření seznamu kalendářů ``from the scratch".
+Tímto se docílí minimálních problémů v GUI při periodických synchronizacích,
+kdy většinu času není potřeba dělat v hierarchii ESourceGroup a ESource objektů
+žádné změny.
+
+\subsubsection{Offline režim}
+
+V offline režimu neprobíhá synchronizace protože není možné vytvořit seznam
+EeeAccount objektů.
+
+To v jakém je evolution režimu se dá zjistit z tak, že pomocí pugin systému 
+zaregistrujeme notifikaci při přechodu z jednoho režimu do druhého a v pluginu
+si budeme uchovávat poslední stav.
+
+Při přechodu z offline do online režimu se povolí periodické synchronizace
+seznamu kalendářů a některé GUI prvky, které v offline režimu nejsou přístupné.
+Zároveň se okamžitě provede resynchronizace seznamu kalendářů.
+
+\subsubsection{Úprava kontextového menu}
+
+Úpravy menu se provádí tak, že evolution při kliknutí na kalendář zavolá hook,
+který může pozměnit konfiguraci menu.
+
+Konfigurace menu obsahuje položky které jsou identifikované určitým klíčem, např. 20.delete
+je tlačítko pro smazání kalendáře, 30.properties je tlačítko pro úpravu
+vlastností kalendáře. My můžeme přidávat další položky a upravovat existující
+(vyžaduje aplikaci patche).
+
+Hook v 3E pluginu tedy zjistí zda bylo kliknuto na 3E kalendář a podle typu
+kalendáře a online/offline stavu upraví konfiguraci menu.
+
+Pokud uživatel vybere naši položku z menu, evolution zavolá námi nastavený
+callback.
+
+V offline režimu kontextové menu 3E kalendáře upravuje/přidává položky:
+\begin{description}
+\item [Configure ACL...] Zašedivěno.
+\item [Unsubscribe] Zašedivěno.
+\item [Delete] Zašedivěno.
+\item [Properties...] Zašedivěno.
+\end{description}
+
+V online režimu kontextové menu 3E kalendáře vlastníka účtu upravuje/přidává položky:
+\begin{description}
+\item [Configure ACL...] Otevírá dialog pro nastavení práv kalendáře.
+\item [Delete] Volá přímo z GUI pluginu RPC pro odstranění kalendáře a následně 
+resynchronizuje seznam kalendářů.
+\end{description}
+
+\newpage
+V online režimu kontextové menu 3E zapsaného kalendáře upravuje/přidává položky:
+\begin{description}
+\item [Unsubscribe] Volá přímo z GUI pluginu RPC pro
+odhlášení kalendáře a následně resynchronizuje seznam kalendářů.
+\item [Delete] Zašedivěno.
+\end{description}
+
+\subsubsection{Zápis kalendáře/úprava hlavního menu}
+
+Pomocí konfiguračního souboru pluginu se přidá položka na určité místo v menu a
+nastaví se callback který se zavolá při kliknutí.
+
+Po kliknutí se otevře dialog pro zápis kalendáře.
+
+\subsubsection{Vytvoření kalendáře a změna nastavení}
+
+Toto se provádí pomocí standardního dialogu v evolution. Tento dialog obsahuje
+widget GtkTable, který máme možnost upravovat pomocí plugin systému.
+
+Rozšíření je implementováno pomocí tří callbacků:
+\begin{description}
+\item [properties\_factory] Tato funkce má za úkol sestavit/upravit GUI dialogu.
+\item [properties\_check] V této funkci je možné zkontrolovat zda je možné
+provést přidání/úpravu kalendáře. Pokud to není možné, tak je třeba vrátit FALSE
+a tlačítko pro potvrzení změn bude zašedivěno.
+\item [properties\_commit] Tato funkce se volá pro dokončení změn po stisknutí
+tlačítka pro jejich potvrzení. Tj. v našem případě pro vytvoření kalendáře na 3E
+serveru, resp. odeslání nového nastavení (barva, název kalendáře) na server.
+Zde je třeba dát pozor na to že evolution sama přidá nový ESource do
+ESourceList, jenže problém je že tento ESource je chybný z hlediska 3E
+pluginu, takže je třeba po přidání provést okamžitě resynchronizaci.
+\end{description}
+
+V jeden moment může být aktivní pouze jeden dialog pro přidání, nebo úpravu nastavení
+kalendáře. Funkce proto sdílejí data pomocí statických proměnných.\footnote{Nic
+jiného nám ani nezbývá.}
+
+Callbacky se vždy volají pro všechny skupiny kalendářů (New Calendar) a všechny
+kalendáře (Properties...). Jiank řečeno, callbacky budou volány i pro standardní
+typy kalendářů v Evolution (file, weather, atd.). Callback sám musí rozhodnout
+zda je volán na správném typu kalendáře a má tedy provést výše uvedenou činnost
+či ne. To se dá rozhodnout pomocí ESource obejktu kalendáře které je předáváno
+callbacku. Typy kalendáře jsou rozlišované pomocí URI prefixu. 3E kalendáře mají
+prefix eee://.
+
+To zda se callbacky volají pro dialog pro přidání kalendáře, nebo pro dialog pro
+úpravu nastavení kalednáře se určuje podle toho zda předávané ESource obsahuje
+má nastavenu URI kalendáře.
+
+\subsection{Zápis sdíleného kalendáře}
+
+Zápis sdíleného kalendáře je implementován jedním dialogem, který obsahuje
+quiksearch řádek pro filtrování seznamu kalendářů podle uživatele a tabulku se
+seznamem sdílených kalendářů. Uživatel si vybere kalendář z tabulky a klikne na
+``Apply".
+
+GUI dialogu je napsané v glade, konstruktor dialogu sestaví GUI z glade souboru
+a zaregistruje callbacky. Každý callback dostane v nepoviném parametru
+\textit{data} objekt obsahující stav dialogu (\textit{struct subscribe\_context}).
+
+Díky tomuto objektu každý callback ví ``co se děje", tj. v jakém stavu se celý
+dialog nachází.
+
+ACL dialog ignoruje vlastní účet uživatele a již zapsané kalendáře.
+
+Po kliknutí na ``Apply" se klient připojí k serveru přes jeden z účtů uživatele
+a provede zapsání kalednáře. Nakonec se provede resynchronizace seznamu
+kalednářů.
+
+\subsection{Nastavení ACL}
+
+Nastavení ACL je implementováno podobně jako zápis sdíleného kalendáře jedním
+dialogem a kontextovým objektem (\textit{struct acl\_context}).
+
+Po otevření dialogu se načte seznam práv pro vybraný kalendář a z tohoto seznamu
+se pak určí režim přístupu ke kalendáři:
+\begin{description}
+\item [Private] Seznam práv je prázdný.
+\item [Public] Seznam práv obsahuje divokou kartu '*'.
+\item [Shared] Seznam pr8v obsahuje alespoň jednoho uživatele s právy read nebo
+write.
+\end{description}
+
+Uživatel pak může pomocí dialogu nastavit režim přístupu ke kalendáři a případně
+určit seznam uživatelů a jejich práva.
+
+Při potvrzení změn se porovná aktuální nastavení a nastavení na serveru a
+provedou se potřebné změny.
+
+\newpage
+\section{EDS plugin}
+
+\subsection{Vlastnosti}
+
+Potřebujeme synchronizovat obsah kalendáře mezi několika CUA a jedním serverem.
+
+Změny v kalendáři, které mohou nastat jsou:
+\begin{itemize}
+\item Přidání nového objektu,
+\item Odstranění objektu,
+\item Úprava existujícího objektu.
+\end{itemize}
+
+Potřebujeme také umožnit omezenou možnost práce s kalendářem v offline režimu.
+Změny mohou vzniknout nas serveru bez vědomíi CUA (tj. CUA neprovedl dané změny).
+Cílem je aby všichni klienti pracující v online režimu viděli aktuální stav
+kalendáře tak jak je uložený na serveru.
+
+\subsection{Poznámky k implemetaci}
+
+EDS plugin implementuje přístup k obsahu jednoho kalendáře. Je tvořen jedním
+objektem jehož metody se dají rozdělit do těchto skupin:
+\begin{description}
+\item[Manipulace s objekty] Přidání, odstranění, aktualizace objektu, vyhledání,
+získání objektu. Tyto operace neprovádějí přímo komunikaci se serverem, ale
+pouze operují nad lokálním mirrorem obsahu kalendáře na serveru.
+\item[Maniplace s kalendářem] Otevření, vytvoření a zrušení kalendáře. Tyto
+metody se nevyužívají k jejich původnímu účelu, protože manipulace s kalendáři
+se provádí z Evolution pluginu.
+\item[Zasílání a příjem iTipů] Zasílání a příjem iTipů přes 3E protokol.
+\item[Utility metody] Získání implementovaných vlastnosí backendu, získání
+emailu uživatele, nastavení alarmu, atd.
+\end{description}
+
+\subsubsection{Synchronizace objektů v kalendáři}
+
+Metody pro manipulaci budou operovat nad lokální keší kalendáře, která se bude
+pravidleně oboustranně synchronizovat se serverem. Rozhraní cache umožňuje
+vynutit synchronizaci jednoho konkrétního objektu. (V online režimu, aby si
+metody backendu mohly vynutit okamžitouo aktualizaci kalendáře.)
+
+Synchronizace má dva směry:
+\begin{description}
+\item[CUA to Server] V lokální cache v CUA se budou změněné objekty ozančovat
+pomocí vlastnosti X-EEE-STATUS, která může nabývat hodnot ADDED, MODIFIED,
+REMOVED. Keš se bude periodicky procházet a všechny změny u označených objektů
+se provedou na serveru a ozančení se zruší. Synchronizaci je možné vynutit
+pro jednu konkrétní změnu. To slouží k okamžitému provádění změn.
+\item[Server to CUA] EDS plugin periodicky kontaktuje server a získáva z něj
+objekty, které byly změněny od poslední aktualizace.
+\end{description}
+
+\subsubsection{Offline režim}
+
+V offline režimu backend plugin nekomunikuje se serverem. Pracuje se pouze nad
+lokální keší objektů. Při přechodu z offline do online režimu se provede
+synchronizace keše.
+
+\section{Úpravy Evolution a EDS}
+
+Seznam ůprav potřebných pro správnou funkci pluginů:
+\begin{description}
+\item[Export hlavičkových souborů] Evolution při instalaci neinstaluje množství
+potřebných hlavičkových souborů, které jsou součástí plugin systému, takže
+externí pluginy nemohou využívat všech možností. Tyto hlavičkové soubory lze
+instalovat buď úpravou Makefile souborů, nebo pomocí sestavovacího skriptu pro
+binární balíček po sestavení samotné evolution. Zvolil jsem druhé řešení,
+protože nevyžaduje patchování evolution.
+\item[Přetěžování položek v kontextovém menu] Toto chování je zdokumentované,
+ale není naimplementované. Můj patch toto chování implementuje.
+\item[Signalizace aktivace komponenty] Implementace generování události
+v rámci plugin systému evolution při aktivaci komponenty.
+\item[Autentizace skupiny kalendářů] EDS identifikuje hesla v klíčence podle URI
+kalendáře. Díky tomu není možné mít v klíčence jedno heslo pro skupinu kalendářů
+přidružených k jednomu účtu. Tento patch implemntuje možnost nastavení auth-key
+u ESource objektu, pro ruční nastavení klíče odlišného od URI kalendáře.
+\end{description}
+
+Tyto patche jsou k dispozici v zdrojovém balíku 3E pluginů.
+
+\section{Poznámky}
+
+Nejsou.
+
+\end{multicols*}
+
+\end{document}
