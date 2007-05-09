@@ -48,7 +48,12 @@ void eee_calendar_set_perm(EeeCalendar* cal, const char* perm);
 void eee_calendar_set_relative_uri(EeeCalendar* cal, const char* uri);
 void eee_calendar_set_access_account(EeeCalendar* cal, EeeAccount* account);
 void eee_calendar_set_owner_account(EeeCalendar* cal, EeeAccount* account);
+
+// communication functions
 gboolean eee_calendar_store_settings(EeeCalendar* cal);
+gboolean eee_calendar_set_private(EeeCalendar* cal);
+gboolean eee_calendar_set_public(EeeCalendar* cal);
+gboolean eee_calendar_set_shared(EeeCalendar* cal, GSList* new_perms);
 
 GType eee_calendar_get_type() G_GNUC_CONST;
 

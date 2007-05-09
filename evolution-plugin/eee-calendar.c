@@ -80,6 +80,128 @@ gboolean eee_calendar_store_settings(EeeCalendar* cal)
 
   return TRUE;
 }
+
+static gboolean remove_acl(EeeCalendar* cal, xr_client_conn* conn)
+{
+  GError* err = NULL;
+  GSList* iter;
+
+  GSList* perms = ESClient_getPermissions(conn, cal->name, &err);
+  if (err)
+  {
+    g_debug("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", eee_settings_get_title(cal->settings), err->code, err->message);
+    goto err0;
+  }
+
+  for (iter = perms; iter; iter = iter->next)
+  {
+    ESPermission* perm = iter->data;
+    ESClient_setPermission(conn, cal->name, perm->user, "none", &err);
+    if (err)
+    {
+      g_debug("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", eee_settings_get_title(cal->settings), err->code, err->message);
+      goto err1;
+    }
+  }
+
+  return TRUE;
+ err1:
+  g_slist_foreach(perms, (GFunc)ESPermission_free, NULL);
+  g_slist_free(perms);
+ err0:
+  g_clear_error(&err);
+  return FALSE;
+}
+
+static gboolean add_wildcard(EeeCalendar* cal, xr_client_conn* conn)
+{
+  GError* err = NULL;
+  ESClient_setPermission(conn, cal->name, "*", "read", &err);
+  if (err)
+  {
+    g_debug("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", eee_settings_get_title(cal->settings), err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+  return TRUE;
+}
+
+static gboolean add_acl(EeeCalendar* cal, xr_client_conn* conn, GSList* new_perms)
+{
+  GError* err = NULL;
+  GSList* iter;
+
+  for (iter = new_perms; iter; iter = iter->next)
+  {
+    ESPermission* perm = iter->data;
+    ESClient_setPermission(conn, cal->name, perm->user, perm->perm, &err);
+    if (err)
+    {
+      g_debug("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", eee_settings_get_title(cal->settings), err->code, err->message);
+      g_clear_error(&err);
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+gboolean eee_calendar_set_private(EeeCalendar* cal)
+{
+  xr_client_conn* conn;
+  GError* err = NULL;
+  gboolean retval;
+
+  g_return_val_if_fail(IS_EEE_CALENDAR(cal), FALSE);
+
+  conn = eee_account_connect(cal->access_account);
+  if (conn == NULL)
+    return FALSE;
+
+  retval = remove_acl(cal, conn);
+
+  xr_client_free(conn);
+  return retval;
+}
+
+gboolean eee_calendar_set_public(EeeCalendar* cal)
+{
+  xr_client_conn* conn;
+  GError* err = NULL;
+  gboolean retval;
+
+  g_return_val_if_fail(IS_EEE_CALENDAR(cal), FALSE);
+
+  conn = eee_account_connect(cal->access_account);
+  if (conn == NULL)
+    return FALSE;
+
+  retval = remove_acl(cal, conn) && add_wildcard(cal, conn);
+
+  xr_client_free(conn);
+  return retval;
+}
+
+gboolean eee_calendar_set_shared(EeeCalendar* cal, GSList* new_perms)
+{
+  xr_client_conn* conn;
+  GError* err = NULL;
+  gboolean retval;
+
+  g_return_val_if_fail(IS_EEE_CALENDAR(cal), FALSE);
+
+  conn = eee_account_connect(cal->access_account);
+  if (conn == NULL)
+    return FALSE;
+
+  //XXX: this is broken because we need to change permissions more gently
+  // remove acl will automatically unsubscribe all users subscribed to our
+  // calendar
+  retval = remove_acl(cal, conn) && add_acl(cal, conn, new_perms);
+
+  xr_client_free(conn);
+  return retval;
+}
+
 /* GObject foo */
 
 G_DEFINE_TYPE(EeeCalendar, eee_calendar, G_TYPE_OBJECT);
