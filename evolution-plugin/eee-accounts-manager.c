@@ -253,8 +253,8 @@ gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr)
   {
     EAccount *eaccount = E_ACCOUNT(e_iterator_get(iter));
     const char* email = e_account_get_string(eaccount, E_ACCOUNT_ID_ADDRESS);
-    char* server_hostname = get_eee_server_hostname(email);
     g_debug("** EEE ** EAccount found, searching for 3E server: email=%s uid=%s", email, eaccount->uid);
+    char* server_hostname = get_eee_server_hostname(email);
 
     if (server_hostname)
     {
