@@ -1,32 +1,25 @@
 Evolution Plugin
 ~~~~~~~~~~~~~~~~
 
-Add this to your dnsmasq.conf for testing:
-
-  txt-record=megous.com,eee server=localhost:4444
-  txt-record=zonio.net,eee server=localhost:4444
-
-GUI Features:
+- cal name handling rework
+- user settings/attributes
+- calendar settings cleanup
 - subscribe to calendar (cleanup)
-- view/modify ACL for a given calendar
+  - too many users handling
+  - merging users from multiple accounts
+- offline mode
+  - close acl/subscribe windows
+  - show error when trying to open it
+- server unavailability fixups
+  - don't destroy account list
+  - synchronize cal list in separate thread
+- documentation update based on comments from Pavel and Standa
 - admin module?
-
-TODO:
-- server unavailability fixups (don't destroy account list)
-- subscription 
-  - selecting and adding subscriptions
-  - merging multiple accounts
-- acl
-  - radio button group in glade howto?
-  - show hide users list
-  - load permissions
-  - modify users list
-  - store permissions
-  - ...
 
 - EeeAccountsManager:
   - check for crossubscription in evolution (two EAccounts both with 3e support,
     one is subscribing from other)
+  - check for multiple EAcounts with same email
 
 EDS Plugin
 ~~~~~~~~~~
@@ -82,6 +75,3 @@ Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 st
 Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_default_timezone()
 Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
 Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-
-
-

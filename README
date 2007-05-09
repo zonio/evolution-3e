@@ -1,0 +1,4 @@
+Add this to your dnsmasq.conf for testing:
+
+  txt-record=megous.com,eee server=localhost:4444
+  txt-record=zonio.net,eee server=localhost:4444
