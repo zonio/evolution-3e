@@ -207,9 +207,6 @@ static void on_subs_window_destroy(GtkObject* object, struct subscribe_context* 
   g_free(ctx);
 }
 
-#define SIGNAL_CONNECT(name) \
-  glade_xml_signal_connect_data(c->xml, G_STRINGIFY(name), (GCallback)name, c)
-
 void subscribe_gui_create(EeeAccountsManager* mgr)
 {
   int col_offset;
@@ -272,7 +269,7 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   c->subscribe_button = glade_xml_get_widget(c->xml, "subs_button_subscribe");
   gtk_widget_set(c->subscribe_button, "sensitive", FALSE, NULL);
 
-  SIGNAL_CONNECT(on_subs_button_cancel_clicked);
-  SIGNAL_CONNECT(on_subs_button_subscribe_clicked);
-  SIGNAL_CONNECT(on_subs_window_destroy);
+  glade_xml_signal_connect_data(c->xml, "on_subs_button_subscribe_clicked", G_CALLBACK(on_subs_button_subscribe_clicked), c);
+  glade_xml_signal_connect_data(c->xml, "on_subs_button_cancel_clicked", G_CALLBACK(on_subs_button_cancel_clicked), c);
+  glade_xml_signal_connect_data(c->xml, "on_subs_window_destroy", G_CALLBACK(on_subs_window_destroy), c);
 }
