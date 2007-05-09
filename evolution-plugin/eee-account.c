@@ -159,6 +159,57 @@ xr_client_conn* eee_account_connect(EeeAccount* account)
   g_clear_error(&err);
   return NULL;
 }
+
+/** Load list of users from the account on the server to the GtkListStore
+ * excluding account owner and optional list of users.
+ *
+ * @param acc EeeAccount
+ * @param prefix User name prefix.
+ * @param exclude_users List of emails of users to exclude.
+ * @param model GtkListStore with at least two columns: 
+ *   - 0 = G_TYPE_STRING (username)
+ *   - 1 = EEE_TYPE_ACCOUNT (account object passed as @b acc parameter)
+ */
+gboolean eee_account_load_users(EeeAccount* acc, char* prefix, GSList* exclude_users, GtkListStore* model)
+{
+  xr_client_conn* conn;
+  GError* err = NULL;
+  GSList *users, *iter;
+  GtkTreeIter titer_user;
+
+  g_debug("** EEE ** load_users acc=%s prefix=%s", acc->email, prefix);
+
+  conn = eee_account_connect(acc);
+  if (conn == NULL)
+    return FALSE;
+
+  users = ESClient_getUsers(conn, prefix ? prefix : "", &err);
+  if (err)
+  {
+    g_debug("** EEE ** Failed to get users list for user '%s'. (%d:%s)", acc->email, err->code, err->message);
+    xr_client_free(conn);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  for (iter = users; iter; iter = iter->next)
+  {
+    char* user = iter->data;
+    if (acc->accessible && acc->email && !strcmp(acc->email, user))
+      continue;
+    if (exclude_users && g_slist_find_custom(exclude_users, user, strcmp))
+      continue;
+    gtk_list_store_append(model, &titer_user);
+    gtk_list_store_set(model, &titer_user, 0, user, 1, acc, -1);
+  }
+
+  g_slist_foreach(users, (GFunc)g_free, NULL);
+  g_slist_free(users);
+
+  xr_client_free(conn);
+  return TRUE;
+}
+
 /* GObject foo */
 
 G_DEFINE_TYPE(EeeAccount, eee_account, G_TYPE_OBJECT);

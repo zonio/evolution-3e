@@ -2,6 +2,7 @@
 #define __EEE_ACCOUNT_H__
 
 #include <glib-object.h>
+#include <gtk/gtk.h>
 #include "interface/ESClient.xrc.h"
 #include "interface/ESAdmin.xrc.h"
 
@@ -54,6 +55,7 @@ void eee_account_add_calendar(EeeAccount* account, EeeCalendar* cal);
 GSList* eee_account_peek_calendars(EeeAccount* account);
 EeeCalendar* eee_account_peek_calendar_by_name(EeeAccount* account, const char* name);
 xr_client_conn* eee_account_connect(EeeAccount* account);
+gboolean eee_account_load_users(EeeAccount* acc, char* prefix, GSList* exclude_users, GtkListStore* model);
 
 GType eee_account_get_type() G_GNUC_CONST;
 

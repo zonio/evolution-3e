@@ -27,44 +27,6 @@ struct subscribe_context
   GtkTreeSelection* selection;
 };
 
-static gboolean load_users(EeeAccount* acc, char* prefix, GtkListStore* model)
-{
-  xr_client_conn* conn;
-  GError* err = NULL;
-  GSList *users, *iter;
-  GtkTreeIter titer_user;
-
-  g_debug("** EEE ** load_users acc=%s prefix=%s", acc->email, prefix);
-
-  conn = eee_account_connect(acc);
-  if (conn == NULL)
-    return FALSE;
-
-  users = ESClient_getUsers(conn, prefix ? prefix : "", &err);
-  if (err)
-  {
-    g_debug("** EEE ** Failed to get users list for user '%s'. (%d:%s)", acc->email, err->code, err->message);
-    xr_client_free(conn);
-    g_clear_error(&err);
-    return FALSE;
-  }
-
-  for (iter = users; iter; iter = iter->next)
-  {
-    char* user = iter->data;
-    if (acc->accessible && acc->email && !strcmp(acc->email, user))
-      continue;
-    gtk_list_store_append(model, &titer_user);
-    gtk_list_store_set(model, &titer_user, 0, user, 1, acc, -1);
-  }
-
-  g_slist_foreach(users, (GFunc)g_free, NULL);
-  g_slist_free(users);
-
-  xr_client_free(conn);
-  return TRUE;
-}
-
 static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* model, struct subscribe_context* ctx)
 {
   xr_client_conn* conn;
@@ -291,7 +253,7 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
     EeeAccount* acc = iter->data;
     if (acc->accessible)
     {
-      load_users(acc, "", users_store);
+      eee_account_load_users(acc, "", NULL, users_store);
       load_calendars(acc, "", c->model, c);
     }
   }
