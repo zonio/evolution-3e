@@ -243,6 +243,9 @@ gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr)
 
   g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(mgr), FALSE);
 
+  if (!eee_plugin_online)
+    return FALSE;
+
   // free all accounts
   eee_accounts_manager_remove_accounts(mgr);
 
@@ -370,8 +373,7 @@ static void e_account_list_changed(EAccountList *account_list, EAccount *account
 static gboolean update_timer_cb(gpointer data)
 {
   EeeAccountsManager* mgr = EEE_ACCOUNTS_MANAGER(data);
-  if (eee_plugin_online)
-    eee_accounts_manager_sync(mgr);
+  eee_accounts_manager_sync(mgr);
   return TRUE;
 }
 
