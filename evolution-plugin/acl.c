@@ -35,6 +35,12 @@ struct acl_context
   GSList* initial_perms;
 };
 
+struct acl_list_click_data
+{
+  GtkTreeIter iter;
+  struct acl_context* ctx;
+};
+
 /* code to set and get acl mode in GUI */
 
 enum
@@ -249,19 +255,6 @@ static void update_users_list(struct acl_context* ctx)
   g_slist_free(users);
 }
 
-static gboolean popup_cb(GtkWidget *widget, GdkEvent *event, GtkWidget *menu)
-{
-  GdkEventButton *bevent = (GdkEventButton *)event;
-  if (event->type != GDK_BUTTON_PRESS)
-    return FALSE;
-  gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, bevent->button, bevent->time);
-  return TRUE;
-}
-
-void menu_activate_remove(GtkMenuItem* item, struct acl_context* ctx)
-{
-}
-
 // acl permission for given user in the treeview was changed, update acl
 // permissions list store
 void acl_perm_edited(GtkCellRendererText* renderer, gchar* path, gchar* new_text, struct acl_context* ctx)
@@ -309,6 +302,53 @@ static void add_user(const char* user, struct acl_context* ctx)
     g_free(user_name);
   }
   while (gtk_tree_model_iter_next(GTK_TREE_MODEL(ctx->users_model), &iter));
+}
+
+// when user clicks on remove button inside popup menu
+static void on_remove_clicked(GtkMenuItem *menuitem, struct acl_list_click_data* cd)
+{
+  char* username;
+  GtkTreeIter iter_user;
+
+  // put user back to users_model
+  gtk_tree_model_get(GTK_TREE_MODEL(cd->ctx->acl_model), &cd->iter, 0, &username, -1);
+  gtk_list_store_append(cd->ctx->users_model, &iter_user);
+  gtk_list_store_set(cd->ctx->users_model, &iter_user, 0, username, -1);
+  g_free(username);
+
+  // remove him
+  gtk_list_store_remove(cd->ctx->acl_model, &cd->iter);
+
+  g_free(cd);
+}
+
+// tree view clicked on
+static gboolean on_tview_clicked(GtkTreeView* tv, GdkEventButton* event, struct acl_context* ctx)
+{
+  GtkTreePath *path = NULL;
+  GtkTreeIter iter;
+
+  if (event->button != 3)
+    return FALSE;
+
+  if (gtk_tree_view_get_path_at_pos(tv, event->x, event->y, &path, NULL, NULL, NULL) &&
+      gtk_tree_model_get_iter(GTK_TREE_MODEL(ctx->acl_model), &iter, path))
+  {
+    // create popup
+    GtkWidget* menu = gtk_menu_new();
+    GtkWidget* menu_item = gtk_menu_item_new_with_label("Remove");
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_item);
+    struct acl_list_click_data* click = g_new0(struct acl_list_click_data, 1);
+    click->iter = iter;
+    click->ctx = ctx;
+    g_signal_connect(menu_item, "activate", G_CALLBACK(on_remove_clicked), click);
+    gtk_widget_show_all(menu);
+    gtk_menu_popup(GTK_MENU(menu), NULL, NULL, NULL, NULL, event->button, event->time);
+    g_object_ref_sink(menu);
+    g_object_unref(menu);
+  }
+
+  return FALSE;
 }
 
 // user pressed enter on the entry
@@ -391,13 +431,6 @@ void acl_gui_create(EeeCalendar* cal)
   c->tview = GTK_TREE_VIEW(glade_xml_get_widget(c->xml, "treeview_acl_users"));
   c->user_entry = glade_xml_get_widget(c->xml, "comboboxentry1");
 
-  // create users popup menu
-  c->users_menu = gtk_menu_new();
-  menu_item = gtk_menu_item_new_with_label("Remove");
-  gtk_menu_shell_append(GTK_MENU_SHELL(c->users_menu), menu_item);
-  g_signal_connect_swapped(menu_item, "activate", G_CALLBACK(menu_activate_remove), c);
-  gtk_widget_show(menu_item);
-
   // users list for autocompletion inside acl table combo cells
   c->users_model = gtk_list_store_new(2, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
   gtk_combo_box_set_model(GTK_COMBO_BOX(c->user_entry), GTK_TREE_MODEL(c->users_model));
@@ -428,6 +461,7 @@ void acl_gui_create(EeeCalendar* cal)
   g_object_set(renderer, "sensitive", TRUE, NULL);
   g_object_set(renderer, "xalign", 0.0, NULL);
   gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Permission", renderer, "text", ACL_PERM_COLUMN, NULL);
+  g_signal_connect(c->tview, "button-press-event", G_CALLBACK(on_tview_clicked), c);
 
   glade_xml_signal_connect_data(c->xml, "on_rb_perm_private_toggled", G_CALLBACK(on_rb_perm_toggled), c);
   glade_xml_signal_connect_data(c->xml, "on_rb_perm_shared_toggled", G_CALLBACK(on_rb_perm_toggled), c);
