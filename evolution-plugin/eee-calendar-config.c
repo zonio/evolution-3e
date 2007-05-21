@@ -450,6 +450,8 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
     // shutdown open acl/subscribe dialogs, etc.
     if (offline_label)
       gtk_widget_show(offline_label);
+    acl_gui_destroy();
+    subscribe_gui_destroy();
   }
 }
 
