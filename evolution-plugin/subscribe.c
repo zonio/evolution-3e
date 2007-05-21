@@ -3,8 +3,7 @@
 #include <glade/glade.h>
 
 #include "subscribe.h"
-
-static GSList* subscribe_contexts = NULL;
+#include "eee-calendar-config.h"
 
 enum
 {
@@ -26,6 +25,8 @@ struct subscribe_context
   GtkWidget* subscribe_button;
   GtkTreeSelection* selection;
 };
+
+static struct subscribe_context* active_ctx = NULL;
 
 static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* model, struct subscribe_context* ctx)
 {
@@ -203,6 +204,7 @@ static void on_subs_window_destroy(GtkObject* object, struct subscribe_context* 
   gtk_object_unref(GTK_OBJECT(ctx->win));
   g_object_unref(ctx->xml);
   g_free(ctx);
+  active_ctx = NULL;
 }
 
 void subscribe_gui_create(EeeAccountsManager* mgr)
@@ -210,6 +212,12 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   int col_offset;
   GtkCellRenderer *renderer;
   GtkTreeViewColumn *column;
+
+  if (!eee_plugin_online)
+    return;
+
+  if (active_ctx)
+    return;
 
   struct subscribe_context* c = g_new0(struct subscribe_context, 1);
   c->mgr = mgr;
@@ -270,4 +278,12 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   glade_xml_signal_connect_data(c->xml, "on_subs_button_subscribe_clicked", G_CALLBACK(on_subs_button_subscribe_clicked), c);
   glade_xml_signal_connect_data(c->xml, "on_subs_button_cancel_clicked", G_CALLBACK(on_subs_button_cancel_clicked), c);
   glade_xml_signal_connect_data(c->xml, "on_subs_window_destroy", G_CALLBACK(on_subs_window_destroy), c);
+
+  active_ctx = c;
+}
+
+void subscribe_gui_destroy()
+{
+  if (active_ctx)
+    gtk_widget_destroy(active_ctx->win);
 }

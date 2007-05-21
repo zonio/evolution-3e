@@ -4,5 +4,6 @@
 #include "eee-accounts-manager.h"
 
 void subscribe_gui_create(EeeAccountsManager* mgr);
+void subscribe_gui_destroy();
 
 #endif
