@@ -195,13 +195,11 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
 
 static void on_subs_button_cancel_clicked(GtkButton* button, struct subscribe_context* ctx)
 {
-  g_debug("EEE: sub cacnel");
   gtk_widget_destroy(GTK_WIDGET(ctx->win));
 }
 
 static void on_subs_window_destroy(GtkObject* object, struct subscribe_context* ctx)
 {
-  g_debug("EEE: sub destroy");
   gtk_object_unref(GTK_OBJECT(ctx->win));
   g_object_unref(ctx->xml);
   g_free(ctx);

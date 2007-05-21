@@ -52,7 +52,7 @@ static int get_acl_mode(struct acl_context* ctx)
     return ACL_MODE_PUBLIC;
   else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ctx->rb_shared)))
     return ACL_MODE_SHARED;
-  g_debug("EEE: should not happen");
+  g_debug("*** EEE *** should not happen");
   return ACL_MODE_PRIVATE;
 }
 
@@ -70,7 +70,7 @@ static int set_acl_mode(struct acl_context* ctx, int mode)
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ctx->rb_shared), TRUE);
       break;
     default:
-      g_debug("EEE: should not happen");
+      g_debug("*** EEE *** should not happen");
       return FALSE;
   }
   return TRUE;
@@ -88,14 +88,12 @@ static void on_rb_perm_toggled(GtkButton* button, struct acl_context* ctx)
     gtk_window_resize(ctx->win, 500, 400);
   else
     gtk_window_resize(ctx->win, 500, 1);
-  g_debug("EEE: acl private %d", get_acl_mode(ctx));
 }
 
 /* ok/cancel buttons callbacks */
 
 static void on_acl_button_cancel_clicked(GtkButton* button, struct acl_context* ctx)
 {
-  g_debug("EEE: acl cancel");
   gtk_widget_destroy(GTK_WIDGET(ctx->win));
 }
 
@@ -152,7 +150,6 @@ static void on_acl_button_ok_clicked(GtkButton* button, struct acl_context* ctx)
 
 static void on_acl_window_destroy(GtkObject* object, struct acl_context* ctx)
 {
-  g_debug("EEE: acl destroy");
   gtk_object_unref(GTK_OBJECT(ctx->win));
   g_object_unref(ctx->xml);
   g_slist_foreach(ctx->initial_perms, (GFunc)ESPermission_free, NULL);
