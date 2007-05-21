@@ -4,6 +4,7 @@
 #include <glade/glade.h>
 
 #include "acl.h"
+#include "eee-calendar-config.h"
 
 static GSList* acl_contexts = NULL;
 
@@ -156,6 +157,7 @@ static void on_acl_window_destroy(GtkObject* object, struct acl_context* ctx)
   g_object_unref(ctx->xml);
   g_slist_foreach(ctx->initial_perms, (GFunc)ESPermission_free, NULL);
   g_slist_free(ctx->initial_perms);
+  acl_contexts = g_slist_remove(acl_contexts, ctx);
   g_free(ctx);
 }
 
@@ -377,6 +379,9 @@ void acl_gui_create(EeeCalendar* cal)
   GtkWidget* menu_item;
   int col_id;
 
+  if (!eee_plugin_online)
+    return;
+
   // create context and load glade file
   struct acl_context* c = g_new0(struct acl_context, 1);
   c->cal = cal;
@@ -439,7 +444,19 @@ void acl_gui_create(EeeCalendar* cal)
     gtk_widget_destroy(GTK_WIDGET(c->win));
     return;
   }
+
   update_users_list(c);
   update_gui_state(c);
+  acl_contexts = g_slist_append(acl_contexts, c);
   gtk_widget_show(GTK_WIDGET(c->win));
+}
+
+static void destroy_ctx(struct acl_context* ctx)
+{
+  gtk_widget_destroy(GTK_WIDGET(ctx->win));
+}
+
+void acl_gui_destroy()
+{
+  g_slist_foreach(acl_contexts, (GFunc)destroy_ctx, NULL);
 }
