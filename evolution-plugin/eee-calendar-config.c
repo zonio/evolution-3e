@@ -459,8 +459,6 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 
 static gint activation_cb(gpointer data)
 {
-  if (!eee_plugin_online)
-    return FALSE;
   if (_mgr == NULL)
     _mgr = eee_accounts_manager_new();
   return FALSE;
