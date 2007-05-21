@@ -7,9 +7,11 @@ Evolution Plugin
 - subscribe to calendar (cleanup)
   - too many users handling
   - merging users from multiple accounts
-- offline mode
-  - close acl/subscribe windows
-  - show error when trying to open it
+  - filter by user name/calendar name?
+- acl:
+  - add users using special evolution widget (can't be used)
+- offline mode:
+  - show error when trying to open subscribe dialog
 - server unavailability fixups
   - don't destroy account list
   - synchronize cal list in separate thread
