@@ -4,5 +4,6 @@
 #include "eee-calendar.h"
 
 void acl_gui_create(EeeCalendar* cal);
+void acl_gui_destroy();
 
 #endif
