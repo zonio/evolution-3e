@@ -21,6 +21,8 @@ int e_plugin_lib_enable(EPluginLib* ep, int enable)
 {
   if (getenv("EEE_EVO_DEBUG"))
     xr_debug_enabled = XR_DEBUG_CALL;
+  g_debug("** EEE ** Starting 3E Evolution Plugin %s", PACKAGE_VERSION);
+  g_debug("** EEE ** Please send bugreports to <%s>", PACKAGE_BUGREPORT);
   return 0;
 }
 
