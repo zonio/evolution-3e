@@ -402,7 +402,7 @@ static void combo_add_completion(GtkComboBoxEntry *cbe, struct acl_context* ctx)
   gtk_entry_completion_set_inline_completion(completion, TRUE);
   gtk_entry_completion_set_popup_single_match(completion, TRUE);
   gtk_entry_set_completion(entry, completion);
-  g_signal_connect(completion, "match-selected", G_CALLBACK(user_selected), ctx);
+  g_signal_connect_after(completion, "match-selected", G_CALLBACK(user_selected), ctx);
   g_signal_connect(cbe, "changed", G_CALLBACK(cbe_changed), ctx);
   g_signal_connect(entry, "key-press-event", G_CALLBACK(combo_entry_keypress), ctx);
   g_object_unref(completion);
