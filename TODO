@@ -1,14 +1,15 @@
 Evolution Plugin
 ~~~~~~~~~~~~~~~~
 
-- cal name handling rework
-- user settings/attributes
-- calendar settings cleanup
-- subscribe to calendar (cleanup)
+- make use of new user settings/attributes support in 3E protocol
+- calendar settings cleanup (see above ^)
+- subscribe to calendar:
+  - search by users realname and show it
+  - search by calname and show it
   - too many users handling
-  - merging users from multiple accounts
-  - filter by user name/calendar name?
+  - merge users from multiple accounts
 - acl:
+  - show users real name
   - add users using special evolution widget (can't be used)
 - offline mode:
   - show error when trying to open subscribe dialog
@@ -16,10 +17,9 @@ Evolution Plugin
   - don't destroy account list
   - synchronize cal list in separate thread
 - documentation update based on comments from Pavel and Standa
-- admin module?
 
 - EeeAccountsManager:
-  - check for crossubscription in evolution (two EAccounts both with 3e support,
+  - check for cross-subscription in evolution (two EAccounts both with 3e support,
     one is subscribing from other)
   - check for multiple EAcounts with same email
 
