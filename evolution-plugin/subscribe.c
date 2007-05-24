@@ -285,5 +285,5 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
 void subscribe_gui_destroy()
 {
   if (active_ctx)
-    gtk_widget_destroy(active_ctx->win);
+    gtk_widget_destroy(GTK_WIDGET(active_ctx->win));
 }
