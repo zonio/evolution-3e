@@ -18,6 +18,7 @@ liborg_gnome_evolution_eee_la_SOURCES = \
   eee-account.c \
   eee-accounts-manager.c \
   dns-txt-search.c \
+  utils.c \
   subscribe.c \
   acl.c
 

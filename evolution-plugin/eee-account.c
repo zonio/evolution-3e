@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <e-util/e-error.h>
 #include <libedataserverui/e-passwords.h>
+#include "utils.h"
 
 #include "eee-account.h"
 
@@ -183,7 +184,18 @@ gboolean eee_account_load_users(EeeAccount* acc, char* prefix, GSList* exclude_u
   if (conn == NULL)
     return FALSE;
 
-  users = ESClient_getUsers(conn, prefix ? prefix : "", &err);
+  if (prefix == NULL || prefix[0] == '\0')
+  {
+    users = ESClient_getUsers(conn, "", &err);
+  }
+  else
+  {
+    char* escaped_prefix = qp_escape_string(prefix);
+    char* query = g_strdup_printf("match_username_prefix(%s)", escaped_prefix);
+    g_free(escaped_prefix);
+    users = ESClient_getUsers(conn, query, &err);
+    g_free(query);
+  }
   if (err)
   {
     g_debug("** EEE ** Failed to get users list for user '%s'. (%d:%s)", acc->email, err->code, err->message);
@@ -194,16 +206,17 @@ gboolean eee_account_load_users(EeeAccount* acc, char* prefix, GSList* exclude_u
 
   for (iter = users; iter; iter = iter->next)
   {
-    char* user = iter->data;
-    if (acc->accessible && acc->email && !strcmp(acc->email, user))
+    ESUser* user = iter->data;
+    if (acc->accessible && acc->email && !strcmp(acc->email, user->username))
       continue;
-    if (exclude_users && g_slist_find_custom(exclude_users, user, strcmp))
+    if (exclude_users && g_slist_find_custom(exclude_users, user->username, (GCompareFunc)strcmp))
       continue;
     gtk_list_store_append(model, &titer_user);
-    gtk_list_store_set(model, &titer_user, 0, user, 1, acc, -1);
+    //XXX: get realname
+    gtk_list_store_set(model, &titer_user, 0, user->username, 1, acc, -1);
   }
 
-  g_slist_foreach(users, (GFunc)g_free, NULL);
+  g_slist_foreach(users, (GFunc)ESUser_free, NULL);
   g_slist_free(users);
 
   xr_client_free(conn);

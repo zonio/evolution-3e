@@ -1,6 +1,7 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include <glade/glade.h>
+#include "utils.h"
 
 #include "subscribe.h"
 #include "eee-calendar-config.h"
@@ -42,7 +43,18 @@ static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* mode
   if (conn == NULL)
     return FALSE;
 
-  cals = ESClient_getSharedCalendars(conn, prefix ? prefix : "", &err);
+  if (prefix == NULL || prefix[0] == '\0')
+  {
+    cals = ESClient_getSharedCalendars(conn, "", &err);
+  }
+  else
+  {
+    char* escaped_prefix = qp_escape_string(prefix);
+    char* query = g_strdup_printf("match_username_prefix(%s)", escaped_prefix);
+    g_free(escaped_prefix);
+    cals = ESClient_getSharedCalendars(conn, query, &err);
+    g_free(query);
+  }
   if (err)
   {
     g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", acc->email, err->code, err->message);

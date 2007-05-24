@@ -18,11 +18,19 @@ error UNKNOWN_COMPONENT = 12;
 error INTERNAL_SERVER_ERROR = 20;
 error CLIENT_ERROR = 21;
 
+struct Attribute
+{
+  string name;
+  string value;
+  boolean is_public;
+}
+
 struct Calendar
 {
   string owner;
   string name;
   string settings;
+  array<Attribute> attrs;
   string perm;
 }
 
@@ -30,6 +38,12 @@ struct Permission
 {
   string user;
   string perm;
+}
+
+struct User
+{
+  string username;
+  array<Attribute> attrs;
 }
 
 struct Message
@@ -46,12 +60,15 @@ servlet Client
   boolean changePassword(string new_password);
   array<Calendar> getCalendars();
   boolean updateCalendarSettings(string calspec, string settings);
+  boolean setCalendarAttribute(string calspec, string name, string value, boolean is_public);
   boolean subscribeCalendar(string calspec);
   boolean unsubscribeCalendar(string calspec);
   array<Permission> getPermissions(string calname);
   boolean setPermission(string calname, string for_username, string perm);
-  array<string> getUsers(string prefix);
-  array<Calendar> getSharedCalendars(string calsowner);
+  array<User> getUsers(string query);
+  boolean setUserAttribute(string name, string value, boolean is_public);
+  array<Attribute> getUserAttributes(string username);
+  array<Calendar> getSharedCalendars(string query);
   boolean newCalendar(string calname);
   boolean deleteCalendar(string calname);
   boolean addObject(string calspec, string object);
@@ -66,5 +83,5 @@ servlet Client
 
 servlet Admin
 {
-  boolean createUser(string username, string password, string settings);
+  boolean createUser(string username, string password);
 }
