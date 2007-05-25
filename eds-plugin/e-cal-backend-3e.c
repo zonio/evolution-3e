@@ -17,8 +17,10 @@
 #define DEBUG 1
 #ifdef DEBUG
 #include <syslog.h>
-#define D(fmt, args...) syslog(LOG_DEBUG, "DEBUG: %s " fmt, G_STRLOC, ## args)
-#define T(fmt, args...) syslog(LOG_DEBUG, "TRACE: %s(" fmt ")", G_STRFUNC, ## args)
+//#define D(fmt, args...) syslog(LOG_DEBUG, "DEBUG: %s " fmt, G_STRLOC, ## args)
+//#define T(fmt, args...) syslog(LOG_DEBUG, "TRACE: %s(" fmt ")", G_STRFUNC, ## args)
+#define D(fmt, args...) g_debug("DEBUG: %s " fmt, G_STRLOC, ## args)
+#define T(fmt, args...) g_debug("TRACE: %s(" fmt ")", G_STRFUNC, ## args)
 #else
 #define D(fmt, args...)
 #define T(fmt, args...)
