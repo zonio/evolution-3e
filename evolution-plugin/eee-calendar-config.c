@@ -335,9 +335,7 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
     return;
   }
 
-#if 0
   // get ECal and remove calendar from the server
-  GError* err = NULL;
   ECal* ecal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
   if (!e_cal_remove(ecal, &err))
   {
@@ -345,7 +343,6 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
     g_clear_error(&err);
   }
   g_object_unref(ecal);
-#endif
 
   if (_mgr)
     eee_accounts_manager_sync(_mgr);
