@@ -69,7 +69,9 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
       e_source_set_property(source, "eee-calendar-name", cal->name);
       e_source_set_property(source, "eee-server", cal->access_account->server);
       e_source_set_property(source, "username", cal->access_account->email);
-      e_source_set_property(source, "auth-key", cal->access_account->email);
+      char* key = g_strdup_printf("eee://%s", cal->access_account->email);
+      e_source_set_property(source, "auth-key", key);
+      g_free(key);
       e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
       if (eee_settings_get_color(cal->settings) > 0)
         e_source_set_color(source, eee_settings_get_color(cal->settings));
@@ -97,7 +99,9 @@ static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAc
     e_source_set_property(source, "eee-calendar-name", cal->name);
     e_source_set_property(source, "eee-server", cal->access_account->server);
     e_source_set_property(source, "username", cal->access_account->email);
-    e_source_set_property(source, "auth-key", cal->access_account->email);
+    char* key = g_strdup_printf("eee://%s", cal->access_account->email);
+    e_source_set_property(source, "auth-key", key);
+    g_free(key);
     e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
     if (eee_settings_get_color(cal->settings) > 0)
       e_source_set_color(source, eee_settings_get_color(cal->settings));

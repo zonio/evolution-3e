@@ -67,21 +67,19 @@ static gboolean authenticate_to_account(EeeAccount* account, xr_client_conn* con
   char *password;
   int retry_limit = 3;
   gboolean rs;
+  char* key = g_strdup_printf("eee://%s", account->email);
 
   while (retry_limit--)
   {
     // get password
-    password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, account->email);
+    password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, key);
     if (!password)
     {
       // no?, ok ask for it
-      char* prompt = g_strdup_printf("%sEnter password for your 3E calendar account (%s).", fail_msg, account->email);
+      char* prompt = g_strdup_printf("%sEnter password for your 3E calendar account (%s).", fail_msg, account->email, key);
       // key must have uri format or unpatched evolution segfaults in
       // ep_get_password_keyring()
-      char* key = g_strdup_printf("eee://%s", account->email);
-      g_debug("e_passwords_ask_password(key=%s)", key);
       password = e_passwords_ask_password(prompt, EEE_PASSWORD_COMPONENT, key, prompt, flags, &remember, NULL);
-      g_free(key);
       g_free(prompt);
       if (!password) 
         goto err;
@@ -93,6 +91,7 @@ static gboolean authenticate_to_account(EeeAccount* account, xr_client_conn* con
     {
       g_free(account->password);
       account->password = password;
+      g_free(key);
       return TRUE;
     }
     g_free(password);
@@ -122,6 +121,7 @@ static gboolean authenticate_to_account(EeeAccount* account, xr_client_conn* con
  err:
   g_free(account->password);
   account->password = NULL;
+  g_free(key);
   return FALSE;
 }
 
