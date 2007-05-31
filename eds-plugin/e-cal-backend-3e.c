@@ -534,7 +534,7 @@ e_cal_sync_server_to_client_sync(ECalBackend3e* cb,
   icalcomponent_free(queried_comps);
   ok = TRUE;
 out2:
-  g_free(escomp);
+  // g_free(escomp);
   // g_free(queried_comps);
 out1:
   g_free(query_server_objects_str);
@@ -658,6 +658,8 @@ e_cal_sync_synchronize(ECalBackend* backend)
   time_t                    now_time = time(NULL);
   struct tm                *tm_now = gmtime(&now_time);
 
+  T("");
+
   g_return_if_fail(E_IS_CAL_BACKEND_3E(backend));
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
@@ -725,6 +727,8 @@ e_cal_sync_main_thread(gpointer data)
   GError                      *err = NULL;
   GTimeVal                    alarm_clock;
 
+  T("");
+
   cb = E_CAL_BACKEND_3E(data);
   g_return_val_if_fail(cb != NULL, NULL);
   D("sync thread started");
@@ -789,6 +793,7 @@ rebuild_clients_changes_list(ECalBackend3e* cb)
   ECalComponent               *ccomp;
   GList                       *cobjs, *citer;
 
+  T("");
   priv = cb->priv;
 
   if (priv->sync_clients_changes)
@@ -1037,7 +1042,54 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
   {
     source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
     priv->username = g_strdup(e_source_get_property(source, "username"));
-    priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, priv->username);
+
+    if (!priv->username)
+    {
+      D("YEAH!");
+     	D("URI %s", e_cal_backend_get_uri (E_CAL_BACKEND(backend)));
+
+
+      GConfClient* gconf;
+      ESourceList* eslist;
+      GSList* iter;
+
+      gconf = gconf_client_get_default();
+      eslist = e_source_list_new_for_gconf(gconf, CALENDAR_SOURCES);
+      D("A");
+      GSList* groups_list = g_slist_copy(e_source_list_peek_groups(eslist));
+      D("B");
+      for (iter = groups_list; iter; iter = iter->next)
+      {
+        ESourceGroup* group = E_SOURCE_GROUP(iter->data);
+        const char* group_name = e_source_group_peek_name(group);
+        D("group name %s", group_name);
+
+        // skip non eee groups
+        if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
+          continue;
+
+        if (group_name && g_str_has_prefix(group_name, "3E: "))
+        {
+          GSList *p;
+          for (p = e_source_group_peek_sources(group); p != NULL; p = p->next)
+          {
+            const char* cal_name = e_source_get_property(E_SOURCE(p->data), "eee-calendar-name");
+            D("cal name: %s", cal_name);
+            D("priv cal name: %s", priv->calname);
+            if (cal_name && !strcmp(cal_name, priv->calname))
+            {
+              D("acquiring username ");
+              priv->username = g_strdup(e_source_get_property(E_SOURCE(p->data), "username"));
+            }
+          }
+        }
+
+        g_slist_free(groups_list);
+      }
+    }
+    else
+      priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, priv->username);
+    D("USERNAME: %s", priv->username);
   }
   else
   {
@@ -1185,9 +1237,12 @@ e_cal_backend_3e_remove(ECalBackendSync* backend,
   e_file_cache_remove(E_FILE_CACHE(priv->cache));
   priv->cache  = NULL;
   priv->is_loaded = FALSE;	
+  priv->sync_mode = SYNC_DIE;
 
-  server_sync_signal(cb, TRUE);
+  g_cond_signal(priv->sync_cond);
   g_mutex_unlock (priv->sync_mutex);
+
+  D("REMOVE DONE");
 
   return GNOME_Evolution_Calendar_Success;
 }
