@@ -166,7 +166,8 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
 
 void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target)
 {
-  ESourceGroup *group = e_source_peek_group(target->source);
+  ESource* source = target->source;
+  ESourceGroup *group = e_source_peek_group(source);
 
   // ignore non 3e calendars
   if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
@@ -210,12 +211,26 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
     g_object_unref(settings);
     const char* calname = e_source_peek_name(target->source);
 
+    // create new calendar on the server
     GError* err = NULL;
     ESClient_newCalendar(conn, (char*)calname, &err);
     if (err == NULL)
     {
       if (!ESClient_updateCalendarSettings(conn, (char*)calname, settings_string, NULL))
         g_debug("** EEE ** failed to update settings on new calendar (%d:%s)", err->code, err->message);
+      
+      // fill ESsource
+      char* relative_uri = g_strdup_printf("%s/%s/%s", account->server, account->email, e_source_peek_name(source));
+      e_source_set_relative_uri(source, relative_uri);
+      g_free(relative_uri);
+      e_source_set_property(source, "auth", "1");
+      e_source_set_property(source, "eee-calendar-name", e_source_peek_name(source));
+      e_source_set_property(source, "eee-server", account->server);
+      e_source_set_property(source, "username", account->email);
+      char* key = g_strdup_printf("eee://%s", account->email);
+      e_source_set_property(source, "auth-key", key);
+      g_free(key);
+      e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
     }
     g_free(settings_string);
     xr_client_free(conn);
