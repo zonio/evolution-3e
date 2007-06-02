@@ -16,7 +16,7 @@
 #include <libedata-cal/e-cal-backend-sexp.h>
 #include "e-cal-backend-3e.h"
 
-extern char       *e_passwords_get_password      (const char *component, const char *key);
+extern char       *e_passwords_get_password(const char *component, const char *key);
 
 #define DEBUG 1
 #ifdef DEBUG
@@ -278,6 +278,46 @@ e_cal_component_get_ids(ECalComponent* comp,
   *rid = e_cal_component_get_recurid_as_string(comp);
 }
 
+static gint
+e_cal_component_compare(gconstpointer ptr1,
+                        gconstpointer ptr2)
+{
+  ECalComponent         *comp1, *comp2;
+  const gchar           *uid1, *uid2;
+  const gchar           *rid1, * rid2;
+  gint                  result;
+
+  comp1 = (ECalComponent*)ptr1;
+  comp2 = (ECalComponent*)ptr2;
+
+  e_cal_component_get_uid(comp1, &uid1);
+  rid1 = e_cal_component_get_recurid_as_string(comp1);
+
+  e_cal_component_get_uid(comp2, &uid2);
+  rid2 = e_cal_component_get_recurid_as_string(comp2);
+
+  result = g_ascii_strcasecmp(uid1, uid2);
+  if (!result)
+  {
+    if (!rid1)
+    {
+      if (!rid2)
+        result = 0;
+      else
+        result = -1;
+    }
+    else
+    {
+      if (!rid2)
+        result = 1;
+      else
+        result = g_ascii_strcasecmp(rid1, rid2);
+    }
+  }
+
+  return result;
+}
+
 /* synchronization internal methods */
 
 static ECalComponent*
@@ -300,42 +340,87 @@ e_cal_sync_find_this_in_cache(ECalBackend3e* cb,
   return e_cal_backend_cache_get_component(priv->cache, uid, rid);
 }
 
+static gboolean
+e_cal_sync_server_open(ECalBackend3e* cb)
+{
+  ECalBackend3ePrivate*        priv;
+  GError*                      err = NULL;
+
+  g_return_val_if_fail(cb != NULL, FALSE);
+
+  priv = cb->priv;
+
+  xr_client_open(priv->conn, priv->server_uri, &err);
+  if (err)
+  {
+    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
+                                      "Failed to estabilish connection to the server", err);
+    g_clear_error(&err);
+    goto err0;
+  }
+
+  // FIXME
+  // ESClient_auth(priv->conn, priv->username, priv->password, &err);
+  ESClient_auth(priv->conn, priv->username, "qwe", &err);
+  if (err != NULL)
+  {
+    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
+                                      "Authentication failed", err);
+    g_clear_error(&err);
+    goto err1;
+  }
+
+  return TRUE;
+
+err1:
+  xr_client_close(priv->conn);
+err0:
+  return FALSE;
+}
+
 // delete component from server
 static gboolean
 e_cal_sync_server_object_delete(ECalBackend3e* cb,
-                                ECalComponent* comp)
+                                ECalComponent* comp,
+                                gboolean conn_opened) /* connection already opened */
 {
-  const gchar*                 uid;
-  const gchar*                 rid;
-  gchar*                       uid_copy;
   ECalBackend3ePrivate*        priv;
-  gboolean                     ok = TRUE;
+  const char*                  uid;
+  const char*                  rid;
+  ECalComponentId *id;
+  gchar*                       uid_copy;
   GError*                      err = NULL;
+  ECalBackend*                 backend;
+  gboolean                     ok = TRUE;
 
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(comp != NULL, FALSE);
 
-  D("delete from server");
   priv = cb->priv;
-  e_cal_component_get_uid(comp, &uid);
-  rid = e_cal_component_get_recurid_as_string (comp);
-  uid_copy = g_strdup_printf("UID:%s", uid);
+  backend = E_CAL_BACKEND(cb);
 
-  if (!ESClient_deleteObject(priv->conn, priv->calspec, uid_copy, &err))
+  D("deleting from server");
+
+  if (conn_opened || e_cal_sync_server_open(cb))
   {
-    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Failed to do cache synchronization",
-                                      err);
-    g_clear_error(&err);
-    ok = FALSE;
-  }
+    e_cal_component_get_uid(comp, &uid);
+    rid = e_cal_component_get_recurid_as_string (comp);
+    uid_copy = g_strdup_printf("UID:%s", uid);
 
-  if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
-  {
-    g_warning("Cannot remove component from cache!");
-    ok = FALSE;
-  }
+    if (!ESClient_deleteObject(priv->conn, priv->calspec, uid_copy, &err))
+    {
+      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Failed to do cache synchronization",
+                                        err);
+      g_clear_error(&err);
+      ok = FALSE;
+    }
 
-  g_free(uid_copy);
+    if (!conn_opened)
+      xr_client_close(priv->conn);
+    g_free(uid_copy);
+  }
+  else
+    return FALSE;
 
   return ok;
 }
@@ -343,7 +428,8 @@ e_cal_sync_server_object_delete(ECalBackend3e* cb,
 // update component on server
 static gboolean
 e_cal_sync_server_object_update(ECalBackend3e* cb,
-                                ECalComponent* ccomp)
+                                ECalComponent* ccomp,
+                                gboolean conn_opened) /* connection already opened */
 {
   gchar*                       object;
   ECalBackend3ePrivate*        priv;
@@ -355,24 +441,32 @@ e_cal_sync_server_object_update(ECalBackend3e* cb,
 
   D(" update on server");
   priv = cb->priv;
-  object = e_cal_component_get_as_string(ccomp);
 
-  if (!ESClient_updateObject(priv->conn, priv->calspec, object, &err))
+  if (conn_opened || e_cal_sync_server_open(cb))
   {
-    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
-                                      "Failed to do cache synchronization",
-                                      err);
-    g_clear_error(&err);
-    ok = FALSE;
-  }
+    object = e_cal_component_get_as_string(ccomp);
 
-  g_free(object);
-  e_cal_component_set_sync_state(ccomp, E_CAL_COMPONENT_IN_SYNCH);
-  if (!e_cal_backend_cache_put_component(priv->cache, ccomp))
-  {
-    g_warning("Cannot put component into the cache!");
-    ok = FALSE;
+    if (!ESClient_updateObject(priv->conn, priv->calspec, object, &err))
+    {
+      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
+                                        "Failed to do cache synchronization",
+                                        err);
+      g_clear_error(&err);
+      ok = FALSE;
+    }
+    else
+    {
+      e_cal_component_set_sync_state(ccomp, E_CAL_COMPONENT_IN_SYNCH);
+      if (!e_cal_backend_cache_put_component(priv->cache, ccomp))
+        g_warning("Cannot put component into the cache!");
+    }
+
+    if (!conn_opened)
+      xr_client_close(priv->conn);
+    g_free(object);
   }
+  else
+    return FALSE;
 
   return ok;
 }
@@ -380,7 +474,8 @@ e_cal_sync_server_object_update(ECalBackend3e* cb,
 // add component on server
 static gboolean
 e_cal_sync_server_object_add(ECalBackend3e* cb,
-                             ECalComponent* ccomp)
+                             ECalComponent* ccomp,
+                             gboolean conn_opened) /* connection already opened */
 {
   gchar*                       object;
   ECalBackend3ePrivate*        priv;
@@ -392,23 +487,32 @@ e_cal_sync_server_object_add(ECalBackend3e* cb,
   g_return_val_if_fail(ccomp != NULL, FALSE);
 
   priv = cb->priv;
-  object = e_cal_component_get_as_string(ccomp);
 
-  if (!ESClient_addObject(priv->conn, priv->calspec, object, &err))
+  if (conn_opened || e_cal_sync_server_open(cb))
   {
-    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
-                                      "Failed to do cache synchronization", err);
-    g_clear_error(&err);
-    ok = FALSE;
-  }
+    object = e_cal_component_get_as_string(ccomp);
 
-  g_free(object);
-  e_cal_component_set_sync_state(ccomp, E_CAL_COMPONENT_IN_SYNCH);
-  if (!e_cal_backend_cache_put_component(priv->cache, ccomp))
-  {
-    g_warning("Cannot put component into the cache!");
-    ok = FALSE;
+    if (!ESClient_addObject(priv->conn, priv->calspec, object, &err))
+    {
+      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
+                                        "Failed to do cache synchronization", err);
+      g_clear_error(&err);
+      ok = FALSE;
+    }
+    else
+    {
+      e_cal_component_set_sync_state(ccomp, E_CAL_COMPONENT_IN_SYNCH);
+
+      if (!e_cal_backend_cache_put_component(priv->cache, ccomp))
+        g_warning("Cannot put component into the cache!");
+    }
+
+    g_free(object);
+    if (!conn_opened)
+      xr_client_close(priv->conn);
   }
+  else
+    return FALSE;
 
   return ok;
 }
@@ -416,13 +520,14 @@ e_cal_sync_server_object_add(ECalBackend3e* cb,
 // create a list with server objects
 // if last_synchro_time is NULL, queries all server objects
 static gboolean
-e_cal_sync_server_to_client_sync(ECalBackend3e* cb,
+e_cal_sync_server_to_client_sync(ECalBackend* backend,
                                  const char* sync_start,
                                  const char* sync_stop)
 {
+  ECalBackend3e*              cb;
+  ECalBackend3ePrivate*       priv;
   gchar*                      str_server_objects;
   GError*                     err = NULL;
-  ECalBackend3ePrivate*       priv;
   gchar*                      query_server_objects_str;
   icalcomponent*              queried_comps;
   icalcomponent_kind          kind;
@@ -433,10 +538,11 @@ e_cal_sync_server_to_client_sync(ECalBackend3e* cb,
   const gchar*                rid;
   const gchar*                uid;
 
-  g_return_val_if_fail(cb != NULL, FALSE);
+  g_return_val_if_fail(backend != NULL, FALSE);
   g_return_val_if_fail(sync_stop != NULL, FALSE);
   // sync_start can be NULL
 
+  cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
 
   query_server_objects_str = sync_start
@@ -498,6 +604,11 @@ e_cal_sync_server_to_client_sync(ECalBackend3e* cb,
             g_warning("Could not put component into the cache!");
             goto out2;
           }
+
+          char* compstr;
+          compstr = e_cal_component_get_as_string(escomp);	
+          e_cal_backend_notify_object_created(backend, compstr);
+          g_free(compstr);
         }
         // otherwise do nothing
       }
@@ -513,6 +624,12 @@ e_cal_sync_server_to_client_sync(ECalBackend3e* cb,
             g_warning("Could not put component into the cache!");
             goto out2;
           }
+
+          char* cache_comp_str;
+          cache_comp_str = e_cal_component_get_as_string(eccomp);
+          e_cal_backend_notify_object_modified(backend, cache_comp_str,
+                                                e_cal_component_get_as_string(escomp));
+          g_free(cache_comp_str);
         }
         else
         {
@@ -523,6 +640,12 @@ e_cal_sync_server_to_client_sync(ECalBackend3e* cb,
             g_warning("Could not remove component from cache!");
             goto out2;
           }
+
+          char* oostr = e_cal_component_get_as_string(eccomp);
+          ECalComponentId *id = e_cal_component_get_id(eccomp);
+          e_cal_backend_notify_object_removed(backend, id, oostr, NULL);
+          e_cal_component_free_id(id);
+          g_free(oostr);
         }
       }
 
@@ -543,7 +666,6 @@ out1:
   return ok;
 }
 
-
 // synchronizes objects, from client's perspective
 // component is only in the client's cache, not on server yet
 static gboolean
@@ -553,28 +675,33 @@ e_cal_sync_client_to_server_sync(ECalBackend3e* cb)
   ECalComponent*               ccomp;
   GList                        *citer;
   ECalBackend3ePrivate         *priv;
+  GError*                   err = NULL;
 
   g_return_val_if_fail(cb != NULL, FALSE);
 
   priv = cb->priv;
 
+  D("starting client to server synchronization for %s: %d changes",
+    priv->calname,
+    g_list_length(priv->sync_clients_changes));
+
   /* send changes from client -> server */
-  for (citer = priv->sync_clients_changes;
+  for (citer = g_list_last(priv->sync_clients_changes);
        ok && citer;
-       citer = g_list_next (citer))
+       citer = g_list_previous(citer))
   {
-    ccomp = E_CAL_COMPONENT (citer->data);
+    ccomp = E_CAL_COMPONENT(citer->data);
 
     switch (e_cal_component_get_sync_state(ccomp))
     {
       case E_CAL_COMPONENT_LOCALLY_CREATED:
-        ok = e_cal_sync_server_object_add(cb, ccomp);
+        ok = e_cal_sync_server_object_add(cb, ccomp, TRUE);
         break;
       case E_CAL_COMPONENT_LOCALLY_MODIFIED:
-        ok = e_cal_sync_server_object_update(cb, ccomp);
+        ok = e_cal_sync_server_object_update(cb, ccomp, TRUE);
         break;
       case E_CAL_COMPONENT_LOCALLY_DELETED:
-        ok = e_cal_sync_server_object_delete(cb, ccomp);
+        ok = e_cal_sync_server_object_delete(cb, ccomp, TRUE);
         break;
       case E_CAL_COMPONENT_IN_SYNCH:
         g_warning("Component should be changed, but is in synch state");
@@ -586,6 +713,13 @@ e_cal_sync_client_to_server_sync(ECalBackend3e* cb)
     if (ok)
       priv->sync_clients_changes = g_list_remove(priv->sync_clients_changes, ccomp);
   }
+
+  D("finishing client to server synchronization for %s: leaving %d changes",
+    priv->calname,
+    g_list_length(priv->sync_clients_changes));
+
+  if (!ok)
+    g_warning("Could not finish client->server synchronization");
 
   return ok;
 }
@@ -682,7 +816,9 @@ e_cal_sync_synchronize(ECalBackend* backend)
     goto err0;
   }
 
-  ESClient_auth(priv->conn, priv->username, priv->password, &err);
+  // FIXME
+  // ESClient_auth(priv->conn, priv->username, priv->password, &err);
+  ESClient_auth(priv->conn, priv->username, "qwe", &err);
   if (err != NULL)
   {
     e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
@@ -693,12 +829,9 @@ e_cal_sync_synchronize(ECalBackend* backend)
 
   D("server to client synchronization %s", priv->calname);
   /* get changes from server */
-  if (!e_cal_sync_server_to_client_sync(cb, last_sync_stamp, now))
+  if (!e_cal_sync_server_to_client_sync(backend, last_sync_stamp, now))
     goto err1;
 
-  D("client to server synchronization for %s: %d changes",
-    priv->calname,
-    g_list_length(priv->sync_clients_changes));
   if (!e_cal_sync_client_to_server_sync(cb))
     goto err1;
 
@@ -708,7 +841,9 @@ e_cal_sync_synchronize(ECalBackend* backend)
   priv->sync_stamp = g_strdup(now);
   g_free(last_sync_stamp);
 
+  D("syncho ended");
   return;
+
 
 err1:
   g_free(last_sync_stamp);
@@ -768,14 +903,14 @@ e_cal_sync_main_thread(gpointer data)
 /* calendar backend functions */
 
 static void
-client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
+e_cal_sync_client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
 {
   ECalBackend3ePrivate        *priv;
 
-  priv = cb->priv;
-
   g_return_if_fail(cb != NULL);
   g_return_if_fail(comp != NULL);
+
+  priv = cb->priv;
 
   g_object_ref(comp);
   priv->sync_clients_changes = g_list_insert(priv->sync_clients_changes, comp, 0);
@@ -783,6 +918,35 @@ client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
   D("marking component as changed by the client, now %d changes",
     g_list_length(priv->sync_clients_changes)); 
 
+}
+
+static void
+e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
+{
+  ECalBackend3ePrivate        *priv;
+  GList                       *node;
+
+  g_return_if_fail(cb != NULL);
+  g_return_if_fail(comp != NULL);
+
+  priv = cb->priv;
+
+  node = g_list_find_custom(priv->sync_clients_changes,
+                            comp,
+                            e_cal_component_compare);
+
+  if (!node)
+  {
+    g_warning("Searched component was not marked as changed - cannot remove it");
+    return;
+  }
+
+  priv->sync_clients_changes = g_list_delete_link(priv->sync_clients_changes,
+                                                  node);
+  // g_object_unref(comp);
+
+  D("unmarking component as changed, now %d changes",
+    g_list_length(priv->sync_clients_changes));
 }
 
 static void
@@ -814,7 +978,7 @@ rebuild_clients_changes_list(ECalBackend3e* cb)
     state = e_cal_component_get_sync_state(ccomp);
 
     if (state != E_CAL_COMPONENT_IN_SYNCH)
-      client_changes_insert(cb, ccomp);
+      e_cal_sync_client_changes_insert(cb, ccomp);
     else
       g_object_unref(ccomp);
   }
@@ -1035,6 +1199,8 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
     ? GNOME_Evolution_Calendar_Success
     : initialize_backend (cb);
 
+  g_return_val_if_fail(priv->calname != 0, GNOME_Evolution_Calendar_OtherError);
+
   g_free(priv->username);
   g_free(priv->password);
 
@@ -1045,24 +1211,19 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
 
     if (!priv->username)
     {
-      D("YEAH!");
-     	D("URI %s", e_cal_backend_get_uri (E_CAL_BACKEND(backend)));
-
-
       GConfClient* gconf;
       ESourceList* eslist;
       GSList* iter;
 
+      D("WHAT USERNAME for CALENDAR %s", priv->calname);
+
       gconf = gconf_client_get_default();
       eslist = e_source_list_new_for_gconf(gconf, CALENDAR_SOURCES);
-      D("A");
       GSList* groups_list = g_slist_copy(e_source_list_peek_groups(eslist));
-      D("B");
       for (iter = groups_list; iter; iter = iter->next)
       {
         ESourceGroup* group = E_SOURCE_GROUP(iter->data);
         const char* group_name = e_source_group_peek_name(group);
-        D("group name %s", group_name);
 
         // skip non eee groups
         if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
@@ -1074,13 +1235,8 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
           for (p = e_source_group_peek_sources(group); p != NULL; p = p->next)
           {
             const char* cal_name = e_source_get_property(E_SOURCE(p->data), "eee-calendar-name");
-            D("cal name: %s", cal_name);
-            D("priv cal name: %s", priv->calname);
-            if (cal_name && !strcmp(cal_name, priv->calname))
-            {
-              D("acquiring username ");
+            if (priv->calname && cal_name && !strcmp(cal_name, priv->calname))
               priv->username = g_strdup(e_source_get_property(E_SOURCE(p->data), "username"));
-            }
           }
         }
 
@@ -1089,13 +1245,16 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
     }
     else
       priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, priv->username);
-    D("USERNAME: %s", priv->username);
   }
   else
   {
     priv->username = g_strdup(username);
     priv->password = g_strdup(password);
   }
+
+  g_return_val_if_fail(priv->username && *priv->username != 0, GNOME_Evolution_Calendar_OtherError);
+
+  D("USERNAME: %s", priv->username);
 
   if (status != GNOME_Evolution_Calendar_Success)
     goto out;
@@ -1218,8 +1377,6 @@ e_cal_backend_3e_remove(ECalBackendSync* backend,
   ECalBackend3e                   *cb;
   ECalBackend3ePrivate            *priv;
 
-  D("REMOVE C>L");
-
   g_return_val_if_fail(backend != NULL,
                        GNOME_Evolution_Calendar_OtherError);
 
@@ -1239,10 +1396,7 @@ e_cal_backend_3e_remove(ECalBackendSync* backend,
   priv->is_loaded = FALSE;	
   priv->sync_mode = SYNC_DIE;
 
-  g_cond_signal(priv->sync_cond);
   g_mutex_unlock (priv->sync_mutex);
-
-  D("REMOVE DONE");
 
   return GNOME_Evolution_Calendar_Success;
 }
@@ -1568,9 +1722,8 @@ e_cal_backend_3e_start_query(ECalBackend * backend,
   g_list_free(objects);
   g_object_unref(cbsexp);
 
-  g_mutex_unlock(priv->sync_mutex);
-
   e_data_cal_view_notify_done(query, GNOME_Evolution_Calendar_Success);
+  g_mutex_unlock(priv->sync_mutex);
 }
 
 // creates a new event/task in the calendar
@@ -1600,17 +1753,30 @@ e_cal_backend_3e_create_object(ECalBackendSync * backend,
     goto out;
   }
   
-  e_cal_component_set_sync_state(comp, E_CAL_COMPONENT_LOCALLY_CREATED);
-  client_changes_insert(cb, comp);
-  e_cal_backend_cache_put_component(priv->cache, comp); //FIXME: check errs
-  *calobj = e_cal_component_get_as_string(comp);
-  g_object_unref(comp);
-
   if (priv->mode == CAL_MODE_REMOTE)
   {
-    T("waking sync thread");
-    g_cond_signal(priv->sync_cond);
+    if (!e_cal_sync_server_object_add(cb, comp, FALSE))
+    {
+      g_warning("Could not add object to server");
+      e_cal_component_set_sync_state(comp, E_CAL_COMPONENT_LOCALLY_CREATED);
+      e_cal_sync_client_changes_insert(cb, comp);
+    }
+    else
+      e_cal_component_set_sync_state(comp, E_CAL_COMPONENT_IN_SYNCH);
   }
+  else
+  {
+    e_cal_component_set_sync_state(comp, E_CAL_COMPONENT_LOCALLY_CREATED);
+    e_cal_sync_client_changes_insert(cb, comp);
+  }
+
+  if (!e_cal_backend_cache_put_component(priv->cache, comp))
+  {
+    g_warning("Could not put component to the cache, when creating object.");
+    status = GNOME_Evolution_Calendar_InvalidObject;
+  }
+  else
+    *calobj = e_cal_component_get_as_string(comp);
 
 out:
   g_mutex_unlock(priv->sync_mutex);
@@ -1629,7 +1795,7 @@ e_cal_backend_3e_modify_object(ECalBackendSync * backend,
 {
   ECalBackend3e            *cb;
   ECalBackend3ePrivate     *priv;
-	ECalComponent            *comp;
+	ECalComponent            *updated_comp;
 	ECalComponent            *cache_comp;
 	gboolean                  online;
 	const char		            *uid = NULL;
@@ -1647,15 +1813,14 @@ e_cal_backend_3e_modify_object(ECalBackendSync * backend,
 
   g_mutex_lock(priv->sync_mutex);
 
-  comp = e_cal_component_new_from_string (calobj);
-	if (comp == NULL)
+  updated_comp = e_cal_component_new_from_string(calobj);
+	if (updated_comp == NULL)
   {
     status = GNOME_Evolution_Calendar_InvalidObject;
     goto out;
   }
 	
-	e_cal_component_get_uid (comp, &uid);
-
+	e_cal_component_get_uid(updated_comp, &uid);
 	cache_comp = e_cal_backend_cache_get_component(priv->cache, uid, NULL);
 
 	if (cache_comp == NULL)
@@ -1664,27 +1829,32 @@ e_cal_backend_3e_modify_object(ECalBackendSync * backend,
     goto out;
   }
 
-  /* mark component as out of synch */
-  if (e_cal_component_get_sync_state(cache_comp) == E_CAL_COMPONENT_IN_SYNCH)
-  {
-    e_cal_component_set_sync_state (comp, E_CAL_COMPONENT_LOCALLY_MODIFIED);
-    client_changes_insert(cb, comp);
-  }
-
-	e_cal_backend_cache_put_component(priv->cache, comp);
-	*old_object = e_cal_component_get_as_string(cache_comp);
-	*new_object = e_cal_component_get_as_string(comp);
-  
   if (priv->mode == CAL_MODE_REMOTE)
   {
-    T("waking sync thread");
-    g_cond_signal(priv->sync_cond);
+    if (!e_cal_sync_server_object_update(cb, cache_comp, FALSE))
+    {
+      g_warning("Could not update component on server");
+      e_cal_component_set_sync_state(updated_comp, E_CAL_COMPONENT_LOCALLY_MODIFIED);
+      e_cal_sync_client_changes_insert(cb, cache_comp);
+    }
   }
+  else
+    if (e_cal_component_get_sync_state(cache_comp) == E_CAL_COMPONENT_IN_SYNCH)
+    {
+      /* mark component as out of synch */
+      e_cal_component_set_sync_state(updated_comp, E_CAL_COMPONENT_LOCALLY_MODIFIED);
+      e_cal_sync_client_changes_insert(cb, updated_comp);
+    }
 
+  *old_object = e_cal_component_get_as_string(cache_comp);
+  g_object_unref(cache_comp);
+  e_cal_backend_cache_put_component(priv->cache, updated_comp);
+  *new_object = e_cal_component_get_as_string(updated_comp);
+  
 out:
   g_mutex_unlock(priv->sync_mutex);
 	
-	return GNOME_Evolution_Calendar_Success;
+	return status;
 }
 
 // removes an object from the calendar
@@ -1696,11 +1866,11 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync * ba
                                                             char **old_object,
                                                             char **object)
 {
-  ECalBackend3e *cb;
-  ECalBackend3ePrivate *priv;
-  ECalComponent* cache_comp;
-	ECalBackendSyncStatus status = GNOME_Evolution_Calendar_Success;
-  ECalComponentSyncState state;
+  ECalBackend3e                           *cb;
+  ECalBackend3ePrivate                    *priv;
+  ECalComponent                           *cache_comp;
+	ECalBackendSyncStatus                   status = GNOME_Evolution_Calendar_Success;
+  ECalComponentSyncState                  state;
 
   T("backend=%p, cal=%p, rid=%s, uid=%s", backend, cal, rid, uid);
   g_return_val_if_fail(backend != NULL, GNOME_Evolution_Calendar_OtherError);
@@ -1708,7 +1878,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync * ba
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
-
   *old_object = *object = NULL;
 
   g_mutex_lock(priv->sync_mutex);
@@ -1721,26 +1890,60 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync * ba
   }
 
   state = e_cal_component_get_sync_state(cache_comp);
-  if (state == E_CAL_COMPONENT_IN_SYNCH)
+  switch (state)
   {
-    e_cal_component_set_sync_state(cache_comp, E_CAL_COMPONENT_LOCALLY_DELETED);
-    client_changes_insert(cb, cache_comp);
+    case E_CAL_COMPONENT_IN_SYNCH:
+    case E_CAL_COMPONENT_LOCALLY_MODIFIED:
+
+      if (priv->mode == CAL_MODE_REMOTE)
+      {
+        if (!e_cal_sync_server_object_delete(cb, cache_comp, FALSE))
+        {
+          g_warning("Could not delete component!");
+          e_cal_component_set_sync_state(cache_comp,
+                                         E_CAL_COMPONENT_IN_SYNCH);
+          status = GNOME_Evolution_Calendar_OtherError;
+          break;
+        }
+      }
+      else
+      {
+        e_cal_component_set_sync_state(cache_comp,
+                                       E_CAL_COMPONENT_LOCALLY_DELETED);
+        if (state == E_CAL_COMPONENT_IN_SYNCH)
+          e_cal_sync_client_changes_insert(cb, cache_comp);
+      }
+
+      if (!e_cal_backend_cache_put_component(priv->cache, cache_comp))
+      {
+        g_warning("Error when removing component, cannot put new"
+                  "component component into the cache!");
+        status = GNOME_Evolution_Calendar_OtherError;
+        break;
+      }
+
+      break;
+
+    case E_CAL_COMPONENT_LOCALLY_CREATED:
+      // not on server yet... delete from cache
+      if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
+      {
+        g_warning("Cannot remove component from cache!");
+        status = GNOME_Evolution_Calendar_OtherError;
+        // do not send it to server - remove object from list of changes
+      }
+      e_cal_sync_client_changes_remove(cb, cache_comp);
+      break;
+
+    case E_CAL_COMPONENT_LOCALLY_DELETED:
+      // nothing to do...
+      g_warning("Deleting component already marked as deleted");
+      status = GNOME_Evolution_Calendar_OtherError;
+      break;
   }
 
-  if (!e_cal_backend_cache_put_component(priv->cache, cache_comp))
-  {
-    g_warning("Cannot put component into the cache!");
-    status = GNOME_Evolution_Calendar_OtherError;
-    goto out;
-  }
-
-  *old_object = e_cal_component_get_as_string(cache_comp);
-
-  if (priv->mode == CAL_MODE_REMOTE)
-  {
-    T("waking sync thread");
-    g_cond_signal(priv->sync_cond);
-  }
+  if (status == GNOME_Evolution_Calendar_Success)
+    *old_object = e_cal_component_get_as_string(cache_comp);
 
 out:
   g_mutex_unlock(priv->sync_mutex);
