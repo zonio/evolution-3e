@@ -106,6 +106,7 @@ GtkWidget *eee_calendar_properties_factory(EPlugin* epl, EConfigHookItemFactoryD
   // can't do anything in offline mode
   if (is_new_calendar_dialog(target->source))
   {
+    target->disable_source_update = TRUE;
     EeeAccount* account = eee_accounts_manager_find_account_by_group(_mgr, group);
     if (account == NULL)
     {
