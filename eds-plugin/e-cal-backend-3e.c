@@ -922,11 +922,11 @@ e_cal_backend_3e_modify_object(ECalBackendSync * backend,
 
   if (priv->mode == CAL_MODE_REMOTE)
   {
-    if (!e_cal_sync_server_object_update(cb, cache_comp, FALSE))
+    if (!e_cal_sync_server_object_update(cb, updated_comp, FALSE))
     {
       g_warning("Could not update component on server");
       e_cal_component_set_sync_state(updated_comp, E_CAL_COMPONENT_LOCALLY_MODIFIED);
-      e_cal_sync_client_changes_insert(cb, cache_comp);
+      e_cal_sync_client_changes_insert(cb, updated_comp);
     }
   }
   else
