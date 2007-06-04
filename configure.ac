@@ -54,6 +54,9 @@ AC_SUBST(EVO3E_LIBS)
 plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin-2.10`
 AC_SUBST(plugindir)
 
+errordir=`$PKG_CONFIG --variable=errordir evolution-plugin-2.10`
+AC_SUBST(errordir)
+
 SOEXT='.so'
 AC_SUBST(SOEXT)
 

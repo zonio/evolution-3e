@@ -9,6 +9,9 @@ plugin_DATA = \
   org-gnome-evolution-eee.glade \
   org-gnome-eee-cal-subscription.xml
 
+error_DATA = \
+  org-gnome-evolution-eee.error
+
 plugin_LTLIBRARIES = \
   liborg-gnome-evolution-eee.la
 
@@ -43,4 +46,5 @@ liborg_gnome_evolution_eee_la_LDFLAGS = \
 EXTRA_DIST = \
   org-gnome-evolution-eee.eplug.in \
   org-gnome-evolution-eee.glade \
-  org-gnome-eee-cal-subscription.xml.in
+  org-gnome-eee-cal-subscription.xml.in \
+  org-gnome-evolution-eee.error
