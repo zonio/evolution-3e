@@ -113,7 +113,7 @@ static gboolean authenticate_to_account(EeeAccount* account, xr_client_conn* con
     }
 
     // forget password and retry
-    e_passwords_forget_password(EEE_PASSWORD_COMPONENT, account->email);
+    e_passwords_forget_password(EEE_PASSWORD_COMPONENT, key);
     flags |= E_PASSWORDS_REPROMPT;
   }
 
