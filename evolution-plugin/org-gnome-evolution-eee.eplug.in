@@ -39,6 +39,15 @@
         id="component.migration" 
         handle="eee_calendar_component_migrate"/>
     </hook>
+
+    <hook class="org.gnome.evolution.calendar.popup:1.0">
+      <menu 
+        id="org.gnome.evolution.calendar.view.popup" 
+        target="select" 
+        factory="eee_calendar_popup_view_factory">
+      </menu>
+    </hook>
+
 -->
 
     <hook class="org.gnome.evolution.calendar.popup:1.0">
@@ -46,14 +55,6 @@
         id="org.gnome.evolution.calendar.source.popup"
         target="source"
         factory="eee_calendar_popup_source_factory">
-      </menu>
-    </hook>
-
-    <hook class="org.gnome.evolution.calendar.popup:1.0">
-      <menu 
-        id="org.gnome.evolution.calendar.view.popup" 
-        target="select" 
-        factory="eee_calendar_popup_view_factory">
       </menu>
     </hook>
 
