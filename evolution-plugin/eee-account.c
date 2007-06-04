@@ -100,9 +100,9 @@ static gboolean authenticate_to_account(EeeAccount* account, xr_client_conn* con
     if (err)
     {
       g_debug("** EEE ** Authentization failed for user '%s'. (%d:%s)", account->email, err->code, err->message);
-      if (err->code == 1)
+      if (err->code == ES_XMLRPC_ERROR_UNKNOWN_USER)
         fail_msg = "User not found. ";
-      else if (err->code == 6)
+      else if (err->code == ES_XMLRPC_ERROR_AUTH_FAILED)
         fail_msg = "Invalid password. ";
       g_clear_error(&err);
     }
