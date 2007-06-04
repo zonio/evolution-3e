@@ -117,7 +117,8 @@ static gboolean authenticate_to_account(EeeAccount* account, xr_client_conn* con
     flags |= E_PASSWORDS_REPROMPT;
   }
 
-  e_error_run(NULL, "mail:eee-auth-error", account->email, NULL);
+  e_error_run(NULL, "eee:multiple-auth-failures", account->email, NULL);
+
  err:
   g_free(account->password);
   account->password = NULL;

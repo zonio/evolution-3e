@@ -5,6 +5,11 @@
    <primary>3E Error {0}.</primary>
  </error>
 
+ <error id="multiple-auth-failures" type="error">
+   <primary>Can't authenticate to 3E account {0}.</primary>
+   <secondary>Account was disabled. To re-enable it, go to account preferences and click on enable account.</secondary>
+ </error>
+
  <!--
  <error type="question" id="question1" default="GTK_RESPONSE_CANCEL">
   <title>{0}?</title>
