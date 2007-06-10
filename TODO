@@ -19,9 +19,12 @@ Evolution Plugin
 - documentation update based on comments from Pavel and Standa
 
 - EeeAccountsManager:
-  - check for cross-subscription in evolution (two EAccounts both with 3e support,
-    one is subscribing from other)
+  - don't replace account list just regenerate it and send notifications
+  - check for cross-subscription in evolution (two EAccounts both with 3e
+    support, one is subscribing from other)
   - check for multiple EAcounts with same email
+  - sync in separate thread
+  - do ESourceList sync in mainloop, triggered from separate thread
 
 EDS Plugin
 ~~~~~~~~~~
