@@ -1,7 +1,10 @@
 AM_CFLAGS = \
   -DG_LOG_DOMAIN=\"libecalbackend3e\" \
   $(LIBXR_CFLAGS) \
-  $(EDS3E_CFLAGS)
+  $(EDS3E_CFLAGS) \
+  -D_GNU_SOURCE \
+  -I$(srcdir) \
+  -I$(top_srcdir)
 
 extension_LTLIBRARIES = libecalbackend3e.la
 
