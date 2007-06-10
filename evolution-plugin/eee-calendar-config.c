@@ -195,6 +195,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
       return;
     }
 
+    /*
     xr_client_conn* conn = eee_account_connect(account);
     if (conn == NULL)
     {
@@ -243,6 +244,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
     }
 
     eee_accounts_manager_sync(_mgr);
+    */
   }
   else
   {
