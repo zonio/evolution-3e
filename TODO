@@ -29,54 +29,13 @@ Evolution Plugin
 EDS Plugin
 ~~~~~~~~~~
 
-Mar 12 17:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_init(cb=0x808a618, klass=0x808ba18)
-Mar 12 17:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_set_mode(backend=0x808a618, mode=2)
-Mar 12 17:15:59 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:185 sync thread started
-Mar 12 17:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_set_default_zone(backend=0x808a618, cal=0x8079b80, tzobj=BEGIN:VTIMEZONE TZID:/softwarestudio.org/Olson_20011030_5/Europe/Prague X-LIC-LOCATION:Europe/Prague BEGIN:DAYLIGHT TZOFFSETFROM:+0100 TZOFFSETTO:+0200 TZNAME:CEST DTSTART:19700329T020000 RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=3 END:DAYLIGHT BEGIN:STANDARD TZOFFSETFROM:+0200 TZOFFSETTO:+0100 TZNAME:CET DTSTART:19701025T030000 RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=10 END:STANDARD END:VTIMEZONE )
-Mar 12 17:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_init(cb=0x808a630, klass=0x808ba18)
-Mar 12 17:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_set_mode(backend=0x808a630, mode=2)
-Mar 12 17:15:59 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:185 sync thread started
-Mar 12 17:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_set_default_zone(backend=0x808a630, cal=0x8079bb0, tzobj=BEGIN:VTIMEZONE TZID:/softwarestudio.org/Olson_20011030_5/Europe/Prague X-LIC-LOCATION:Europe/Prague BEGIN:DAYLIGHT TZOFFSETFROM:+0100 TZOFFSETTO:+0200 TZNAME:CEST DTSTART:19700329T020000 RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=3 END:DAYLIGHT BEGIN:STANDARD TZOFFSETFROM:+0200 TZOFFSETTO:+0100 TZNAME:CET DTSTART:19701025T030000 RRULE:FREQ=YEARLY;INTERVAL=1;BYDAY=-1SU;BYMONTH=10 END:STANDARD END:VTIMEZONE )
-Mar 12 16:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_open(backend=0x808a618, cal=0x8079b80, only_if_exists=0, username=ondrej.jirman@zonio.net, password=qwe)
-Mar 12 17:15:59 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:332 3es uri=https://127.0.0.1:4444/ESClient
-Mar 12 17:15:59 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:333 3es calname=personal
-Mar 12 17:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_open(backend=0x808a630, cal=0x8079bb0, only_if_exists=0, username=megous@megous.com, password=qwe)
-Mar 12 17:15:59 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:332 3es uri=https://127.0.0.1:4444/ESClient
-Mar 12 17:15:59 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:333 3es calname=personal
-Mar 12 16:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_is_read_only(backend=0x808a618, cal=0x8079b80, read_only=false)
-Mar 12 17:15:59 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_is_read_only(backend=0x808a630, cal=0x8079bb0, read_only=false)
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a630, query=0x80a8c00)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070225T230000Z")                           (make-time "20070408T220000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_default_timezone()
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a618, query=0x82480f0)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070225T230000Z")                           (make-time "20070408T220000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a618, query=0x808d0f0)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070311T230000Z")                           (make-time "20070312T230000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a618, query=0x80a8c30)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070311T230000Z")                           (make-time "20070316T230000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a618, query=0x8248120)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070311T230000Z")                           (make-time "20070318T230000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a618, query=0x80a8c60)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070228T230000Z")                           (make-time "20070331T220000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a630, query=0x80a8c90)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070311T230000Z")                           (make-time "20070312T230000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_default_timezone()
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a630, query=0x8248150)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070311T230000Z")                           (make-time "20070316T230000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_default_timezone()
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a630, query=0x808d120)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070311T230000Z")                           (make-time "20070318T230000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_default_timezone()
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_start_query(backend=0x808a630, query=0x8248180)
-Mar 12 17:16:00 core evolution-data-server-1.8: DEBUG: e-cal-backend-3e.c:753 start_query() = (and (occur-in-time-range? (make-time "20070228T230000Z")                           (make-time "20070331T220000Z"))     (contains? "summary" "Summary contains"))
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_default_timezone()
-Mar 12 17:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
-Mar 12 16:16:00 core evolution-data-server-1.8: TRACE: e_cal_backend_3e_internal_get_timezone()
+
+Evolution/EDS
+~~~~~~~~~~~~~
+- extend ESourceGroup to support properites like ESource
+- add property to not show ESourceGroup in new calendars
+- set property from EeeAccountsManager on each ESourceGroup that is not
+  connectable account so that it can be hidden from the new calendar possible
+  accounts list
+- don't add these accounts to the list in
+  calendar/gui/dialogs/calendar-setup.c:432
