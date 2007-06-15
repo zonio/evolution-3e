@@ -1191,6 +1191,7 @@ static void e_cal_backend_3e_init(ECalBackend3e * cb, ECalBackend3eClass * klass
     g_thread_init(NULL);
 
   cb->priv = g_new0(ECalBackend3ePrivate, 1);
+  cb->priv->sync_mode = SYNC_SLEEP;
   cb->priv->sync_cond = g_cond_new();
   cb->priv->sync_mutex = g_mutex_new();
   cb->priv->sync_thread = g_thread_create(e_cal_sync_main_thread, cb, TRUE, NULL);
