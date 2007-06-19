@@ -41,6 +41,9 @@ void icomp_x_prop_set(icalcomponent *comp,
 const char * icomp_x_prop_get (icalcomponent *comp,
                                const char *key);
 
+const char*
+icomp_get_uid(icalcomponent* comp);
+
 // extract X-3e-STATUS property
 gboolean icomp_get_deleted_status(icalcomponent* comp);
 

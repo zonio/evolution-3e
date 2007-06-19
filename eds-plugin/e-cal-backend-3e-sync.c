@@ -203,6 +203,55 @@ e_cal_sync_server_object_add(ECalBackend3e* cb,
   return ok;
 }
 
+// free result with icalcomponent_free
+static icalcomponent*
+e_cal_sync_query_server_objects(ECalBackend3e* cb,
+                                const char* sync_start,
+                                const char* sync_stop)
+{
+  ECalBackend3ePrivate*       priv;
+  GError*                     err = NULL;
+  gchar*                      query_server_objects_str;
+  icalcomponent*              queried_comps = NULL;
+  gchar*                      str_server_objects;
+
+  g_return_val_if_fail(cb != NULL, FALSE);
+  g_return_val_if_fail(sync_stop != NULL, FALSE);
+  // sync_start can be NULL
+
+  priv = cb->priv;
+
+  query_server_objects_str = sync_start
+    ? g_strdup_printf("date_from('%s') and date_to('%s')", sync_start, sync_stop)
+    : g_strdup_printf("date_to('%s')", sync_stop);
+
+  str_server_objects = ESClient_queryObjects(priv->conn, priv->calspec,
+                                             query_server_objects_str,
+                                             &err);
+  if (err)
+  {
+    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
+                                      "Cannot fetch calendar objects from server", err);
+    g_clear_error(&err);
+    goto out1;
+  }
+
+  // queried_comps is one big component with subcomponents
+  // returned from queryObjects call
+  queried_comps = icalparser_parse_string(str_server_objects);
+  if (queried_comps == NULL)
+  {
+    g_warning("Could not parse components returned from server!");
+    goto out1;
+  }
+
+  return queried_comps;
+
+out1:
+  icalcomponent_free(queried_comps);
+  return NULL;
+}
+
 // create a list with server objects
 // if last_synchro_time is NULL, queries all server objects
 gboolean
@@ -225,33 +274,11 @@ e_cal_sync_server_to_client_sync(ECalBackend* backend,
   const gchar*                uid;
 
   g_return_val_if_fail(backend != NULL, FALSE);
-  g_return_val_if_fail(sync_stop != NULL, FALSE);
-  // sync_start can be NULL
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
 
-  query_server_objects_str = sync_start
-    ? g_strdup_printf("date_from('%s') and date_to('%s')", sync_start, sync_stop)
-    : g_strdup_printf("date_to('%s')", sync_stop);
-
-  str_server_objects = ESClient_queryObjects(priv->conn, priv->calspec,
-                                             query_server_objects_str,
-                                             &err);
-  if (err)
-  {
-    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
-                                      "Cannot fetch calendar objects from server", err);
-    g_clear_error(&err);
-    goto out1;
-  }
-
-  // queried_comps is one big component with subcomponents
-  // returned from queryObjects call
-  queried_comps = icalparser_parse_string(str_server_objects);
-
-  g_debug("QUERY %s: %s", query_server_objects_str,
-          str_server_objects);
+  queried_comps = e_cal_sync_query_server_objects(cb, sync_start, sync_stop);
 
   if (queried_comps == NULL)
   {
@@ -349,8 +376,6 @@ out2:
   // g_free(escomp);
   // g_free(queried_comps);
 out1:
-  g_free(query_server_objects_str);
-  g_free(str_server_objects);
 
   return ok;
 }
@@ -365,6 +390,7 @@ e_cal_sync_client_to_server_sync(ECalBackend3e* cb)
   GList                        *citer;
   ECalBackend3ePrivate         *priv;
   GError*                   err = NULL;
+  const char                   *uid, *rid;
 
   g_return_val_if_fail(cb != NULL, FALSE);
 
@@ -391,6 +417,12 @@ e_cal_sync_client_to_server_sync(ECalBackend3e* cb)
         break;
       case E_CAL_COMPONENT_LOCALLY_DELETED:
         ok = e_cal_sync_server_object_delete(cb, ccomp, TRUE);
+        if (ok)
+        {
+          e_cal_component_get_ids(ccomp, &uid, &rid);
+          if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
+            g_warning("Could not remove component from cache!");
+        }
         break;
       case E_CAL_COMPONENT_IN_SYNCH:
         g_warning("Component should be changed, but is in synch state");
@@ -528,7 +560,7 @@ e_cal_sync_save_stamp(ECalBackend3e* cb,
 }
 
 void
-e_cal_sync_synchronize(ECalBackend* backend)
+e_cal_sync_incremental_synchronization(ECalBackend* backend)
 {
   GError*                   err = NULL;
   ECalBackend3ePrivate*     priv;
@@ -630,7 +662,7 @@ e_cal_sync_main_thread(gpointer data)
       continue;
     }
 
-    e_cal_sync_synchronize(E_CAL_BACKEND(data));
+    e_cal_sync_total_synchronization(cb);
 
     /* get some rest :) */
     g_get_current_time(&alarm_clock);
@@ -662,8 +694,8 @@ e_cal_sync_client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
   g_object_ref(comp);
   priv->sync_clients_changes = g_list_insert(priv->sync_clients_changes, comp, 0);
 
-  D("marking component as changed by the client, now %d changes",
-    g_list_length(priv->sync_clients_changes)); 
+  D("marking component as changed by the client, now %d changes: %s",
+    g_list_length(priv->sync_clients_changes), e_cal_component_get_as_string(comp));	
 
 }
 
@@ -735,3 +767,116 @@ rebuild_clients_changes_list(ECalBackend3e* cb)
   g_list_free(cobjs);
 }
 
+void
+e_cal_sync_total_synchronization(ECalBackend3e* cb)
+{
+  ECalBackend3ePrivate*     priv = cb->priv;
+  ECalBackendCache         *bcache = priv->cache;
+  GError*                   err = NULL;
+  GList                    *cobjs;
+  GList                    *citer;
+  GList                    *sobjs = NULL;
+  GList                    *siter;
+  icalcomponent            *scomp;
+  icalcomponent            *server_components;
+  const char               *uid;	
+  const char               *rid;
+  char                     *uid_copy;
+  ECalComponent            *ccomp = NULL;
+  gboolean                 ok;
+  ECalComponentSyncState   sync_state;
+  icalcomponent_kind       kind;
+  icalcomponent_kind       bkind;
+  ECalComponent*           escomp;
+  char                     now[256];
+  time_t                   now_time = time(NULL);
+  struct tm                tm_now;
+  GHashTable               *uidindex;
+
+  T("");
+  D("starting TOTAL synchronization!");
+
+  g_return_if_fail(cb != NULL);
+  priv = cb->priv;
+  g_return_if_fail(priv->conn != NULL);
+
+  gmtime_r(&now_time, &tm_now);
+  if (!(strftime(now, sizeof(now), "%F %T", &tm_now)))
+    return;
+
+  if (!e_cal_sync_server_open(cb))
+    return;
+
+  uidindex = g_hash_table_new(g_str_hash, g_str_equal);
+  cobjs = e_cal_backend_cache_get_components(bcache);
+  for (citer = cobjs; citer; citer = g_list_next (citer))
+  {
+    ccomp = E_CAL_COMPONENT (citer->data);
+    sync_state = e_cal_component_get_sync_state(ccomp);
+    e_cal_component_get_ids(ccomp, &uid, &rid);
+
+    if (sync_state == E_CAL_COMPONENT_IN_SYNCH)
+    {
+      if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
+        g_warning("Could not remove component from cache!");
+    }
+    else
+    {
+      uid_copy = g_strdup_printf("UID:%s", uid);
+      g_hash_table_insert(uidindex, (gpointer)uid_copy, ccomp);
+    }
+  }
+
+  server_components = e_cal_sync_query_server_objects(cb, NULL, now);
+  if (!server_components)
+    goto out1;
+
+  kind  = icalcomponent_isa(server_components);
+  bkind = e_cal_backend_get_kind(E_CAL_BACKEND(cb));
+
+  if (kind == ICAL_VCALENDAR_COMPONENT)
+  {
+    // scomp is subcomponent of queried_comps
+    scomp = icalcomponent_get_first_component(server_components, bkind);
+
+    while (scomp)
+    {
+      uid = icomp_get_uid(scomp);
+      uid_copy = g_strstrip(g_strdup(uid));
+
+      if (!icomp_get_deleted_status(scomp) && !g_hash_table_lookup(uidindex, uid_copy))
+      {
+        escomp = e_cal_component_new();
+        if (!e_cal_component_set_icalcomponent(escomp, icalcomponent_new_clone(scomp)))
+        {
+          g_warning("Cannot parse component queried from server!");
+          goto out2;
+        }
+        e_cal_component_set_sync_state(escomp, E_CAL_COMPONENT_IN_SYNCH);
+        D("INSERTING COMPONENT");
+        if (!e_cal_backend_cache_put_component(priv->cache, escomp))
+          g_warning("Cannot put component into the cache!");
+        else
+        {
+          D("INSERTED OK");
+          char* compstr;
+          compstr = e_cal_component_get_as_string(escomp);	
+          e_cal_backend_notify_object_created(E_CAL_BACKEND(cb), compstr);
+          g_free(compstr);
+        }
+        g_object_unref(escomp);
+      }
+      scomp = icalcomponent_get_next_component(server_components, bkind);
+    }
+  }
+
+  if (!e_cal_sync_client_to_server_sync(cb))
+    goto out1;
+
+  g_list_foreach(cobjs, (GFunc) g_object_unref, NULL);
+  g_list_free(cobjs);
+
+out2:
+out1:
+  xr_client_close(priv->conn);
+}

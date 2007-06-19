@@ -49,11 +49,15 @@ void e_cal_sync_save_stamp(ECalBackend3e* cb,
 
 void e_cal_sync_synchronize(ECalBackend* backend);
 
+
 ECalComponent*
 e_cal_sync_find_settings(ECalBackend3e* cb);
 
 // synchro thread main
 gpointer e_cal_sync_main_thread(gpointer data);
+
+void
+e_cal_sync_total_synchronization(ECalBackend3e* cb);
 
 
 /* calendar backend functions */

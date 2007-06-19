@@ -100,6 +100,21 @@ icomp_get_deleted_status(icalcomponent* comp)
   return FALSE;
 }
 
+const char*
+icomp_get_uid(icalcomponent* comp)
+{
+  icalproperty* iproperty;
+
+  g_return_val_if_fail(comp != NULL, NULL);
+
+  iproperty = icalcomponent_get_first_property(comp, ICAL_UID_PROPERTY);
+
+  if (iproperty)
+    return g_strdup(icalproperty_as_ical_string(iproperty));
+
+  return NULL;
+}
+
 // set internal synchro state
 void
 e_cal_component_set_sync_state(ECalComponent *comp,

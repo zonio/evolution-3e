@@ -323,7 +323,10 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
       }
     }
     else
-      priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, priv->username);
+    {
+      priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT,
+                                                e_source_get_property(source, "auth-key"));
+    }
   }
   else
   {
@@ -334,6 +337,9 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
   g_return_val_if_fail(priv->username && *priv->username != 0, GNOME_Evolution_Calendar_OtherError);
 
   D("USERNAME: %s", priv->username);
+  D("CALNAME: %s", priv->calname);
+  D("PASSWORD: %s", priv->password);
+  source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
 
   if (status != GNOME_Evolution_Calendar_Success)
     goto out;
@@ -936,6 +942,11 @@ e_cal_backend_3e_modify_object(ECalBackendSync * backend,
       e_cal_component_set_sync_state(updated_comp, E_CAL_COMPONENT_LOCALLY_MODIFIED);
       e_cal_sync_client_changes_insert(cb, updated_comp);
     }
+    else
+    {
+      e_cal_sync_client_changes_remove(cb, cache_comp);
+      e_cal_sync_client_changes_insert(cb, updated_comp);
+    }
 
   *old_object = e_cal_component_get_as_string(cache_comp);
   g_object_unref(cache_comp);
@@ -1001,8 +1012,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync * ba
       {
         e_cal_component_set_sync_state(cache_comp,
                                        E_CAL_COMPONENT_LOCALLY_DELETED);
-        if (state == E_CAL_COMPONENT_IN_SYNCH)
-          e_cal_sync_client_changes_insert(cb, cache_comp);
+        e_cal_sync_client_changes_insert(cb, cache_comp);
       }
 
       if (!e_cal_backend_cache_put_component(priv->cache, cache_comp))
