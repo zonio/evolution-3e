@@ -411,3 +411,94 @@ void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
 {
   subscribe_gui_create(mgr());
 }
+
+/* mail account 3E configuration */
+
+static GtkWidget* add_section(GtkWidget* panel, const char* title)
+{
+  GtkWidget *vbox, *hbox, *label;
+  char* markup_title = g_strdup_printf("<b>%s</b>", title);
+
+  gtk_box_pack_start(GTK_BOX(panel), label = gtk_label_new(markup_title), FALSE, FALSE, 0);
+  g_free(markup_title);
+	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+  gtk_label_set_use_markup(GTK_LABEL(label), TRUE);
+  gtk_box_pack_start(GTK_BOX(panel), hbox = gtk_hbox_new(FALSE, 12), FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(""), FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(hbox), vbox = gtk_vbox_new(FALSE, 12), FALSE, FALSE, 0);
+
+  return vbox;
+}
+
+void status_changed(GtkToggleButton* button, const char* name)
+{
+  if (gtk_toggle_button_get_active(button))
+    eee_accounts_manager_enable_account(mgr(), name);
+  else
+    eee_accounts_manager_disable_account(mgr(), name);
+  eee_accounts_manager_force_sync(mgr());
+}
+
+GtkWidget* eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData *data)
+{
+	EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+  GtkWidget *panel, *section, *checkbutton_status, *label;
+
+  g_debug("EEE: properties factory called");
+
+	if (data->old)
+		return data->old;
+	
+  // toplevel vbox contains frames that group 3E account settings into various
+  // groups
+	panel = gtk_vbox_new(FALSE, 12);
+  gtk_container_set_border_width(GTK_CONTAINER(panel), 12);
+
+  // Status group
+  section = add_section(panel, "Account Status");
+  char* note = g_strdup_printf("If you have 3E account <i>%s</i>, you can turn it on/off here.", name);
+	label = (GtkWidget*)gtk_object_new(GTK_TYPE_LABEL, 
+    "label", note, 
+    "use-markup", TRUE,
+    "justify", GTK_JUSTIFY_LEFT, 
+    "xaling", 0, 
+    "yalign", 0.5, 
+    NULL); 
+  g_free(note);
+  gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
+  checkbutton_status = gtk_check_button_new_with_label("3E Account Enabled");
+  gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
+
+  //XXX: update button based on live account status
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), !eee_accounts_manager_account_is_disabled(mgr(), name));
+  g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(status_changed), (gpointer)name); // <<< this should be ok
+
+  gtk_widget_show_all(panel);
+	gtk_notebook_insert_page(GTK_NOTEBOOK(data->parent), panel, gtk_label_new("3E Account Settings"), 4);
+
+	return panel;
+}
+
+gboolean eee_account_properties_check(EPlugin *epl, EConfigHookPageCheckData *data)
+{
+	EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+	int status = TRUE;
+
+  g_debug("EEE: properties check called");
+
+	if (data->pageid == NULL || !strcmp(data->pageid, "40.eee")) 
+  {
+	}
+
+	return status;
+}
+
+void eee_account_properties_commit(EPlugin *epl, EConfigHookItemFactoryData *data)
+{
+	EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+
+  g_debug("EEE: properties commit called");
+}
