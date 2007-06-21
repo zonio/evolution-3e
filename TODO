@@ -1,41 +1,33 @@
 Evolution Plugin
 ~~~~~~~~~~~~~~~~
 
-- make use of new user settings/attributes support in 3E protocol
-- calendar settings cleanup (see above ^)
+future separate commits:
+  - hide already subscribed calendars from the subscribe dialog list
+  - improve account disabling heuristics (switch to local-offline mode
+    automatically)
+  - refactor offline/shared cal warnings in new calendar dialogs
+  - add perm property to the ESource
+  - show error when trying to open subscribe dialog in offline mode
+  - open added source groups in the sourcelist panel
+  - inform user that server can't be contacted
+  - implement new features using user attributes
+  - make use of new user settings/attributes support in 3E protocol
+  - check for cross-subscription in evolution (two EAccounts both with 3e
+    support, one is subscribing from other)
+  - check for multiple EAcounts with same email
+
 - subscribe to calendar:
   - search by users realname and show it
   - search by calname and show it
   - too many users handling
   - merge users from multiple accounts
+
 - acl:
   - show users real name
-  - add users using special evolution widget (can't be used)
-- offline mode:
-  - show error when trying to open subscribe dialog
-- server unavailability fixups
-  - don't destroy account list
-  - synchronize cal list in separate thread
-- documentation update based on comments from Pavel and Standa
 
-- EeeAccountsManager:
-  - don't replace account list just regenerate it and send notifications
-  - check for cross-subscription in evolution (two EAccounts both with 3e
-    support, one is subscribing from other)
-  - check for multiple EAcounts with same email
-  - sync in separate thread
-  - do ESourceList sync in mainloop, triggered from separate thread
-
-EDS Plugin
-~~~~~~~~~~
-
+- documentation update
 
 Evolution/EDS
 ~~~~~~~~~~~~~
-- extend ESourceGroup to support properites like ESource
-- add property to not show ESourceGroup in new calendars
-- set property from EeeAccountsManager on each ESourceGroup that is not
-  connectable account so that it can be hidden from the new calendar possible
-  accounts list
-- don't add these accounts to the list in
+- don't add groups that does not represent owned accounts to the list in
   calendar/gui/dialogs/calendar-setup.c:432
