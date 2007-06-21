@@ -30,16 +30,16 @@ struct _EeeSettingsClass
 
 G_BEGIN_DECLS
 
-EeeSettings* eee_settings_new(const char* string);
-gboolean eee_settings_parse(EeeSettings* settings, const char* string);
-char* eee_settings_encode(EeeSettings* settings);
-
-void eee_settings_set_title(EeeSettings* settings, const char* title);
-const char* eee_settings_get_title(EeeSettings* settings);
-void eee_settings_set_color(EeeSettings* settings, guint32 color);
-guint32 eee_settings_get_color(EeeSettings* settings);
-
 GType eee_settings_get_type() G_GNUC_CONST;
+
+EeeSettings*       eee_settings_new                    (const char* string);
+gboolean           eee_settings_parse                  (EeeSettings* settings, const char* string);
+char*              eee_settings_encode                 (EeeSettings* settings);
+void               eee_settings_set_title              (EeeSettings* settings, const char* title);
+const char*        eee_settings_get_title              (EeeSettings* settings);
+void               eee_settings_set_color              (EeeSettings* settings, guint32 color);
+guint32            eee_settings_get_color              (EeeSettings* settings);
+char*              eee_settings_string_from_parts      (const char* title, guint32 color);
 
 G_END_DECLS
 

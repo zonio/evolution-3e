@@ -2,63 +2,413 @@
 #include <stdlib.h>
 #include <e-util/e-error.h>
 #include <libedataserverui/e-passwords.h>
-#include "utils.h"
 
+#include "dns-txt-search.h"
+#include "utils.h"
 #include "eee-account.h"
 
 struct _EeeAccountPriv
 {
-  GSList* calendars;          /**< List of EeeCalendar objects owned by this account. */
+  xr_client_conn* conn;
+  gboolean is_authorized;
+  GSList *cals;
 };
 
-EeeAccount* eee_account_new()
+EeeAccount* eee_account_new(const char* name)
 {
-  EeeAccount *obj = g_object_new(EEE_TYPE_ACCOUNT, NULL);
-  return obj;
+  EeeAccount *self = g_object_new(EEE_TYPE_ACCOUNT, NULL);
+  self->name = g_strdup(name);
+  return self;
 }
 
-void eee_account_add_calendar(EeeAccount* account, EeeCalendar* cal)
+EeeAccount* eee_account_new_copy(EeeAccount* ref)
 {
-  g_return_if_fail(IS_EEE_CALENDAR(cal));
-  g_return_if_fail(IS_EEE_ACCOUNT(account));
-
-  account->priv->calendars = g_slist_append(account->priv->calendars, cal);
+  EeeAccount *self = g_object_new(EEE_TYPE_ACCOUNT, NULL);
+  eee_account_copy(self, ref);
+  return self;
 }
 
-GSList* eee_account_peek_calendars(EeeAccount* account)
+void eee_account_copy(EeeAccount* self, EeeAccount* ref)
 {
-  g_return_val_if_fail(IS_EEE_ACCOUNT(account), NULL);
+  g_return_if_fail(IS_EEE_ACCOUNT(self));
+  g_return_if_fail(IS_EEE_ACCOUNT(ref));
 
-  return account->priv->calendars;
+  g_free(self->name);
+  self->name = g_strdup(ref->name);
+  g_free(self->server);
+  self->server = g_strdup(ref->server);
 }
 
-/** Find EeeCalendar object by name.
- *
- * @param account EeeAccount object.
- * @param name Name.
- *
- * @return Matching EeeCalendar object or NULL.
- */
-EeeCalendar* eee_account_peek_calendar_by_name(EeeAccount* account, const char* name)
+void eee_account_disable(EeeAccount* self)
 {
+  self->disabled = TRUE;
+}
+
+gboolean eee_account_find_server(EeeAccount* self)
+{
+  if (self->server)
+    return TRUE;
+  self->server = get_eee_server_hostname(self->name);
+  if (self->server)
+  {
+    g_debug("** EEE ** Found 3E server '%s' for account '%s'.", self->server, self->name);
+    return TRUE;
+  }
+  else
+  {
+    g_debug("** EEE ** 3E server NOT found for account '%s'.", self->name);
+    return FALSE;
+  }
+}
+
+/* communication functions */
+
+static gboolean remove_acl(xr_client_conn* conn, const char* calname)
+{
+  GError* err = NULL;
   GSList* iter;
 
-  g_return_val_if_fail(IS_EEE_ACCOUNT(account), NULL);
-  g_return_val_if_fail(name != NULL, NULL);
-
-  for (iter = eee_account_peek_calendars(account); iter; iter = iter->next)
+  GSList* perms = ESClient_getPermissions(conn, (char*)calname, &err);
+  if (err)
   {
-    EeeCalendar* cal = iter->data;
-    if (cal->name && !strcmp(cal->name, name))
-      return cal;
+    g_warning("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", calname, err->code, err->message);
+    goto err0;
   }
 
-  return NULL;
+  for (iter = perms; iter; iter = iter->next)
+  {
+    ESPermission* perm = iter->data;
+    ESClient_setPermission(conn, (char*)calname, perm->user, "none", &err);
+    if (err)
+    {
+      g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
+      goto err1;
+    }
+  }
+
+  return TRUE;
+
+ err1:
+  g_slist_foreach(perms, (GFunc)ESPermission_free, NULL);
+  g_slist_free(perms);
+ err0:
+  g_clear_error(&err);
+  return FALSE;
 }
 
-/* 3e server access methods */
+static gboolean add_wildcard(xr_client_conn* conn, const char* calname)
+{
+  GError* err = NULL;
+  ESClient_setPermission(conn, (char*)calname, "*", "read", &err);
+  if (err)
+  {
+    g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+  return TRUE;
+}
 
-static gboolean authenticate_to_account(EeeAccount* account, xr_client_conn* conn)
+static gboolean add_acl(xr_client_conn* conn, const char* calname, GSList* new_perms)
+{
+  GError* err = NULL;
+  GSList* iter;
+
+  for (iter = new_perms; iter; iter = iter->next)
+  {
+    ESPermission* perm = iter->data;
+    ESClient_setPermission(conn, (char*)calname, perm->user, perm->perm, &err);
+    if (err)
+    {
+      g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
+      g_clear_error(&err);
+      return FALSE;
+    }
+  }
+  return TRUE;
+}
+
+gboolean eee_account_calendar_acl_set_private(EeeAccount* self, const char* calname)
+{
+  if (calname == NULL || !eee_account_auth(self))
+    return FALSE;
+  return remove_acl(self->priv->conn, calname);
+}
+
+gboolean eee_account_calendar_acl_set_public(EeeAccount* self, const char* calname)
+{
+  if (calname == NULL || !eee_account_auth(self))
+    return FALSE;
+  return remove_acl(self->priv->conn, calname) && add_wildcard(self->priv->conn, calname);
+}
+
+gboolean eee_account_calendar_acl_set_shared(EeeAccount* self, const char* calname, GSList* new_perms)
+{
+  if (calname == NULL || !eee_account_auth(self))
+    return FALSE;
+  //XXX: this is broken because we need to change permissions more gently
+  // remove acl will automatically unsubscribe all users subscribed to our
+  // calendar
+  return remove_acl(self->priv->conn, calname) && add_acl(self->priv->conn, calname, new_perms);
+}
+
+GSList* eee_account_load_calendars(EeeAccount* self)
+{
+  GError* err = NULL;
+
+  if (!eee_account_auth(self))
+    return NULL;
+
+  g_slist_foreach(self->priv->cals, (GFunc)ESCalendar_free, NULL);
+  g_slist_free(self->priv->cals);
+
+  self->priv->cals = ESClient_getCalendars(self->priv->conn, &err);
+  if (err)
+  {
+    g_warning("** EEE ** Failed to get calendars for account '%s'. (%d:%s)", self->name, err->code, err->message);
+    g_clear_error(&err);
+    return NULL;
+  }
+
+  return self->priv->cals;
+}
+
+GSList* eee_account_peek_calendars(EeeAccount* self)
+{
+  return self->priv->cals;
+}
+
+gboolean eee_account_get_shared_calendars_by_username_prefix(EeeAccount* self, const char* prefix, GSList** cals)
+{
+  char* query = NULL;
+  gboolean retval;
+
+  if (prefix != NULL && prefix[0] != '\0')
+  {
+    char* escaped_prefix = qp_escape_string(prefix);
+    query = g_strdup_printf("match_username_prefix(%s)", escaped_prefix);
+    g_free(escaped_prefix);
+  }
+
+  retval = eee_account_get_shared_calendars(self, query ? query : "", cals);
+
+  g_free(query);
+  return retval;
+}
+
+gboolean eee_account_get_shared_calendars(EeeAccount* self, const char* query, GSList** cals)
+{
+  GError* err = NULL;
+
+  if (query == NULL || cals == NULL || !eee_account_auth(self))
+    return FALSE;
+
+  *cals = ESClient_getSharedCalendars(self->priv->conn, (char*)query, &err);
+  if (err)
+  {
+    g_warning("** EEE ** Failed to get calendars for account '%s'. (%d:%s)", self->name, err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+void eee_account_free_calendars_list(GSList* l)
+{
+  if (l == NULL)
+    return;
+  g_slist_foreach(l, (GFunc)ESCalendar_free, NULL);
+  g_slist_free(l);
+}
+
+gboolean eee_account_update_calendar_settings(EeeAccount* self, const char* owner, const char* calname, const char* settings)
+{
+  GError* err = NULL;
+
+  if (owner == NULL || calname == NULL || settings == NULL || !eee_account_auth(self))
+    return FALSE;
+
+  char* calspec = g_strdup_printf("%s:%s", owner, calname);
+  ESClient_updateCalendarSettings(self->priv->conn, calspec, (char*)settings, &err);
+  g_free(calspec);
+
+  if (err)
+  {
+    g_warning("** EEE ** Failed to store settings for calendar '%s:%s'. (%d:%s)", owner, calname, err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+static char* generate_calname()
+{
+  GRand* rand = g_rand_new();
+  return g_strdup_printf("%08x", g_rand_int(rand));
+}
+
+gboolean eee_account_create_new_calendar(EeeAccount* self, const char* settings, char** calname)
+{
+  GError* err = NULL;
+
+  if (settings == NULL || calname == NULL || !eee_account_auth(self))
+    return FALSE;
+
+  while (1)
+  {
+    *calname = generate_calname();
+    ESClient_newCalendar(self->priv->conn, *calname, &err);
+    if (err == NULL)
+    {
+      ESClient_updateCalendarSettings(self->priv->conn, *calname, (char*)settings, &err);
+      if (err)
+      {
+        g_warning("** EEE ** failed to update settings on new calendar (%d:%s)", err->code, err->message);
+        g_clear_error(&err);
+      }
+      break;
+    }
+    if (err->code == ES_XMLRPC_ERROR_CALENDAR_EXISTS)
+    {
+      g_free(*calname);
+      *calname = NULL;
+    }
+    else
+      break;
+  }
+
+  if (err)
+  {
+    g_warning("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+gboolean eee_account_unsubscribe_calendar(EeeAccount* self, const char* owner, const char* calname)
+{
+  GError* err = NULL;
+
+  if (owner == NULL || calname == NULL || !eee_account_auth(self))
+    return FALSE;
+
+  char* calspec = g_strdup_printf("%s:%s", owner, calname);
+  ESClient_unsubscribeCalendar(self->priv->conn, calspec, &err);
+  g_free(calspec);
+
+  if (err)
+  {
+    g_warning("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+gboolean eee_account_subscribe_calendar(EeeAccount* self, const char* owner, const char* calname)
+{
+  GError* err = NULL;
+
+  if (owner == NULL || calname == NULL || !eee_account_auth(self))
+    return FALSE;
+
+  char* calspec = g_strdup_printf("%s:%s", owner, calname);
+  ESClient_subscribeCalendar(self->priv->conn, calspec, &err);
+  g_free(calspec);
+
+  if (err)
+  {
+    g_warning("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+gboolean eee_account_delete_calendar(EeeAccount* self, const char* calname)
+{
+  GError* err = NULL;
+
+  if (calname == NULL || !eee_account_auth(self))
+    return FALSE;
+
+  ESClient_deleteCalendar(self->priv->conn, (char*)calname, &err);
+
+  if (err)
+  {
+    g_warning("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/** Load list of users from the self on the server to the GtkListStore
+ * excluding self owner and optional list of users.
+ *
+ * @param self EeeAccount
+ * @param prefix User name prefix.
+ * @param exclude_users List of emails of users to exclude.
+ * @param model GtkListStore with at least two columns: 
+ *   - 0 = G_TYPE_STRING (username)
+ *   - 1 = EEE_TYPE_ACCOUNT (self object passed as @b self parameter)
+ */
+gboolean eee_account_load_users(EeeAccount* self, char* prefix, GSList* exclude_users, GtkListStore* model)
+{
+  GError* err = NULL;
+  GSList *users, *iter;
+  GtkTreeIter titer_user;
+
+  g_debug("** EEE ** load_users self=%s prefix=%s", self->name, prefix);
+
+  if (!eee_account_auth(self))
+    return FALSE;
+
+  if (prefix == NULL || prefix[0] == '\0')
+  {
+    users = ESClient_getUsers(self->priv->conn, "", &err);
+  }
+  else
+  {
+    char* escaped_prefix = qp_escape_string(prefix);
+    char* query = g_strdup_printf("match_username_prefix(%s)", escaped_prefix);
+    g_free(escaped_prefix);
+    users = ESClient_getUsers(self->priv->conn, query, &err);
+    g_free(query);
+  }
+  if (err)
+  {
+    g_warning("** EEE ** Failed to get users list for user '%s'. (%d:%s)", self->name, err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  for (iter = users; iter; iter = iter->next)
+  {
+    ESUser* user = iter->data;
+    if (!strcmp(self->name, user->username))
+      continue;
+    if (exclude_users && g_slist_find_custom(exclude_users, user->username, (GCompareFunc)strcmp))
+      continue;
+    gtk_list_store_append(model, &titer_user);
+    //XXX: get realname
+    gtk_list_store_set(model, &titer_user, 0, user->username, 1, self, -1);
+  }
+
+  g_slist_foreach(users, (GFunc)ESUser_free, NULL);
+  g_slist_free(users);
+
+  return TRUE;
+}
+
+gboolean eee_account_auth(EeeAccount* self)
 {
   GError* err = NULL;
   guint32 flags = E_PASSWORDS_REMEMBER_FOREVER|E_PASSWORDS_SECRET;
@@ -67,161 +417,117 @@ static gboolean authenticate_to_account(EeeAccount* account, xr_client_conn* con
   char *password;
   int retry_limit = 3;
   gboolean rs;
-  char* key = g_strdup_printf("eee://%s", account->email);
+  char* key;
+
+  if (!eee_account_connect(self))
+    return FALSE;
+  if (self->priv->is_authorized)
+    return TRUE;
+
+  key = g_strdup_printf("eee://%s", self->name);
+  password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, key);
 
   while (retry_limit--)
   {
-    // get password
-    password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, key);
-    if (!password)
+    if (password == NULL)
     {
-      // no?, ok ask for it
-      char* prompt = g_strdup_printf("%sEnter password for your 3E calendar account (%s).", fail_msg, account->email, key);
+      char* prompt = g_strdup_printf("%sEnter password for your 3E calendar account: %s.", fail_msg, self->name);
       // key must have uri format or unpatched evolution segfaults in
       // ep_get_password_keyring()
       password = e_passwords_ask_password(prompt, EEE_PASSWORD_COMPONENT, key, prompt, flags, &remember, NULL);
       g_free(prompt);
-      if (!password) 
+      if (password == NULL)
         goto err;
     }
 
-    // try to authenticate
-    rs = ESClient_auth(conn, account->email, password, &err);
+    rs = ESClient_auth(self->priv->conn, self->name, password, &err);
+    g_free(password);
+    password = NULL;
     if (!err && rs == TRUE)
     {
-      g_free(account->password);
-      account->password = password;
+      self->priv->is_authorized = TRUE;
       g_free(key);
       return TRUE;
     }
-    g_free(password);
 
-    // process error
     if (err)
     {
-      g_debug("** EEE ** Authentization failed for user '%s'. (%d:%s)", account->email, err->code, err->message);
-      if (err->code == ES_XMLRPC_ERROR_UNKNOWN_USER)
-        fail_msg = "User not found. ";
-      else if (err->code == ES_XMLRPC_ERROR_AUTH_FAILED)
+      g_warning("** EEE ** Authentization failed for user '%s'. (%d:%s)", self->name, err->code, err->message);
+      if (err->code == ES_XMLRPC_ERROR_AUTH_FAILED)
+      {
+        g_clear_error(&err);
         fail_msg = "Invalid password. ";
-      g_clear_error(&err);
+      }
+      else
+      {
+        g_clear_error(&err);
+        goto err;
+      }
     }
     else
     {
-      g_debug("** EEE ** Authentization failed for user '%s'.", account->email);
-      fail_msg = "";
+      g_warning("** EEE ** Authentization failed for user '%s' without error.", self->name);
+      fail_msg = "Invalid password. ";
     }
 
-    // forget password and retry
     e_passwords_forget_password(EEE_PASSWORD_COMPONENT, key);
     flags |= E_PASSWORDS_REPROMPT;
   }
 
-  e_error_run(NULL, "eee:multiple-auth-failures", account->email, NULL);
-
  err:
-  g_free(account->password);
-  account->password = NULL;
   g_free(key);
   return FALSE;
 }
 
-xr_client_conn* eee_account_connect(EeeAccount* account)
+xr_client_conn* eee_account_connect(EeeAccount* self)
 {
-  xr_client_conn* conn;
   GError* err = NULL;
   char* server_uri;
 
-  g_debug("** EEE ** Connecting to 3E server: server=%s user=%s", account->server, account->email);
-  conn = xr_client_new(&err);
+  if (self->server == NULL)
+    return NULL;
+
+  if (self->priv->conn)
+    return self->priv->conn;
+
+  g_debug("** EEE ** Connecting to 3E server: server=%s user=%s", self->server, self->name);
+
+  self->priv->conn = xr_client_new(&err);
   if (err)
   {
-    g_debug("** EEE ** Can't create client interface. (%d:%s)", err->code, err->message);
+    g_warning("** EEE ** Can't create client interface. (%d:%s)", err->code, err->message);
     goto err0;
   }
+
   if (getenv("EEE_EVO_DISABLE_SSL"))
-    server_uri = g_strdup_printf("http://%s/ESClient", account->server);
+    server_uri = g_strdup_printf("http://%s/ESClient", self->server);
   else
-    server_uri = g_strdup_printf("https://%s/ESClient", account->server);
-  xr_client_open(conn, server_uri, &err);
+    server_uri = g_strdup_printf("https://%s/ESClient", self->server);
+  
+  xr_client_open(self->priv->conn, server_uri, &err);
   g_free(server_uri);
   if (err)
   {
-    g_debug("** EEE ** Can't open connection to the server. (%d:%s)", err->code, err->message);
+    g_warning("** EEE ** Can't open connection to the server. (%d:%s)", err->code, err->message);
     goto err1;
   }
-  if (!authenticate_to_account(account, conn))
-    goto err1;
 
-  return conn;
+  return self->priv->conn;
 
  err1:
-  xr_client_free(conn);
+  xr_client_free(self->priv->conn);
  err0:
   g_clear_error(&err);
+  self->priv->conn = NULL;
   return NULL;
 }
 
-/** Load list of users from the account on the server to the GtkListStore
- * excluding account owner and optional list of users.
- *
- * @param acc EeeAccount
- * @param prefix User name prefix.
- * @param exclude_users List of emails of users to exclude.
- * @param model GtkListStore with at least two columns: 
- *   - 0 = G_TYPE_STRING (username)
- *   - 1 = EEE_TYPE_ACCOUNT (account object passed as @b acc parameter)
- */
-gboolean eee_account_load_users(EeeAccount* acc, char* prefix, GSList* exclude_users, GtkListStore* model)
+void eee_account_disconnect(EeeAccount* self)
 {
-  xr_client_conn* conn;
-  GError* err = NULL;
-  GSList *users, *iter;
-  GtkTreeIter titer_user;
-
-  g_debug("** EEE ** load_users acc=%s prefix=%s", acc->email, prefix);
-
-  conn = eee_account_connect(acc);
-  if (conn == NULL)
-    return FALSE;
-
-  if (prefix == NULL || prefix[0] == '\0')
-  {
-    users = ESClient_getUsers(conn, "", &err);
-  }
-  else
-  {
-    char* escaped_prefix = qp_escape_string(prefix);
-    char* query = g_strdup_printf("match_username_prefix(%s)", escaped_prefix);
-    g_free(escaped_prefix);
-    users = ESClient_getUsers(conn, query, &err);
-    g_free(query);
-  }
-  if (err)
-  {
-    g_debug("** EEE ** Failed to get users list for user '%s'. (%d:%s)", acc->email, err->code, err->message);
-    xr_client_free(conn);
-    g_clear_error(&err);
-    return FALSE;
-  }
-
-  for (iter = users; iter; iter = iter->next)
-  {
-    ESUser* user = iter->data;
-    if (acc->accessible && acc->email && !strcmp(acc->email, user->username))
-      continue;
-    if (exclude_users && g_slist_find_custom(exclude_users, user->username, (GCompareFunc)strcmp))
-      continue;
-    gtk_list_store_append(model, &titer_user);
-    //XXX: get realname
-    gtk_list_store_set(model, &titer_user, 0, user->username, 1, acc, -1);
-  }
-
-  g_slist_foreach(users, (GFunc)ESUser_free, NULL);
-  g_slist_free(users);
-
-  xr_client_free(conn);
-  return TRUE;
+  if (self->priv->conn)
+    xr_client_free(self->priv->conn);
+  self->priv->conn = NULL;
+  self->priv->is_authorized = FALSE;
 }
 
 /* GObject foo */
@@ -236,20 +542,21 @@ static void eee_account_init(EeeAccount *self)
 static void eee_account_dispose(GObject *object)
 {
   EeeAccount *self = EEE_ACCOUNT(object);
-  g_debug("dispose account %p", object);
-  g_slist_foreach(self->priv->calendars, (GFunc)g_object_unref, NULL);
-  g_slist_free(self->priv->calendars);
-  self->priv->calendars = NULL;
+
   G_OBJECT_CLASS(eee_account_parent_class)->dispose(object);
 }
 
 static void eee_account_finalize(GObject *object)
 {
   EeeAccount *self = EEE_ACCOUNT(object);
-  g_debug("dispose account %p", object);
-  g_free(self->email);
-  g_free(self->password);
+
+  g_free(self->name);
   g_free(self->server);
+  if (self->priv->conn)
+    xr_client_free(self->priv->conn);
+  g_slist_foreach(self->priv->cals, (GFunc)ESCalendar_free, NULL);
+  g_slist_free(self->priv->cals);
+
   G_OBJECT_CLASS(eee_account_parent_class)->finalize(object);
 }
 

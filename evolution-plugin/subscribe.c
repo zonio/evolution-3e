@@ -5,6 +5,7 @@
 
 #include "subscribe.h"
 #include "eee-calendar-config.h"
+#include "eee-settings.h"
 
 enum
 {
@@ -29,39 +30,19 @@ struct subscribe_context
 
 static struct subscribe_context* active_ctx = NULL;
 
-static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* model, struct subscribe_context* ctx)
+static gboolean load_calendars(EeeAccount* account, char* prefix, GtkTreeStore* model, struct subscribe_context* ctx)
 {
-  xr_client_conn* conn;
-  GError* err = NULL;
-  GSList *users, *cals, *iter, *iter2;
+  GSList *cals, *iter;
   GtkTreeIter titer_user;
   GtkTreeIter titer_cal;
+  gboolean rs;
 
-  g_debug("** EEE ** load_users acc=%s prefix=%s", acc->email, prefix);
+  g_debug("** EEE ** load_users account=%s prefix=%s", account->name, prefix);
 
-  conn = eee_account_connect(acc);
-  if (conn == NULL)
+  rs = eee_account_get_shared_calendars_by_username_prefix(account, prefix, &cals);
+  eee_account_disconnect(account);
+  if (!rs)
     return FALSE;
-
-  if (prefix == NULL || prefix[0] == '\0')
-  {
-    cals = ESClient_getSharedCalendars(conn, "", &err);
-  }
-  else
-  {
-    char* escaped_prefix = qp_escape_string(prefix);
-    char* query = g_strdup_printf("match_username_prefix(%s)", escaped_prefix);
-    g_free(escaped_prefix);
-    cals = ESClient_getSharedCalendars(conn, query, &err);
-    g_free(query);
-  }
-  if (err)
-  {
-    g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", acc->email, err->code, err->message);
-    xr_client_free(conn);
-    g_clear_error(&err);
-    return FALSE;
-  }
 
   // for each user get his calendars
   char* prev_owner = NULL;
@@ -71,7 +52,7 @@ static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* mode
   {
     ESCalendar* cal = iter->data;
     // skip calendars owned by logegd in user
-    if (acc->accessible && acc->email && !strcmp(acc->email, cal->owner))
+    if (!strcmp(account->name, cal->owner))
       continue;
 
     if (!prev_owner || strcmp(prev_owner, cal->owner))
@@ -81,7 +62,7 @@ static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* mode
         SUB_NAME_COLUMN, cal->owner, 
         SUB_PERM_COLUMN, "", 
         SUB_OWNER_COLUMN, cal->owner, 
-        SUB_ACCOUNT_COLUMN, acc, 
+        SUB_ACCOUNT_COLUMN, account, 
         SUB_IS_CALENDAR_COLUMN, FALSE, -1);
       prev_owner = cal->owner;
     }
@@ -91,7 +72,7 @@ static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* mode
       SUB_NAME_COLUMN, cal->name,
       SUB_PERM_COLUMN, cal->perm, 
       SUB_OWNER_COLUMN, cal->owner, 
-      SUB_ACCOUNT_COLUMN, acc, 
+      SUB_ACCOUNT_COLUMN, account, 
       SUB_IS_CALENDAR_COLUMN, TRUE, -1);
   }
   g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
@@ -99,34 +80,36 @@ static gboolean load_calendars(EeeAccount* acc, char* prefix, GtkTreeStore* mode
 
   gtk_tree_view_expand_all(ctx->tview);
 
-  xr_client_free(conn);
-  return 0;
+  return TRUE;
 }
 
 static gboolean user_selected(GtkEntryCompletion *widget, GtkTreeModel *model, GtkTreeIter *iter, struct subscribe_context* ctx)
 {
   char* user = NULL;
-  EeeAccount* acc = NULL;
-  gtk_tree_model_get(model, iter, 0, &user, 1, &acc, -1);
+  EeeAccount* account = NULL;
+  gtk_tree_model_get(model, iter, 0, &user, 1, &account, -1);
   gtk_tree_store_clear(ctx->model);
-  if (user && acc)
-    load_calendars(acc, user, ctx->model, ctx);
+  if (user && account)
+    load_calendars(account, user, ctx->model, ctx);
   g_free(user);
   return FALSE;
 }
 
 static gboolean user_insert_prefix(GtkEntryCompletion *widget, char* prefix, struct subscribe_context* ctx)
 {
+  GSList* iter, *list;
+
   if (prefix == NULL)
     return FALSE;
-  GSList* iter;
+
   gtk_tree_store_clear(ctx->model);
-  for (iter = eee_accounts_manager_peek_accounts_list(ctx->mgr); iter; iter = iter->next)
+  list = eee_accounts_manager_peek_accounts_list(ctx->mgr);
+  for (iter = list; iter; iter = iter->next)
   {
-    EeeAccount* acc = iter->data;
-    if (acc->accessible)
-      load_calendars(acc, prefix, ctx->model, ctx);
+    EeeAccount* account = iter->data;
+    load_calendars(account, prefix, ctx->model, ctx);
   }
+  
   return FALSE;
 }
 
@@ -136,7 +119,7 @@ static void calendar_selection_changed(GtkTreeSelection *selection, struct subsc
   GtkTreeModel *model;
   char* name = NULL;
   char* perm = NULL;
-  EeeAccount* acc = NULL;
+  EeeAccount* account = NULL;
   gboolean is_calendar = FALSE;
 
   if (gtk_tree_selection_get_selected(selection, &model, &iter))
@@ -144,7 +127,7 @@ static void calendar_selection_changed(GtkTreeSelection *selection, struct subsc
     gtk_tree_model_get(model, &iter, 
       SUB_NAME_COLUMN, &name,
       SUB_PERM_COLUMN, &perm,
-      SUB_ACCOUNT_COLUMN, &acc,
+      SUB_ACCOUNT_COLUMN, &account,
       SUB_IS_CALENDAR_COLUMN, &is_calendar, -1);
 
     if (is_calendar)
@@ -161,13 +144,16 @@ static void calendar_selection_changed(GtkTreeSelection *selection, struct subsc
 
 static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe_context* ctx)
 {
-  GError* err = NULL;
   GtkTreeIter iter;
   GtkTreeModel *model;
   char* name = NULL;
   char* owner = NULL;
-  EeeAccount* acc = NULL;
+  EeeAccount* account = NULL;
   gboolean is_calendar = FALSE;
+  ESource* source;
+  ESourceGroup* group;
+  EeeSettings* settings;
+  char* settings_string;
 
   if (!gtk_tree_selection_get_selected(ctx->selection, &model, &iter))
     goto err0;
@@ -175,29 +161,28 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   gtk_tree_model_get(model, &iter, 
     SUB_NAME_COLUMN, &name,
     SUB_OWNER_COLUMN, &owner,
-    SUB_ACCOUNT_COLUMN, &acc,
+    SUB_ACCOUNT_COLUMN, &account,
     SUB_IS_CALENDAR_COLUMN, &is_calendar, -1);
 
-  if (!is_calendar || acc == NULL || name == NULL)
+  if (!is_calendar || account == NULL || name == NULL)
     goto err1;
 
-  xr_client_conn* conn = eee_account_connect(acc);
-  if (conn == NULL)
+  group = eee_accounts_manager_find_group_by_name(ctx->mgr, owner);
+  if (group == NULL)
     goto err1;
 
-  char* calspec = g_strdup_printf("%s:%s", owner, name);
-  ESClient_subscribeCalendar(conn, calspec, &err);
-  g_free(calspec);
-  xr_client_free(conn);
-
-  if (err)
-  {
-    g_debug("** EEE ** subscription failed (%d:%s)", err->code, err->message);
-    g_clear_error(&err);
+  if (!eee_account_subscribe_calendar(account, owner, name))
     goto err1;
-  }
 
-  eee_accounts_manager_sync(ctx->mgr);
+  settings = eee_settings_new(NULL);
+  eee_settings_set_title(settings, name);
+  settings_string = eee_settings_encode(settings);
+  source = e_source_new_3e(name, owner, account, settings_string);
+  g_free(settings_string);
+  g_object_unref(settings);
+  e_source_group_add_source(group, source, -1);
+  e_source_list_sync(eee_accounts_manager_peek_source_list(ctx->mgr), NULL);
+  eee_accounts_manager_abort_current_sync(ctx->mgr);
 
  err1:
   g_free(name);
@@ -262,15 +247,13 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
 
   // setup autocompletion (0 == username, 1 == EeeAccount*)
   GtkListStore* users_store = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_POINTER);
-  GSList* iter;
-  for (iter = eee_accounts_manager_peek_accounts_list(mgr); iter; iter = iter->next)
+  GSList* iter, *list;
+  list = eee_accounts_manager_peek_accounts_list(mgr);
+  for (iter = list; iter; iter = iter->next)
   {
-    EeeAccount* acc = iter->data;
-    if (acc->accessible)
-    {
-      eee_account_load_users(acc, "", NULL, users_store);
-      load_calendars(acc, "", c->model, c);
-    }
+    EeeAccount* account = iter->data;
+    eee_account_load_users(account, "", NULL, users_store);
+    load_calendars(account, "", c->model, c);
   }
   GtkEntryCompletion *completion;
   completion = gtk_entry_completion_new();

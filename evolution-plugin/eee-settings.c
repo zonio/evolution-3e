@@ -82,6 +82,16 @@ guint32 eee_settings_get_color(EeeSettings* settings)
   return settings->priv->color;
 }
 
+char* eee_settings_string_from_parts(const char* title, guint32 color)
+{
+  EeeSettings* settings = eee_settings_new(NULL);
+  eee_settings_set_title(settings, title);
+  eee_settings_set_color(settings, color);
+  char* settings_string = eee_settings_encode(settings);
+  g_object_unref(settings);
+  return settings_string;
+}
+
 /* GObject foo */
 
 G_DEFINE_TYPE(EeeSettings, eee_settings, G_TYPE_OBJECT);

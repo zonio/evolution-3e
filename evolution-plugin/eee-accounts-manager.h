@@ -4,38 +4,6 @@
 #include <libedataserver/e-source-list.h>
 #include "eee-account.h"
 
-/** 3E account manager.
- *
- * One instance per evolution process.
- *
- * Role of the EeeAccountsManager is to keep calendar ESourceList in sync with
- * EAccountList (each account must have it's own ESourceGroup) and ESource in
- * each group in sync with list of calendars on the 3e server.
- *
- * First we load list of EAccount objects (email accounts in evolution), then we
- * determine hostnames of the 3e servers for each email account (and if it has
- * one) and automatically load list of calendars from the 3e server.
- *
- * Then we load existing ESourceGroup objects with eee:// URI prefix (i.e. list
- * of eee accounts in the calendar view) and their associated ESources.
- *
- * Last step is to compare lists of ESource obejcts (eee accounts list in
- * calendar view) with list of calendars stored on the server and update list of
- * ESource obejcts to match list of calendars stored on the server.
- *
- * After this initial sync, our local list of EeeAccount and EeeCalendar obejcts
- * will be in sync with either list of calendar sources in gconf (what is shown
- * in calendar view) and list of existing email accounts (EAccount objects).
- *
- * Now we will setup notification mechanism for EAccount and calendar list
- * changes. We will also periodically fetch list of calendars from the 3e server
- * and update list of calendars in the calendars source list.
- *
- * GUI for adding/removing callendars will call methods of EeeAccountsManager
- * instead of directly playing with ESourceList content. This will assure
- * consistency of our local calendar list.
- */
-
 #define EEE_URI_PREFIX "eee://" 
 
 #define EEE_TYPE_ACCOUNTS_MANAGER            (eee_accounts_manager_get_type())
@@ -62,17 +30,24 @@ struct _EeeAccountsManagerClass
 
 G_BEGIN_DECLS
 
-EeeAccountsManager* eee_accounts_manager_new();
-
-gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr);
-void eee_accounts_manager_remove_accounts(EeeAccountsManager* mgr);
-GSList* eee_accounts_manager_peek_accounts_list(EeeAccountsManager* mgr);
-void eee_accounts_manager_add_account(EeeAccountsManager* mgr, EeeAccount* account);
-EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, const char* email);
-EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group);
-EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source);
-
 GType eee_accounts_manager_get_type() G_GNUC_CONST;
+
+EeeAccountsManager*    eee_accounts_manager_new                          ();
+void                   eee_accounts_manager_add_account                  (EeeAccountsManager* self, EeeAccount* account);
+void                   eee_accounts_manager_remove_account               (EeeAccountsManager* self, EeeAccount* account);
+GSList*                eee_accounts_manager_peek_accounts_list           (EeeAccountsManager* self);
+ESourceList*           eee_accounts_manager_peek_source_list             (EeeAccountsManager* self);
+ESourceGroup*          eee_accounts_manager_find_group_by_name           (EeeAccountsManager *self, const char *name);
+EeeAccount*            eee_accounts_manager_find_account_by_name         (EeeAccountsManager* self, const char* name);
+EeeAccount*            eee_accounts_manager_find_account_by_group        (EeeAccountsManager* self, ESourceGroup* group);
+EeeAccount*            eee_accounts_manager_find_account_by_source       (EeeAccountsManager* self, ESource* source);
+void                   eee_accounts_manager_load_access_accounts_list    (EeeAccountsManager* self);
+void                   eee_accounts_manager_activate_accounts            (EeeAccountsManager* self);
+gboolean               eee_accounts_manager_account_is_disabled          (EeeAccountsManager* self, const char* name);
+void                   eee_accounts_manager_disable_account              (EeeAccountsManager* self, const char* name);
+void                   eee_accounts_manager_enable_account               (EeeAccountsManager* self, const char* name);
+void                   eee_accounts_manager_force_sync                   (EeeAccountsManager* self);
+void                   eee_accounts_manager_abort_current_sync           (EeeAccountsManager* self);
 
 G_END_DECLS
 

@@ -16,16 +16,14 @@ plugin_LTLIBRARIES = \
   liborg-gnome-evolution-eee.la
 
 liborg_gnome_evolution_eee_la_SOURCES = \
-  eee-calendar-config.c \
-  eee-calendar-config.h \
-  eee-settings.c \
-  eee-settings.h \
-  eee-calendar.c \
-  eee-calendar.h \
   eee-account.c \
   eee-account.h \
   eee-accounts-manager.c \
   eee-accounts-manager.h \
+  eee-calendar-config.c \
+  eee-calendar-config.h \
+  eee-settings.c \
+  eee-settings.h \
   dns-txt-search.c \
   dns-txt-search.h \
   utils.c \

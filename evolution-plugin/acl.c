@@ -5,6 +5,7 @@
 
 #include "acl.h"
 #include "eee-calendar-config.h"
+#include "utils.h"
 
 static GSList* acl_contexts = NULL;
 
@@ -17,7 +18,9 @@ enum
 
 struct acl_context
 {
-  EeeCalendar* cal;
+  ESource* source;
+  EeeAccount* account;
+
   GladeXML* xml;
   GtkWindow* win;
   GtkWidget* rb_private;
@@ -126,19 +129,20 @@ static gboolean store_acl(struct acl_context* ctx)
     }
   }
 
+  const char* calname = e_source_get_property(ctx->source, "eee-calname");
   if (ctx->initial_mode == new_mode)
   {
     if (new_mode == ACL_MODE_SHARED)
-      retval = eee_calendar_set_shared(ctx->cal, perms);
+      retval = eee_account_calendar_acl_set_shared(ctx->account, calname, perms);
   }
   else
   {
     if (new_mode == ACL_MODE_PRIVATE)
-      retval = eee_calendar_set_private(ctx->cal);
+      retval = eee_account_calendar_acl_set_private(ctx->account, calname);
     else if (new_mode == ACL_MODE_PUBLIC)
-      retval = eee_calendar_set_public(ctx->cal);
+      retval = eee_account_calendar_acl_set_public(ctx->account, calname);
     else if (new_mode == ACL_MODE_SHARED)
-      retval = eee_calendar_set_shared(ctx->cal, perms);
+      retval = eee_account_calendar_acl_set_shared(ctx->account, calname, perms);
   }
 
   g_slist_foreach(perms, (GFunc)ESPermission_free, NULL);
@@ -157,6 +161,8 @@ static void on_acl_button_ok_clicked(GtkButton* button, struct acl_context* ctx)
 static void on_acl_window_destroy(GtkObject* object, struct acl_context* ctx)
 {
   gtk_object_unref(GTK_OBJECT(ctx->win));
+  g_object_unref(ctx->source);
+  g_object_unref(ctx->account);
   g_object_unref(ctx->xml);
   g_slist_foreach(ctx->initial_perms, (GFunc)ESPermission_free, NULL);
   g_slist_free(ctx->initial_perms);
@@ -168,12 +174,14 @@ static gboolean load_state(struct acl_context* ctx)
 {
   GError* err = NULL;
 
-  xr_client_conn* conn = eee_account_connect(ctx->cal->access_account);
-  if (conn == NULL)
+  char* calname = (char*)e_source_get_property(ctx->source, "eee-calname");
+  xr_client_conn* conn = eee_account_connect(ctx->account);
+  if (!eee_account_auth(ctx->account))
     return FALSE;
 
-  GSList* perms = ESClient_getPermissions(conn, ctx->cal->name, &err);
-  xr_client_free(conn);
+  GSList* perms = ESClient_getPermissions(conn, calname, &err);
+
+  eee_account_disconnect(ctx->account);
 
   if (err)
   {
@@ -251,7 +259,7 @@ static void update_users_list(struct acl_context* ctx)
     users = g_slist_append(users, perm->user);
   }
   gtk_list_store_clear(ctx->users_model);
-  eee_account_load_users(ctx->cal->access_account, NULL, users, ctx->users_model);
+  eee_account_load_users(ctx->account, NULL, users, ctx->users_model);
   g_slist_free(users);
 }
 
@@ -409,19 +417,21 @@ static void combo_add_completion(GtkComboBoxEntry *cbe, struct acl_context* ctx)
 }
 
 // buid acl dialog
-void acl_gui_create(EeeCalendar* cal)
+void acl_gui_create(EeeAccountsManager* mgr, EeeAccount* account, ESource* source)
 {
   GtkCellRenderer *renderer;
   GtkTreeViewColumn *column;
   GtkWidget* menu_item;
   int col_id;
+  struct acl_context* c;
 
-  if (!eee_plugin_online)
+  if (!eee_plugin_online || account == NULL || !e_source_is_3e_owned_calendar(source))
     return;
 
   // create context and load glade file
-  struct acl_context* c = g_new0(struct acl_context, 1);
-  c->cal = cal;
+  c = g_new0(struct acl_context, 1);
+  c->source = g_object_ref(source);
+  c->account = g_object_ref(account);
   c->xml = glade_xml_new(PLUGINDIR "/org-gnome-evolution-eee.glade", "acl_window", NULL);
   c->win = GTK_WINDOW(gtk_widget_ref(glade_xml_get_widget(c->xml, "acl_window")));
   c->rb_private = glade_xml_get_widget(c->xml, "rb_perm_private");

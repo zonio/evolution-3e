@@ -8,403 +8,530 @@
 #include "dns-txt-search.h"
 #include "eee-calendar-config.h"
 #include "eee-accounts-manager.h"
+#include "eee-settings.h"
+#include "utils.h"
 
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
+#define EEE_KEY "/apps/evolution/calendar/eee/"
 
 struct _EeeAccountsManagerPriv
 {
   GConfClient* gconf;         /**< Gconf client. */
   EAccountList* ealist;       /**< EAccountList instance used internally to watch for changes. */
   ESourceList* eslist;        /**< Source list for calendar. */
+  GSList* disabled_accounts;  /**< List of names of disabled accounts. */
+  GSList* access_accounts;    /**< List of names of accessible accounts (user can connect to). */
   GSList* accounts;           /**< List of EeeAccount obejcts managed by this EeeAccountsManager. */
-  guint timer;
+  
+  // calendar list synchronization thread
+  GThread* sync_thread;       /**< Synchronization thread. */
+  gboolean sync_thread_running; /**< Flag that controls whether sync thread should run. */
+  gboolean sync_force;        /**< Flag that forces "immediate" (within few secs) synchronization. */
+  gboolean sync_abort;        /**< Flag that forces "abort" of current synchronization. */
+  GSList* sync_accounts;      /**< List of account objects loaded by sync thrad. */
+
+  GMutex* accounts_lock;
 };
 
-/**
- * ESourceGroup/ESource hierarchy synchronization code 
- */
-
-/* get ESource by 3E calendar name */
-static ESource* e_source_group_peek_source_by_cal_name(ESourceGroup *group, const char *name)
+/* sync finish phase */
+gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
 {
-  GSList *p;
-  for (p = e_source_group_peek_sources(group); p != NULL; p = p->next)
+  GSList *iter, *iter2;
+
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), FALSE);
+
+  g_debug("EEE: sync phase 2");
+  if (self->priv->sync_abort)
   {
-    const char* cal_name = e_source_get_property(E_SOURCE(p->data), "eee-calendar-name");
-    if (cal_name && !strcmp(cal_name, name))
-      return E_SOURCE(p->data);
+    self->priv->sync_abort = FALSE;
+    return FALSE;
   }
-  return NULL;
-}
 
-/* sync ESource list within ESourceGroup */
-static void sync_source_list(EeeAccountsManager* mgr, ESourceGroup* group, EeeAccount* acc)
-{
-  GSList* iter;
-
-  // for each source in the group
-  GSList* source_list = g_slist_copy(e_source_group_peek_sources(group));
-  for (iter = source_list; iter; iter = iter->next)
+  // unmark groups/sources
+  for (iter = e_source_list_peek_groups(self->priv->eslist); iter; iter = iter->next)
   {
-    ESource* source = E_SOURCE(iter->data);
-    const char* cal_name = e_source_get_property(source, "eee-calendar-name");
-    EeeCalendar* cal = eee_account_peek_calendar_by_name(acc, cal_name);
+    ESourceGroup* group = E_SOURCE_GROUP(iter->data);
 
-    if (cal == NULL || cal->synced)
+    if (!e_source_group_is_3e(group))
+      continue;
+
+    g_debug("EEE: group %s", e_source_group_peek_name(group));
+    g_object_set_data(G_OBJECT(group), "synced", (gpointer)FALSE);
+    for (iter2 = e_source_group_peek_sources(group); iter2; iter2 = iter2->next)
     {
-      g_debug("** EEE ** Removing source: group=%s source=%s", e_source_group_peek_name(group), e_source_peek_name(source));
-      e_source_group_remove_source(group, source);
+      ESource* source = E_SOURCE(iter2->data);
+      g_object_set_data(G_OBJECT(source), "synced", (gpointer)FALSE);
+      g_debug("EEE: source %s", e_source_peek_name(source));
+    }
+  }
+
+  // go through synced account description structures and update ESourceList
+  // accordingly
+  for (iter = self->priv->sync_accounts; iter; iter = iter->next)
+  {
+    EeeAccount* account = iter->data;
+    EeeAccount* current_account;
+    ESourceGroup* group;
+    char* group_name = g_strdup_printf("3E: %s", account->name);
+
+    g_debug("EEE: account %s", account->name);
+
+    // find ESourceGroup and EeeAccount
+    group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
+    current_account = eee_accounts_manager_find_account_by_name(self, account->name);
+
+    if (account->disabled)
+    {
+      if (current_account)
+        eee_accounts_manager_remove_account(self, current_account);
+      if (group)
+        e_source_list_remove_group(self->priv->eslist, group);
+      eee_accounts_manager_disable_account(self, account->name);
+      continue;
+    }
+
+    // create account if it does not exist
+    if (current_account == NULL)
+      eee_accounts_manager_add_account(self, g_object_ref(account));
+    else
+      eee_account_copy(current_account, account);
+
+    // create group if it does not exist
+    if (group == NULL)
+    {
+      group = e_source_group_new(group_name, EEE_URI_PREFIX);
+      e_source_list_add_group(self->priv->eslist, group, -1);
+      g_debug("EEE: creating group %s", group_name);
+    }
+    g_free(group_name);
+
+    // check group sources
+    for (iter2 = eee_account_peek_calendars(account); iter2 != NULL; iter2 = iter2->next)
+    {
+      ESCalendar* cal = iter2->data;
+      ESource* source;
+
+      if (!strcmp(cal->owner, account->name))
+      {
+        g_debug("EEE: owner's calendar %s:%s", cal->owner, cal->name);
+        // calendar owned by owner of account that represents current group
+        source = e_source_group_peek_source_by_calname(group, cal->name);
+        if (source == NULL)
+        {
+          g_debug("EEE: source not found");
+          source = e_source_new_3e(cal->name, cal->owner, account, cal->settings);
+          e_source_group_add_source(group, source, -1);
+        }
+        else
+        {
+          g_debug("EEE: source found");
+          e_source_set_3e_properties(source, cal->name, cal->owner, account, cal->settings);
+        }
+      }
+      else
+      {
+        g_debug("EEE: shared calendar %s:%s", cal->owner, cal->name);
+        char* owner_group_name = g_strdup_printf("3E: %s", cal->owner);
+        // shared calendar, it should be put into another group
+        ESourceGroup* owner_group = e_source_list_peek_group_by_name(self->priv->eslist, owner_group_name);
+        if (owner_group == NULL)
+        {
+          g_debug("EEE: shared group not found");
+          owner_group = e_source_group_new(owner_group_name, EEE_URI_PREFIX);
+          e_source_list_add_group(self->priv->eslist, owner_group, -1);
+        }
+        g_object_set_data(G_OBJECT(owner_group), "synced", (gpointer)TRUE);
+
+        source = e_source_group_peek_source_by_calname(owner_group, cal->name);
+        if (source == NULL)
+        {
+          g_debug("EEE: shared source not found");
+          source = e_source_new_3e(cal->name, cal->owner, account, cal->settings);
+          e_source_group_add_source(owner_group, source, -1);
+        }
+        else
+        {
+          e_source_set_3e_properties(source, cal->name, cal->owner, account, cal->settings);
+        }
+      }
+      g_object_set_data(G_OBJECT(source), "synced", (gpointer)TRUE);
+    }
+
+    g_object_set_data(G_OBJECT(group), "synced", (gpointer)TRUE);
+  }
+
+  // remove non-marked sources/groups
+  for (iter = e_source_list_peek_groups(self->priv->eslist); iter; iter = iter->next)
+  {
+    ESourceGroup* group = E_SOURCE_GROUP(iter->data);
+    if (!e_source_group_is_3e(group))
+      continue;
+
+    if (g_object_get_data(G_OBJECT(group), "synced"))
+    {
+      for (iter2 = e_source_group_peek_sources(group); iter2; iter2 = iter2->next)
+      {
+        ESource* source = E_SOURCE(iter2->data);
+        if (!g_object_get_data(G_OBJECT(source), "synced"))
+        {
+          g_debug("EEE: removing source %s", e_source_peek_name(source));
+          e_source_group_remove_source(group, source);
+        }
+      }
     }
     else
     {
-      const char* source_name = eee_settings_get_title(cal->settings);
-      if (source_name == NULL)
-        source_name = cal->name;
-
-      g_debug("** EEE ** Updating source: group=%s source=%s", e_source_group_peek_name(group), source_name);
-
-      e_source_set_name(source, source_name);
-      e_source_set_relative_uri(source, cal->relative_uri);
-      e_source_set_property(source, "auth", "1");
-      e_source_set_property(source, "eee-calendar-name", cal->name);
-      e_source_set_property(source, "eee-server", cal->access_account->server);
-      e_source_set_property(source, "username", cal->access_account->email);
-      char* key = g_strdup_printf("eee://%s", cal->access_account->email);
-      e_source_set_property(source, "auth-key", key);
-      g_free(key);
-      e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
-      if (eee_settings_get_color(cal->settings) > 0)
-        e_source_set_color(source, eee_settings_get_color(cal->settings));
-      cal->synced = 1;
+      g_debug("EEE: removing group %s", e_source_group_peek_name(group));
+      e_source_list_remove_group(self->priv->eslist, group);
     }
   }
-  g_slist_free(source_list);
 
-  for (iter = eee_account_peek_calendars(acc); iter; iter = iter->next)
-  {
-    EeeCalendar* cal = iter->data;
-    ESource* source;
+  e_source_list_sync(self->priv->eslist, NULL);
 
-    if (e_source_group_peek_source_by_cal_name(group, cal->name))
-      continue;
-
-    const char* source_name = eee_settings_get_title(cal->settings);
-    if (source_name == NULL)
-      source_name = cal->name;
-
-    g_debug("** EEE ** Adding source: group=%s source=%s", e_source_group_peek_name(group), source_name);
-
-    source = e_source_new(source_name, cal->relative_uri);
-    e_source_set_property(source, "auth", "1");
-    e_source_set_property(source, "eee-calendar-name", cal->name);
-    e_source_set_property(source, "eee-server", cal->access_account->server);
-    e_source_set_property(source, "username", cal->access_account->email);
-    char* key = g_strdup_printf("eee://%s", cal->access_account->email);
-    e_source_set_property(source, "auth-key", key);
-    g_free(key);
-    e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
-    if (eee_settings_get_color(cal->settings) > 0)
-      e_source_set_color(source, eee_settings_get_color(cal->settings));
-    e_source_group_add_source(group, source, -1);
-  }
+  return TRUE;
 }
 
-/* sync ESourceGroup objects with EeeAccountsManager accounts */
-static void sync_group_list(EeeAccountsManager* mgr)
+gboolean sync_phase2_idle(gpointer data)
 {
+  eee_accounts_manager_sync_phase2(data);
+  return FALSE;
+}
+
+/* synchronization phase1 (load data from the server) */
+gboolean eee_accounts_manager_sync_phase1(EeeAccountsManager* self)
+{
+  GSList* accounts = NULL;
   GSList* iter;
-  g_debug("** EEE ** Updating calendars source group list...");
 
-  // synchronize existing ESource objects
-  GSList* groups_list = g_slist_copy(e_source_list_peek_groups(mgr->priv->eslist));
-  for (iter = groups_list; iter; iter = iter->next)
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), FALSE);
+
+  // get copy of accounts to work on
+  g_mutex_lock(self->priv->accounts_lock);
+  for (iter = self->priv->access_accounts; iter; iter = iter->next)
   {
-    ESourceGroup* group = E_SOURCE_GROUP(iter->data);
-    const char* group_name = e_source_group_peek_name(group);
-    EeeAccount* acc = NULL;
-
-    // skip non eee groups
-    if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
-      continue;
-    
-    if (group_name && g_str_has_prefix(group_name, "3E: "))
-      acc = eee_accounts_manager_find_account_by_email(mgr, group_name+4);
-
-    if (acc == NULL || acc->synced)
-    {
-      g_debug("** EEE ** Removing group: %s", group_name);
-      e_source_list_remove_group(mgr->priv->eslist, group);
-      continue;
-    }
-
-    g_debug("** EEE ** Updating group: %s", group_name);
-    sync_source_list(mgr, group, acc);
-    acc->synced = 1;
+    char* name = iter->data;
+    EeeAccount* account = eee_accounts_manager_find_account_by_name(self, name);
+    if (account)
+      account = eee_account_new_copy(account);
+    else
+      account = eee_account_new(name);
+    accounts = g_slist_append(accounts, account);
   }
-  g_slist_free(groups_list);
+  g_mutex_unlock(self->priv->accounts_lock);
 
-  // add new accounts
-  for (iter = mgr->priv->accounts; iter; iter = iter->next)
+  // go through the list of EeeAccount objects and load calendar lists
+  for (iter = accounts; iter; iter = iter->next)
   {
-    EeeAccount* acc = iter->data;
-    ESourceGroup* group;
+    EeeAccount* account = iter->data;
 
-    char* group_name = g_strdup_printf("3E: %s", acc->email);
-    if (e_source_list_peek_group_by_name(mgr->priv->eslist, group_name))
+    if (!eee_account_find_server(account))
     {
-      g_free(group_name);
+      eee_account_disable(account);
       continue;
     }
 
-    group = e_source_group_new(group_name, EEE_URI_PREFIX);
-    g_debug("** EEE ** Adding group: %s", group_name);
-    g_free(group_name);
-    if (!e_source_list_add_group(mgr->priv->eslist, group, -1))
+    if (!eee_account_connect(account) || !eee_account_auth(account))
     {
-      g_object_unref(group);
+      eee_account_disable(account);
+      eee_account_disconnect(account);
       continue;
     }
 
-    sync_source_list(mgr, group, acc);
-  }
-  e_source_list_sync(mgr->priv->eslist, NULL);
-}
-
-/**
- * EeeAccountsManager accounts synchronization code 
- */
-
-/* load calenars from the server for given account */
-static gboolean sync_calendar_list_from_server(EeeAccountsManager* mgr, EeeAccount* access_account)
-{
-  xr_client_conn* conn;
-  GError* err = NULL;
-  GSList *cals, *iter;
-  int rs;
-
-  // get calendar list from the server
-  conn = eee_account_connect(access_account);
-  if (conn == NULL)
-    return FALSE;
-
-  cals = ESClient_getCalendars(conn, &err);
-  if (err)
-  {
-    g_debug("** EEE ** Failed to get calendars for user '%s'. (%d:%s)", access_account->email, err->code, err->message);
-    xr_client_free(conn);
-    g_clear_error(&err);
-    return FALSE;
-  }
-  xr_client_free(conn);
-
-  // process retrieved calendars
-  for (iter = cals; iter; iter = iter->next)
-  {
-    ESCalendar* cal = iter->data;
-    g_debug("** EEE ** %s: Found calendar on the server (%s:%s:%s:%s)", access_account->email, cal->owner, cal->name, cal->perm, cal->settings);
-
-    // create ecal
-    EeeCalendar* ecal = eee_calendar_new();
-    eee_calendar_set_name(ecal, cal->name);
-    eee_calendar_set_perm(ecal, cal->perm);
-    char* relative_uri = g_strdup_printf("%s/%s/%s", access_account->server, access_account->email, cal->name);
-    eee_calendar_set_relative_uri(ecal, relative_uri);
-    g_free(relative_uri);
-    eee_settings_parse(ecal->settings, cal->settings);
-    eee_calendar_set_access_account(ecal, access_account);
-
-    // find existing owner EeeAccount or create new 
-    EeeAccount* owner_account;
-    owner_account = eee_accounts_manager_find_account_by_email(mgr, cal->owner);
-    if (owner_account == NULL)
-    {
-      owner_account = eee_account_new();
-      owner_account->email = g_strdup(cal->owner);
-      owner_account->server = g_strdup(access_account->server);
-      eee_accounts_manager_add_account(mgr, owner_account);
-    }
-
-    eee_calendar_set_owner_account(ecal, owner_account);
-    eee_account_add_calendar(owner_account, ecal);
+    eee_account_load_calendars(account);
+    eee_account_disconnect(account);
   }
 
-  g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
-  g_slist_free(cals);
+  self->priv->sync_accounts = accounts;
+  g_idle_add(sync_phase2_idle, self);
   return TRUE;
 }
 
-/** Synchrinize source lists in evolution from the 3e server.
- *
- * Adter this call everything should be in sync.
- *
- * @param mgr EeeAccountsManager object.
- *
- * @return TRUE on success, FALSE on failure.
- */
-gboolean eee_accounts_manager_sync(EeeAccountsManager* mgr)
+void eee_accounts_manager_abort_current_sync(EeeAccountsManager* self)
 {
-  EIterator *iter;
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
 
-  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(mgr), FALSE);
-
-  if (!eee_plugin_online)
-    return FALSE;
-
-  // free all accounts
-  eee_accounts_manager_remove_accounts(mgr);
-
-  // go through the list of EAccount objects and create EeeAccount objects
-  for (iter = e_list_get_iterator(E_LIST(mgr->priv->ealist));
-       e_iterator_is_valid(iter);
-       e_iterator_next(iter))
-  {
-    EAccount *eaccount = E_ACCOUNT(e_iterator_get(iter));
-    const char* email = e_account_get_string(eaccount, E_ACCOUNT_ID_ADDRESS);
-    g_debug("** EEE ** EAccount found, searching for 3E server: email=%s uid=%s", email, eaccount->uid);
-    char* server_hostname = get_eee_server_hostname(email);
-
-    if (server_hostname)
-    {
-      g_debug("** EEE ** Found 3E server enabled account '%s'! (%s)", email, server_hostname);
-      EeeAccount* account = eee_account_new();
-      account->accessible = 1;
-      account->email = g_strdup(email); 
-      account->server = server_hostname;
-      eee_accounts_manager_add_account(mgr, account);
-
-      sync_calendar_list_from_server(mgr, account);
-    }
-  }
-
-  sync_group_list(mgr);
-  return TRUE;
+  self->priv->sync_abort = TRUE;
 }
 
-/**
- * Accounts list management 
- */
-
-/* remove all accounts */
-void eee_accounts_manager_remove_accounts(EeeAccountsManager* mgr)
+/* add account to the list, manager takes reference of account object */
+void eee_accounts_manager_add_account(EeeAccountsManager* self, EeeAccount* account)
 {
-  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(mgr));
-
-  // free all accounts
-  g_slist_foreach(mgr->priv->accounts, (GFunc)g_object_unref, NULL);
-  g_slist_free(mgr->priv->accounts);
-  mgr->priv->accounts = NULL;
-}
-
-/* get accounts list */
-GSList* eee_accounts_manager_peek_accounts_list(EeeAccountsManager* mgr)
-{
-  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(mgr), NULL);
-
-  return mgr->priv->accounts;
-}
-
-/* add account to the list */
-void eee_accounts_manager_add_account(EeeAccountsManager* mgr, EeeAccount* account)
-{
-  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(mgr));
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
   g_return_if_fail(IS_EEE_ACCOUNT(account));
 
-  mgr->priv->accounts = g_slist_append(mgr->priv->accounts, account);
+  g_mutex_lock(self->priv->accounts_lock);
+  if (!eee_accounts_manager_find_account_by_name(self, account->name))
+    self->priv->accounts = g_slist_append(self->priv->accounts, account);
+  g_mutex_unlock(self->priv->accounts_lock);
 }
 
-/**
- * EeeAccountsManager search functions.
- */
+/* remove account from the list */
+void eee_accounts_manager_remove_account(EeeAccountsManager* self, EeeAccount* account)
+{
+  EeeAccount* tmp;
 
-/** Find EeeAccount object by email.
- *
- * @param mgr EeeAccountsManager object.
- * @param email E-mail of the account.
- *
- * @return Matching EeeAccount object or NULL.
- */
-EeeAccount* eee_accounts_manager_find_account_by_email(EeeAccountsManager* mgr, const char* email)
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
+  g_return_if_fail(IS_EEE_ACCOUNT(account));
+
+  g_mutex_lock(self->priv->accounts_lock);
+  tmp = eee_accounts_manager_find_account_by_name(self, account->name);
+  if (tmp)
+  {
+    self->priv->accounts = g_slist_remove(self->priv->accounts, tmp);
+    g_object_unref(tmp);
+  }
+  g_mutex_unlock(self->priv->accounts_lock);
+}
+
+void eee_accounts_manager_disable_account(EeeAccountsManager* self, const char* name)
+{
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
+  g_return_if_fail(name != NULL);
+
+  if (eee_accounts_manager_account_is_disabled(self, name))
+    return;
+
+  self->priv->disabled_accounts = g_slist_append(self->priv->disabled_accounts, g_strdup(name));
+  eee_accounts_manager_load_access_accounts_list(self);
+  gconf_client_set_list(self->priv->gconf, 
+    EEE_KEY "disabled_accounts", GCONF_VALUE_STRING, self->priv->disabled_accounts, NULL);
+}
+
+void eee_accounts_manager_enable_account(EeeAccountsManager* self, const char* name)
+{
+  GSList* item;
+
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
+  g_return_if_fail(name != NULL);
+
+  while (TRUE)
+  {
+    item = g_slist_find_custom(self->priv->disabled_accounts, name, (GCompareFunc)strcmp);
+    if (item == NULL)
+      break;
+    self->priv->disabled_accounts = g_slist_remove_link(self->priv->disabled_accounts, item);
+  }
+
+  eee_accounts_manager_load_access_accounts_list(self);
+  gconf_client_set_list(self->priv->gconf, 
+    EEE_KEY "disabled_accounts", GCONF_VALUE_STRING, self->priv->disabled_accounts, NULL);
+}
+
+gboolean eee_accounts_manager_account_is_disabled(EeeAccountsManager* self, const char* name)
+{
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), FALSE);
+  g_return_val_if_fail(name != NULL, FALSE);
+
+  return !!g_slist_find_custom(self->priv->disabled_accounts, name, (GCompareFunc)strcmp);
+}
+
+GSList* eee_accounts_manager_peek_accounts_list(EeeAccountsManager* self)
+{
+  return self->priv->accounts;
+}
+
+ESourceList* eee_accounts_manager_peek_source_list(EeeAccountsManager* self)
+{
+  return self->priv->eslist;
+}
+
+/* find EeeAccount object */
+EeeAccount* eee_accounts_manager_find_account_by_name(EeeAccountsManager* self, const char* name)
 {
   GSList* iter;
 
-  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(mgr), NULL);
-  g_return_val_if_fail(email != NULL, NULL);
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), NULL);
+  g_return_val_if_fail(name != NULL, NULL);
 
-  for (iter = mgr->priv->accounts; iter; iter = iter->next)
+  for (iter = self->priv->accounts; iter; iter = iter->next)
   {
-    EeeAccount* a = iter->data;
-    if (a->email && !strcmp(a->email, email))
-      return a;
+    EeeAccount* account = iter->data;
+    if (!strcmp(account->name, name))
+      return account;
   }
-
   return NULL;
 }
 
-/** Find EeeAccount object by ESourceGroup.
- *
- * @param mgr EeeAccountsManager object.
- * @param group ESourceGroup object.
- *
- * @return Matching EeeAccount object or NULL.
- */
-EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* mgr, ESourceGroup* group)
+/* find ESourceGroup by name */
+ESourceGroup* eee_accounts_manager_find_group_by_name(EeeAccountsManager *self, const char *name)
 {
-  const char* name = e_source_group_peek_name(group);
-  if (!g_str_has_prefix(name, "3E: "))
-    return eee_accounts_manager_find_account_by_email(mgr, name);
-  return eee_accounts_manager_find_account_by_email(mgr, name+4);
+  char* _name = g_strdup_printf("3E: %s", name);
+  ESourceGroup* group = e_source_list_peek_group_by_name(self->priv->eslist, _name);
+  g_free(_name);
+  return group;
 }
 
-/** Find EeeCalendar object by ESource.
- *
- * @param mgr EeeAccountsManager object.
- * @param source ESource object.
- *
- * @return Matching EeeCalendar object or NULL.
- */
-EeeCalendar* eee_accounts_manager_find_calendar_by_source(EeeAccountsManager* mgr, ESource* source)
+/* find EeeAccount for ESourceGroup object */
+EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* self, ESourceGroup* group)
 {
-  EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr, e_source_peek_group(source));
-  return eee_account_peek_calendar_by_name(account, e_source_get_property(source, "eee-calendar-name"));
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), NULL);
+  g_return_val_if_fail(E_IS_SOURCE_GROUP(group), NULL);
+  g_return_val_if_fail(e_source_group_is_3e(group), NULL);
+
+  return eee_accounts_manager_find_account_by_name(self, e_source_group_peek_name(group)+4);
 }
 
-/* callback listening for changes in account list */
-static void e_account_list_changed(EAccountList *account_list, EAccount *account, EeeAccountsManager* mgr)
+/* find EeeAccount for ESource object */
+EeeAccount* eee_accounts_manager_find_account_by_source(EeeAccountsManager* self, ESource* source)
 {
-  eee_accounts_manager_sync(mgr);
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), NULL);
+  g_return_val_if_fail(E_IS_SOURCE(source), NULL);
+  g_return_val_if_fail(e_source_is_3e(source), NULL);
+
+  return eee_accounts_manager_find_account_by_name(self, e_source_get_property(source, "eee-account"));
 }
 
-static gboolean update_timer_cb(gpointer data)
+/* load list of enabled accessible EEE accounts */
+void eee_accounts_manager_load_access_accounts_list(EeeAccountsManager* self)
 {
-  EeeAccountsManager* mgr = EEE_ACCOUNTS_MANAGER(data);
-  eee_accounts_manager_sync(mgr);
-  return TRUE;
+  EIterator* iter;
+
+  g_mutex_lock(self->priv->accounts_lock);
+  g_slist_foreach(self->priv->access_accounts, (GFunc)g_free, NULL);
+  g_slist_free(self->priv->access_accounts);
+  self->priv->access_accounts = NULL;
+
+  for (iter = e_list_get_iterator(E_LIST(self->priv->ealist));
+       e_iterator_is_valid(iter);
+       e_iterator_next(iter))
+  {
+    EAccount *account = E_ACCOUNT(e_iterator_get(iter));
+    const char* name = e_account_get_string(account, E_ACCOUNT_ID_ADDRESS);
+    if (eee_accounts_manager_account_is_disabled(self, name))
+      continue;
+    self->priv->access_accounts = g_slist_append(self->priv->access_accounts, g_strdup(name));
+  }
+  g_mutex_unlock(self->priv->accounts_lock);
 }
 
-/** Create new EeeAccountsManager.
- *
- * This function should be called only once per evolution instance.
- *
- * @return EeeAccountsManager object.
- */
+/* callback called when EAccountList changes */
+static void account_list_changed(EAccountList *account_list, EAccount *account, EeeAccountsManager* mgr)
+{
+  eee_accounts_manager_load_access_accounts_list(mgr);
+  // go through ESourceGroups and remove/add groups
+}
+
+void eee_accounts_manager_activate_accounts(EeeAccountsManager* self)
+{
+  GSList *iter, *iter2, *iter2_next, *iter_next;
+
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
+
+  // for each accessible account
+  for (iter = self->priv->access_accounts; iter; iter = iter->next)
+  {
+    EeeAccount* account;
+    ESourceGroup* group;
+    char* name = iter->data;
+    char* group_name = g_strdup_printf("3E: %s", name);
+
+    // find ESourceGroup and EeeAccount
+    group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
+    account = eee_accounts_manager_find_account_by_name(self, name);
+
+    // create account if it does not exist
+    if (account == NULL)
+    {
+      account = eee_account_new(name);
+      eee_accounts_manager_add_account(self, account);
+    }
+
+    // create group if it does not exist
+    if (group == NULL)
+    {
+      group = e_source_group_new(group_name, EEE_URI_PREFIX);
+      e_source_list_add_group(self->priv->eslist, group, -1);
+    }
+    else
+    {
+      // check group sources
+      for (iter2 = e_source_group_peek_sources(group); iter2 != NULL; iter2 = iter2_next)
+      {
+        // we may be removing sources so ensure that we have valid next pointer
+        iter2_next = iter2->next;
+        ESource* source = iter2->data;
+
+        if (e_source_is_3e(source))
+        {
+          const char* calname = e_source_get_property(source, "eee-calname");
+          e_source_set_3e_properties(source, calname, account->name, account, NULL);
+        }
+        else
+        {
+          // ESource without calname is useless, drop it
+          e_source_group_remove_source(group, source);
+        }
+      }
+      g_free(group_name);
+    }
+
+    g_object_set_data(G_OBJECT(group), "accessible", (gpointer)TRUE);
+  }
+
+  // for each ESourceGroup that does not represent accessible account
+  for (iter = e_source_list_peek_groups(self->priv->eslist); iter; iter = iter_next)
+  {
+    iter_next = iter->next;
+    ESourceGroup* group = iter->data;
+    gboolean contains_source = FALSE;
+
+    // skip non-3E groups and accessible groups initialized above
+    if (!e_source_group_is_3e(group) || g_object_get_data(G_OBJECT(group), "accessible"))
+      continue;
+
+    for (iter2 = e_source_group_peek_sources(group); iter2 != NULL; iter2 = iter2_next)
+    {
+      // we may be removing sources so ensure that we have valid next pointer
+      GSList* iter2_next = iter2->next;
+      ESource* source = iter2->data;
+
+      // these ESources are probably for shared calendars, if we can't find
+      // account for them, remove them
+      if (eee_accounts_manager_find_account_by_source(self, source))
+        contains_source = TRUE;
+      else
+        e_source_group_remove_source(group, source);
+    }
+
+    if (!contains_source)
+      e_source_list_remove_group(self->priv->eslist, group);
+  }
+}
+
+/* create new EeeAccountsManager */
 EeeAccountsManager* eee_accounts_manager_new()
 {
-  EeeAccountsManager *mgr = g_object_new(EEE_TYPE_ACCOUNTS_MANAGER, NULL);
-       
-  mgr->priv->gconf = gconf_client_get_default();
-  mgr->priv->ealist = e_account_list_new(mgr->priv->gconf);
-  mgr->priv->eslist = e_source_list_new_for_gconf(mgr->priv->gconf, CALENDAR_SOURCES);
+  EeeAccountsManager *self = g_object_new(EEE_TYPE_ACCOUNTS_MANAGER, NULL);
 
-  g_debug("** EEE ** Starting EeeAccountsManager %p", mgr);
-  eee_accounts_manager_sync(mgr);
+  eee_accounts_manager_activate_accounts(self);
 
-  g_signal_connect(mgr->priv->ealist, "account_added", G_CALLBACK(e_account_list_changed), mgr);
-  g_signal_connect(mgr->priv->ealist, "account_changed", G_CALLBACK(e_account_list_changed), mgr);
-  g_signal_connect(mgr->priv->ealist, "account_removed", G_CALLBACK(e_account_list_changed), mgr);    
+  return self;
+}
 
-  mgr->priv->timer = g_timeout_add(20000, update_timer_cb, mgr);
+void eee_accounts_manager_force_sync(EeeAccountsManager* self)
+{
+  self->priv->sync_force = TRUE;
+}
 
-  return mgr;
+/* sync thread */
+static gpointer sync_thread_func(gpointer data)
+{
+  EeeAccountsManager* mgr = data;
+  int i;
+
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(mgr), NULL);
+
+  while (mgr->priv->sync_thread_running)
+  {
+    eee_accounts_manager_sync_phase1(mgr);
+
+    // wait for 60 seconds (or less if forced to)
+    for (i=0; i<5 && !mgr->priv->sync_force; i++)
+      g_usleep(1000000);
+    mgr->priv->sync_force = FALSE;
+  }
+
+  return NULL;
 }
 
 /* GObject foo */
@@ -414,23 +541,44 @@ G_DEFINE_TYPE(EeeAccountsManager, eee_accounts_manager, G_TYPE_OBJECT);
 static void eee_accounts_manager_init(EeeAccountsManager *self)
 {
   self->priv = G_TYPE_INSTANCE_GET_PRIVATE(self, EEE_TYPE_ACCOUNTS_MANAGER, EeeAccountsManagerPriv);
+
+  self->priv->accounts_lock = g_mutex_new();
+  self->priv->gconf = gconf_client_get_default();
+  self->priv->ealist = e_account_list_new(self->priv->gconf);
+  self->priv->eslist = e_source_list_new_for_gconf(self->priv->gconf, CALENDAR_SOURCES);
+  self->priv->disabled_accounts = gconf_client_get_list(self->priv->gconf, 
+    EEE_KEY "disabled_accounts", GCONF_VALUE_STRING, NULL);
+
+  eee_accounts_manager_load_access_accounts_list(self);
+
+  g_signal_connect(self->priv->ealist, "account_added", G_CALLBACK(account_list_changed), self);
+  g_signal_connect(self->priv->ealist, "account_changed", G_CALLBACK(account_list_changed), self);
+  g_signal_connect(self->priv->ealist, "account_removed", G_CALLBACK(account_list_changed), self);    
+
+  self->priv->sync_thread_running = TRUE;
+  self->priv->sync_thread = g_thread_create(sync_thread_func, self, FALSE, NULL);
 }
 
 static void eee_accounts_manager_dispose(GObject *object)
 {
   EeeAccountsManager *self = EEE_ACCOUNTS_MANAGER(object);
-  eee_accounts_manager_remove_accounts(self);
-  g_object_unref(self->priv->gconf);
-  g_object_unref(self->priv->ealist);
-  g_object_unref(self->priv->eslist);
-  g_source_remove(self->priv->timer);
+
   G_OBJECT_CLASS(eee_accounts_manager_parent_class)->dispose(object);
 }
 
 static void eee_accounts_manager_finalize(GObject *object)
 {
   EeeAccountsManager *self = EEE_ACCOUNTS_MANAGER(object);
-  g_debug("** EEE ** Stoppping EeeAccountsManager %p", self);
+
+  g_slist_foreach(self->priv->accounts, (GFunc)g_object_unref, NULL);
+  g_slist_free(self->priv->accounts);
+  g_slist_foreach(self->priv->disabled_accounts, (GFunc)g_free, NULL);
+  g_slist_free(self->priv->disabled_accounts);
+  g_object_unref(self->priv->gconf);
+  g_object_unref(self->priv->eslist);
+  g_object_unref(self->priv->ealist);
+  g_mutex_free(self->priv->accounts_lock);
+
   G_OBJECT_CLASS(eee_accounts_manager_parent_class)->finalize(object);
 }
 

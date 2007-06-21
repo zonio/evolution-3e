@@ -7,22 +7,31 @@
 #include <calendar/gui/e-cal-popup.h>
 #include <shell/es-event.h>
 #include <mail/em-menu.h>
+#include <mail/em-config.h>
 
 #include "eee-accounts-manager.h"
 #include "eee-calendar-config.h"
+#include "eee-settings.h"
+#include "utils.h"
 #include "subscribe.h"
 #include "acl.h"
 
 /* plugin intialization */
 
-static EeeAccountsManager* _mgr = NULL;
+static EeeAccountsManager* mgr()
+{
+  static EeeAccountsManager* _mgr = NULL;
+  if (_mgr == NULL)
+    _mgr = eee_accounts_manager_new();
+  return _mgr;
+}
 
 int e_plugin_lib_enable(EPluginLib* ep, int enable)
 {
   if (getenv("EEE_EVO_DEBUG"))
     xr_debug_enabled = XR_DEBUG_CALL;
   g_debug("** EEE ** Starting 3E Evolution Plugin %s", PACKAGE_VERSION);
-  g_debug("** EEE ** Please send bugreports to <%s>", PACKAGE_BUGREPORT);
+  g_debug("** EEE ** Please report bugs to <%s>", PACKAGE_BUGREPORT);
   return 0;
 }
 
@@ -34,24 +43,33 @@ static GtkWidget* offline_label = NULL;
 
 static gboolean is_new_calendar_dialog(ESource* source)
 {
-  // if ESource does not have relative_uri, dialog is for creating new calendar
+  gboolean is_new = FALSE;
   const char *rel_uri = e_source_peek_relative_uri(source);
-  return !(rel_uri && strlen(rel_uri));
+
+  // if ESource does not have relative_uri, dialog is for creating new calendar,
+  // first time this function is called on given ESource, it's result must be
+  // stored in ESource, because relative_uri may be modified and we still want
+  // to determine if dialog is for new or existing calendar
+  is_new = rel_uri == NULL || strlen(rel_uri) == 0 || g_object_get_data(G_OBJECT(source), "is_new");
+
+  if (is_new)
+    g_object_set_data(G_OBJECT(source), "is_new", GUINT_TO_POINTER(1));
+
+  return is_new;
 }
 
-/* create toplevel notices in dialog (offline mode notice, iaccessible calendar account notice) */
+/* create toplevel notices in dialog (offline mode notice, inaccessible calendar account notice) */
 GtkWidget *eee_calendar_properties_factory_top(EPlugin* epl, EConfigHookItemFactoryData* data)
 {
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(target->source);
 
-  // ignore non 3e calendars
-  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
-    return gtk_label_new("");
-
   if (!hidden)
     hidden = gtk_label_new("");
+  if (!e_source_group_is_3e(group))
+    return hidden;
 
+  /*
   if (data->old)
   {
     //XXX: free widgets? WTF?
@@ -59,7 +77,7 @@ GtkWidget *eee_calendar_properties_factory_top(EPlugin* epl, EConfigHookItemFact
     gtk_widget_destroy(offline_label);
     notice_label = NULL;
     offline_label = NULL;
-  }
+  }*/
 
   int row = GTK_TABLE(data->parent)->nrows;
 
@@ -86,15 +104,14 @@ GtkWidget *eee_calendar_properties_factory(EPlugin* epl, EConfigHookItemFactoryD
 {
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(target->source);
-
-  // ignore non 3e calendars
-  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
-    return gtk_label_new("");
+  EeeAccount* account;
 
   g_debug("** EEE ** Properties Dialog Items Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
   if (!hidden)
     hidden = gtk_label_new("");
+  if (!e_source_group_is_3e(group))
+    return hidden;
 
   // can't do anything in offline mode
   if (!eee_plugin_online)
@@ -103,22 +120,19 @@ GtkWidget *eee_calendar_properties_factory(EPlugin* epl, EConfigHookItemFactoryD
     return hidden;
   }
 
-  // can't do anything in offline mode
+  //XXX: check if account is online
+  account = eee_accounts_manager_find_account_by_group(mgr(), group);
+  if (account == NULL)
+    return hidden;    
+
   if (is_new_calendar_dialog(target->source))
   {
     target->disable_source_update = TRUE;
-    EeeAccount* account = eee_accounts_manager_find_account_by_group(_mgr, group);
-    if (account == NULL)
-    {
-      g_debug("** EEE ** internal error, can't find account");
-      return hidden;
-    }
-
-    if (!account->accessible)
-    {
+  }
+  else
+  {
+    if (!e_source_is_3e_owned_calendar(target->source))
       gtk_widget_show(notice_label);
-      return hidden;    
-    }
   }
 
   return hidden;
@@ -129,37 +143,24 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(target->source);
 
-  // ignore non 3e calendars (assume they are OK)
-  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
-    return TRUE;
-
   g_debug("** EEE ** Properties Dialog Check Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
-  // check if we should bother with detailed checks
+  if (!e_source_group_is_3e(group))
+    return TRUE;
   if (!eee_plugin_online)
     return FALSE;
 
   if (is_new_calendar_dialog(target->source))
   {
-    // creating new calendar
-    EeeAccount* account = eee_accounts_manager_find_account_by_group(_mgr, group);
+    EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr(), group);
     if (account == NULL)
-    {
-      g_debug("** EEE ** internal error, can't find account");
       return FALSE;
-    }
-    if (!account->accessible)
-      return FALSE;   
   }
   else
   {
-    // editting properties of existing calendar
-    EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, target->source);
-    if (cal == NULL)
-    {
-      g_debug("** EEE ** internal error, can't find calendar");
+    EeeAccount* account = eee_accounts_manager_find_account_by_source(mgr(), target->source);
+    if (account == NULL)
       return FALSE;
-    }
   }
 
   return TRUE;
@@ -170,99 +171,53 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
   ESource* source = target->source;
   ESourceGroup *group = e_source_peek_group(source);
 
-  // ignore non 3e calendars
-  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
-    return;
-
   g_debug("** EEE ** Properties Dialog Commit Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
-  // check if we should bother with commit at all
+  if (!e_source_group_is_3e(group))
+    return;
   if (!eee_plugin_online)
     return;
 
   if (is_new_calendar_dialog(target->source))
   {
-    // creating new calendar
-    EeeAccount* account = eee_accounts_manager_find_account_by_group(_mgr, group);
+    EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr(), group);
     if (account == NULL)
-    {
-      g_debug("** EEE ** internal error, can't find account");
       return;
-    }
-    if (!account->accessible)
-    {
-      g_debug("** EEE ** internal error, account is not accessible");
-      return;
-    }
 
-    /*
-    xr_client_conn* conn = eee_account_connect(account);
-    if (conn == NULL)
-    {
-      g_debug("** EEE ** internal error, can't connect to account");
-      return;
-    }
-
-    // create calname and settings string
-    EeeSettings* settings = eee_settings_new(NULL);
+    // create settings string
     guint32 color = 0;
     e_source_get_color(target->source, &color);
-    eee_settings_set_color(settings, color);
-    eee_settings_set_title(settings, e_source_peek_name(target->source));
-    char* settings_string = eee_settings_encode(settings);
-    g_object_unref(settings);
-    const char* calname = e_source_peek_name(target->source);
+    char* settings_string = eee_settings_string_from_parts(e_source_peek_name(source), color);
+    char* calname = NULL;
 
-    // create new calendar on the server
-    GError* err = NULL;
-    ESClient_newCalendar(conn, (char*)calname, &err);
-    if (err == NULL)
-    {
-      if (!ESClient_updateCalendarSettings(conn, (char*)calname, settings_string, NULL))
-        g_debug("** EEE ** failed to update settings on new calendar (%d:%s)", err->code, err->message);
-      
-      // fill ESsource
-      char* relative_uri = g_strdup_printf("%s/%s/%s", account->server, account->email, e_source_peek_name(source));
-      e_source_set_relative_uri(source, relative_uri);
-      g_free(relative_uri);
-      e_source_set_property(source, "auth", "1");
-      e_source_set_property(source, "eee-calendar-name", e_source_peek_name(source));
-      e_source_set_property(source, "eee-server", account->server);
-      e_source_set_property(source, "username", account->email);
-      char* key = g_strdup_printf("eee://%s", account->email);
-      e_source_set_property(source, "auth-key", key);
-      g_free(key);
-      e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
-    }
+    eee_account_create_new_calendar(account, settings_string, &calname);
+    eee_account_disconnect(account);
+
+    e_source_set_3e_properties(source, calname, account->name, account, settings_string);
     g_free(settings_string);
-    xr_client_free(conn);
-
-    if (err)
-    {
-      g_debug("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
-      g_clear_error(&err);
-    }
-
-    eee_accounts_manager_sync(_mgr);
-    */
+    g_free(calname);
   }
   else
   {
     // editting properties of existing calendar
-    EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, target->source);
-    if (cal == NULL)
-    {
-      g_debug("** EEE ** internal error, can't find calendar");
+    EeeAccount* account = eee_accounts_manager_find_account_by_source(mgr(), source);
+    if (account == NULL)
       return;
-    }
 
-    guint32 color;
+    // create settings string
+    guint32 color = 0;
     e_source_get_color(target->source, &color);
-    e_source_set_color(target->source, color);
-    eee_settings_set_color(cal->settings, color);
-    eee_settings_set_title(cal->settings, e_source_peek_name(target->source));
-    eee_calendar_store_settings(cal);
+    char* settings_string = eee_settings_string_from_parts(e_source_peek_name(source), color);
+    const char* calname = e_source_get_property(source, "eee-calname");
+    const char* owner = e_source_get_property(source, "eee-owner");
+
+    eee_account_update_calendar_settings(account, owner, calname, settings_string);
+    eee_account_disconnect(account);
+
+    g_free(settings_string);
   }
+
+  eee_accounts_manager_abort_current_sync(mgr());
 }
 
 /* calendar source list popup menu items */
@@ -272,15 +227,13 @@ static void on_permissions_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
+  EeeAccount* account;
 
   if (!eee_plugin_online)
     return;
 
-  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
-
-  g_debug("** EEE ** on_permissions_cb: (source=%s)", e_source_peek_name(source));
-
-  acl_gui_create(cal);
+  account = eee_accounts_manager_find_account_by_source(mgr(), source);
+  acl_gui_create(mgr(), account, source);
 }
 
 static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
@@ -288,37 +241,20 @@ static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
+  const char* owner = e_source_get_property(source, "eee-owner");
+  const char* calname = e_source_get_property(source, "eee-calname");
+  EeeAccount* account;
 
   if (!eee_plugin_online)
     return;
-
-  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
-  if (cal == NULL)
+  if (e_source_is_3e_owned_calendar(source))
     return;
 
-  // ignore owned calendars
-  if (cal->access_account == cal->owner_account)
-    return;
-
-  GError* err = NULL;
-  xr_client_conn* conn = eee_account_connect(cal->access_account);
-  if (conn == NULL)
-    return;
-
-  char* calspec = g_strdup_printf("%s:%s", cal->owner_account->email, cal->name);
-  ESClient_unsubscribeCalendar(conn, calspec, &err);
-  g_free(calspec);
-  xr_client_free(conn);
-
-  if (err)
-  {
-    g_debug("** EEE ** on_unsubscribe_cb: unsubscribe failed (%d:%s)", err->code, err->message);
-    g_clear_error(&err);
-    return;
-  }
-
-  if (_mgr)
-    eee_accounts_manager_sync(_mgr);
+  account = eee_accounts_manager_find_account_by_source(mgr(), source);
+  if (eee_account_unsubscribe_calendar(account, owner, calname))
+    e_source_group_remove_source(group, source);
+  eee_account_disconnect(account);
+  eee_accounts_manager_abort_current_sync(mgr());
 }
 
 static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
@@ -326,44 +262,31 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
+  char* calname = (char*)e_source_get_property(source, "eee-calname");
+  EeeAccount* account;
+  GError* err = NULL;
 
   if (!eee_plugin_online)
     return;
-
-  EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
-  if (cal == NULL)
+  if (!e_source_is_3e_owned_calendar(source))
     return;
 
-  // ignore subscribed calendars
-  if (cal->access_account != cal->owner_account)
-    return;
-
-  GError* err = NULL;
-  xr_client_conn* conn = eee_account_connect(cal->access_account);
-  if (conn == NULL)
-    return;
-
-  ESClient_deleteCalendar(conn, cal->name, &err);
-  xr_client_free(conn);
-
-  if (err)
+  account = eee_accounts_manager_find_account_by_source(mgr(), source);
+  if (eee_account_delete_calendar(account, calname))
   {
-    g_debug("** EEE ** on_delete_cb: delete failed (%d:%s)", err->code, err->message);
-    g_clear_error(&err);
-    return;
-  }
+    e_source_group_remove_source(group, source);
 
-  // get ECal and remove calendar from the server
-  ECal* ecal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
-  if (!e_cal_remove(ecal, &err))
-  {
-    g_debug("** EEE ** on_delete_cb: ECal remove failed (%d:%s)", err->code, err->message);
-    g_clear_error(&err);
+    // get ECal and remove calendar from the server
+    ECal* ecal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
+    if (!e_cal_remove(ecal, &err))
+    {
+      g_debug("** EEE ** on_delete_cb: ECal remove failed (%d:%s)", err->code, err->message);
+      g_clear_error(&err);
+    }
+    g_object_unref(ecal);
   }
-  g_object_unref(ecal);
-
-  if (_mgr)
-    eee_accounts_manager_sync(_mgr);
+  eee_account_disconnect(account);
+  eee_accounts_manager_abort_current_sync(mgr());
 }
 
 static EPopupItem popup_items_shared_cal[] = {
@@ -396,28 +319,25 @@ static void popup_free(EPopup *ep, GSList *items, void *data)
 
 void eee_calendar_popup_source_factory(EPlugin* ep, ECalPopupTargetSource* target)
 {
-  int items_count;
-  EPopupItem* items;
-  GSList* menus = NULL;
-  int i;
-
   // get selected source (which was right-clciked on)
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
   ESourceGroup* group = e_source_peek_group(source);
+  int items_count;
+  EPopupItem* items;
+  GSList* menus = NULL;
+  EeeAccount* account;
+  int i;
 
-  // ignore non 3E groups
-  if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
+  if (!e_source_is_3e(source))
     return;
 
   if (eee_plugin_online)
   {
-    EeeCalendar* cal = eee_accounts_manager_find_calendar_by_source(_mgr, source);
-    if (cal == NULL)
-    {
-      g_debug("** EEE ** Can't get EeeCalendar for ESource. (%s)", e_source_peek_name(source));
+    account = eee_accounts_manager_find_account_by_source(mgr(), source);
+    if (account == NULL)
       goto offline_mode;
-    }
-    if (cal->owner_account->accessible)
+
+    if (e_source_is_3e_owned_calendar(source))
     {
       items_count = G_N_ELEMENTS(popup_items_user_cal);
       items = popup_items_user_cal;
@@ -435,29 +355,26 @@ void eee_calendar_popup_source_factory(EPlugin* ep, ECalPopupTargetSource* targe
     items = popup_items_cal_offline;
   }
 
-  // add popup items
   for (i = 0; i < items_count; i++)
     menus = g_slist_prepend(menus, items+i);
+
   e_popup_add_items(target->target.popup, menus, NULL, popup_free, NULL);
 }
 
 /* watch evolution state (online/offline) */
 
-gboolean eee_plugin_online;
+gboolean eee_plugin_online = FALSE;
 
 void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 {
   int online = target->state;
+
   g_debug("** EEE ** State changed to: %s", online ? "online" : "offline");
+
   eee_plugin_online = !!online;
   if (online)
   {
-    // force calendar list synchronization, etc.
-    if (_mgr)
-      eee_accounts_manager_sync(_mgr);
-    else
-      _mgr = eee_accounts_manager_new();
-    
+    mgr();
     // hacky hacky hack hack
     if (offline_label)
       gtk_widget_hide(offline_label);
@@ -476,8 +393,7 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 
 static gint activation_cb(gpointer data)
 {
-  if (_mgr == NULL)
-    _mgr = eee_accounts_manager_new();
+  mgr();
   return FALSE;
 }
 
@@ -486,7 +402,6 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
   if (strstr(target->name, "OAFIID:GNOME_Evolution_Calendar_Component") == NULL)
     return;
 
-  /* create EeeAccountsManager singleton and register it for destruction */
   g_idle_add(activation_cb, NULL);  
 }
 
@@ -494,5 +409,5 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
 
 void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
 {
-  subscribe_gui_create(_mgr);
+  subscribe_gui_create(mgr());
 }
