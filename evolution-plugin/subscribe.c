@@ -154,6 +154,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   ESourceGroup* group;
   EeeSettings* settings;
   char* settings_string;
+  char* group_name;
 
   if (!gtk_tree_selection_get_selected(ctx->selection, &model, &iter))
     goto err0;
@@ -167,12 +168,17 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   if (!is_calendar || account == NULL || name == NULL)
     goto err1;
 
-  group = eee_accounts_manager_find_group_by_name(ctx->mgr, owner);
-  if (group == NULL)
-    goto err1;
-
   if (!eee_account_subscribe_calendar(account, owner, name))
     goto err1;
+
+  group_name = g_strdup_printf("3E: %s", owner);
+  group = e_source_list_peek_group_by_name(eee_accounts_manager_peek_source_list(ctx->mgr), group_name);
+  if (group == NULL)
+  {
+    group = e_source_group_new(group_name, EEE_URI_PREFIX);
+    e_source_list_add_group(eee_accounts_manager_peek_source_list(ctx->mgr), group, -1);
+  }
+  g_free(group_name);
 
   settings = eee_settings_new(NULL);
   eee_settings_set_title(settings, name);

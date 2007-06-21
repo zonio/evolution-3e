@@ -37,7 +37,6 @@ void                   eee_accounts_manager_add_account                  (EeeAcc
 void                   eee_accounts_manager_remove_account               (EeeAccountsManager* self, EeeAccount* account);
 GSList*                eee_accounts_manager_peek_accounts_list           (EeeAccountsManager* self);
 ESourceList*           eee_accounts_manager_peek_source_list             (EeeAccountsManager* self);
-ESourceGroup*          eee_accounts_manager_find_group_by_name           (EeeAccountsManager *self, const char *name);
 EeeAccount*            eee_accounts_manager_find_account_by_name         (EeeAccountsManager* self, const char* name);
 EeeAccount*            eee_accounts_manager_find_account_by_group        (EeeAccountsManager* self, ESourceGroup* group);
 EeeAccount*            eee_accounts_manager_find_account_by_source       (EeeAccountsManager* self, ESource* source);

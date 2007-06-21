@@ -352,15 +352,6 @@ EeeAccount* eee_accounts_manager_find_account_by_name(EeeAccountsManager* self, 
   return NULL;
 }
 
-/* find ESourceGroup by name */
-ESourceGroup* eee_accounts_manager_find_group_by_name(EeeAccountsManager *self, const char *name)
-{
-  char* _name = g_strdup_printf("3E: %s", name);
-  ESourceGroup* group = e_source_list_peek_group_by_name(self->priv->eslist, _name);
-  g_free(_name);
-  return group;
-}
-
 /* find EeeAccount for ESourceGroup object */
 EeeAccount* eee_accounts_manager_find_account_by_group(EeeAccountsManager* self, ESourceGroup* group)
 {
