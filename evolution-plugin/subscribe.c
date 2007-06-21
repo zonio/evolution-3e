@@ -5,7 +5,6 @@
 
 #include "subscribe.h"
 #include "eee-calendar-config.h"
-#include "eee-settings.h"
 
 enum
 {
@@ -152,7 +151,6 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   gboolean is_calendar = FALSE;
   ESource* source;
   ESourceGroup* group;
-  EeeSettings* settings;
   char* settings_string;
   char* group_name;
 
@@ -180,12 +178,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   }
   g_free(group_name);
 
-  settings = eee_settings_new(NULL);
-  eee_settings_set_title(settings, name);
-  settings_string = eee_settings_encode(settings);
-  source = e_source_new_3e(name, owner, account, settings_string);
-  g_free(settings_string);
-  g_object_unref(settings);
+  source = e_source_new_3e(name, owner, account, name, 0);
   e_source_group_add_source(group, source, -1);
   e_source_list_sync(eee_accounts_manager_peek_source_list(ctx->mgr), NULL);
   eee_accounts_manager_abort_current_sync(ctx->mgr);

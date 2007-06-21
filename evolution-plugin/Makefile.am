@@ -22,8 +22,6 @@ liborg_gnome_evolution_eee_la_SOURCES = \
   eee-accounts-manager.h \
   eee-calendar-config.c \
   eee-calendar-config.h \
-  eee-settings.c \
-  eee-settings.h \
   dns-txt-search.c \
   dns-txt-search.h \
   utils.c \

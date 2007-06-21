@@ -16,11 +16,22 @@ void                   e_source_set_3e_properties                        (ESourc
                                                                           const char* calname, 
                                                                           const char* owner, 
                                                                           EeeAccount* account, 
-                                                                          const char* settings);
+                                                                          const char* title, 
+                                                                          guint32 color);
 ESource*               e_source_new_3e                                   (const char* calname, 
                                                                           const char* owner, 
                                                                           EeeAccount* account, 
-                                                                          const char* settings);
+                                                                          const char* title, 
+                                                                          guint32 color);
+ESource*               e_source_new_3e_with_attrs                        (const char* calname, 
+                                                                          const char* owner, 
+                                                                          EeeAccount* account, 
+                                                                          GSList* attrs);
+void                   e_source_set_3e_properties_with_attrs             (ESource* source, 
+                                                                          const char* calname, 
+                                                                          const char* owner, 
+                                                                          EeeAccount* account, 
+                                                                          GSList* attrs);
 ESource*               e_source_group_peek_source_by_calname             (ESourceGroup *group,
                                                                           const char *name);
 

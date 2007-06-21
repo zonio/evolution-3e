@@ -222,25 +222,40 @@ void eee_account_free_calendars_list(GSList* l)
   g_slist_free(l);
 }
 
-gboolean eee_account_update_calendar_settings(EeeAccount* self, const char* owner, const char* calname, const char* settings)
+gboolean eee_account_set_calendar_attribute(EeeAccount* self, const char* owner, const char* calname, const char* name, const char* value, gboolean is_public)
 {
   GError* err = NULL;
 
-  if (owner == NULL || calname == NULL || settings == NULL || !eee_account_auth(self))
+  if (owner == NULL || calname == NULL || name == NULL || !eee_account_auth(self))
     return FALSE;
 
   char* calspec = g_strdup_printf("%s:%s", owner, calname);
-  ESClient_updateCalendarSettings(self->priv->conn, calspec, (char*)settings, &err);
+  ESClient_setCalendarAttribute(self->priv->conn, calspec, (char*)name, (char*)(value ? value : ""), is_public, &err);
   g_free(calspec);
 
   if (err)
   {
-    g_warning("** EEE ** Failed to store settings for calendar '%s:%s'. (%d:%s)", owner, calname, err->code, err->message);
+    g_warning("** EEE ** Failed to get calendars for account '%s'. (%d:%s)", self->name, err->code, err->message);
     g_clear_error(&err);
     return FALSE;
   }
 
   return TRUE;
+}
+
+gboolean eee_account_update_calendar_settings(EeeAccount* self, const char* owner, const char* calname, const char* title, guint32 color)
+{
+  gboolean rs = TRUE;
+  char* color_string = NULL;
+
+  rs &= eee_account_set_calendar_attribute(self, owner, calname, "title", title, TRUE);
+
+  if (color)
+    color_string = g_strdup_printf("%06x", color);
+  rs &= eee_account_set_calendar_attribute(self, owner, calname, "color", color_string, FALSE);
+  g_free(color_string);
+
+  return rs;
 }
 
 static char* generate_calname()
@@ -249,34 +264,23 @@ static char* generate_calname()
   return g_strdup_printf("%08x", g_rand_int(rand));
 }
 
-gboolean eee_account_create_new_calendar(EeeAccount* self, const char* settings, char** calname)
+gboolean eee_account_create_new_calendar(EeeAccount* self, char** calname)
 {
   GError* err = NULL;
 
-  if (settings == NULL || calname == NULL || !eee_account_auth(self))
+  if (calname == NULL || !eee_account_auth(self))
     return FALSE;
 
   while (1)
   {
     *calname = generate_calname();
     ESClient_newCalendar(self->priv->conn, *calname, &err);
-    if (err == NULL)
-    {
-      ESClient_updateCalendarSettings(self->priv->conn, *calname, (char*)settings, &err);
-      if (err)
-      {
-        g_warning("** EEE ** failed to update settings on new calendar (%d:%s)", err->code, err->message);
-        g_clear_error(&err);
-      }
+    if (err == NULL || err->code != ES_XMLRPC_ERROR_CALENDAR_EXISTS)
       break;
-    }
-    if (err->code == ES_XMLRPC_ERROR_CALENDAR_EXISTS)
-    {
-      g_free(*calname);
-      *calname = NULL;
-    }
-    else
-      break;
+
+    // try again
+    g_free(*calname);
+    *calname = NULL;
   }
 
   if (err)

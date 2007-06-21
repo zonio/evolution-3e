@@ -8,7 +8,6 @@
 #include "dns-txt-search.h"
 #include "eee-calendar-config.h"
 #include "eee-accounts-manager.h"
-#include "eee-settings.h"
 #include "utils.h"
 
 #define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
@@ -119,13 +118,13 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
         if (source == NULL)
         {
           g_debug("EEE: source not found");
-          source = e_source_new_3e(cal->name, cal->owner, account, cal->settings);
+          source = e_source_new_3e_with_attrs(cal->name, cal->owner, account, cal->attrs);
           e_source_group_add_source(group, source, -1);
         }
         else
         {
           g_debug("EEE: source found");
-          e_source_set_3e_properties(source, cal->name, cal->owner, account, cal->settings);
+          e_source_set_3e_properties_with_attrs(source, cal->name, cal->owner, account, cal->attrs);
         }
       }
       else
@@ -146,12 +145,12 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
         if (source == NULL)
         {
           g_debug("EEE: shared source not found");
-          source = e_source_new_3e(cal->name, cal->owner, account, cal->settings);
+          source = e_source_new_3e_with_attrs(cal->name, cal->owner, account, cal->attrs);
           e_source_group_add_source(owner_group, source, -1);
         }
         else
         {
-          e_source_set_3e_properties(source, cal->name, cal->owner, account, cal->settings);
+          e_source_set_3e_properties_with_attrs(source, cal->name, cal->owner, account, cal->attrs);
         }
       }
       g_object_set_data(G_OBJECT(source), "synced", (gpointer)TRUE);
@@ -449,7 +448,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager* self)
         if (e_source_is_3e(source))
         {
           const char* calname = e_source_get_property(source, "eee-calname");
-          e_source_set_3e_properties(source, calname, account->name, account, NULL);
+          e_source_set_3e_properties(source, calname, account->name, account, NULL, 0);
         }
         else
         {

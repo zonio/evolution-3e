@@ -11,7 +11,6 @@
 
 #include "eee-accounts-manager.h"
 #include "eee-calendar-config.h"
-#include "eee-settings.h"
 #include "utils.h"
 #include "subscribe.h"
 #include "acl.h"
@@ -170,7 +169,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
 {
   ESource* source = target->source;
   ESourceGroup *group = e_source_peek_group(source);
-
+  guint32 color = 0;
   g_debug("** EEE ** Properties Dialog Commit Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
   if (!e_source_group_is_3e(group))
@@ -178,43 +177,32 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
   if (!eee_plugin_online)
     return;
 
+  e_source_get_color(target->source, &color);
+
   if (is_new_calendar_dialog(target->source))
   {
+    char* calname = NULL;
     EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr(), group);
     if (account == NULL)
       return;
 
-    // create settings string
-    guint32 color = 0;
-    e_source_get_color(target->source, &color);
-    char* settings_string = eee_settings_string_from_parts(e_source_peek_name(source), color);
-    char* calname = NULL;
-
-    eee_account_create_new_calendar(account, settings_string, &calname);
+    if (eee_account_create_new_calendar(account, &calname))
+      eee_account_update_calendar_settings(account, account->name, calname, e_source_peek_name(source), color);
     eee_account_disconnect(account);
 
-    e_source_set_3e_properties(source, calname, account->name, account, settings_string);
-    g_free(settings_string);
+    e_source_set_3e_properties(source, calname, account->name, account, NULL, 0); // title and color are already set
     g_free(calname);
   }
   else
   {
-    // editting properties of existing calendar
     EeeAccount* account = eee_accounts_manager_find_account_by_source(mgr(), source);
     if (account == NULL)
       return;
 
-    // create settings string
-    guint32 color = 0;
-    e_source_get_color(target->source, &color);
-    char* settings_string = eee_settings_string_from_parts(e_source_peek_name(source), color);
     const char* calname = e_source_get_property(source, "eee-calname");
     const char* owner = e_source_get_property(source, "eee-owner");
-
-    eee_account_update_calendar_settings(account, owner, calname, settings_string);
+    eee_account_update_calendar_settings(account, owner, calname, e_source_peek_name(source), color);
     eee_account_disconnect(account);
-
-    g_free(settings_string);
   }
 
   eee_accounts_manager_abort_current_sync(mgr());

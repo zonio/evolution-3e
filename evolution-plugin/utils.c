@@ -1,7 +1,6 @@
 #include <glib.h>
 #include <string.h>
 #include "utils.h"
-#include "eee-settings.h"
 
 char* qp_escape_string(const char* s)
 {
@@ -57,9 +56,8 @@ gboolean e_source_is_3e_owned_calendar(ESource* source)
       e_source_get_property(source, "eee-account"));
 }
 
-void e_source_set_3e_properties(ESource* source, const char* calname, const char* owner, EeeAccount* account, const char* settings)
+void e_source_set_3e_properties(ESource* source, const char* calname, const char* owner, EeeAccount* account, const char* title, guint32 color)
 {
-  EeeSettings* s;
   char* relative_uri = g_strdup_printf("%s/%s/%s", account->name, owner, calname);
   char* key = g_strdup_printf("eee://%s", account->name);
   
@@ -72,26 +70,45 @@ void e_source_set_3e_properties(ESource* source, const char* calname, const char
   e_source_set_property(source, "eee-owner", owner);
   e_source_set_property(source, "eee-account", account->name);
   e_source_set_property(source, "eee-calname", calname);
-
-  if (settings)
-  {
-    s = eee_settings_new(settings);
-    if (eee_settings_get_title(s))
-      e_source_set_name(source, eee_settings_get_title(s));
-    if (eee_settings_get_color(s) > 0)
-      e_source_set_color(source, eee_settings_get_color(s));
-    g_object_unref(s);
-  }
+  if (title)
+    e_source_set_name(source, title);
+  if (color)
+    e_source_set_color(source, color);
 
   g_free(relative_uri);
   g_free(key);
 }
 
-ESource* e_source_new_3e(const char* calname, const char* owner, EeeAccount* account, const char* settings)
+ESource* e_source_new_3e(const char* calname, const char* owner, EeeAccount* account, const char* title, guint32 color)
 {
   ESource* source = e_source_new("[No Title]", "");
-  e_source_set_3e_properties(source, calname, owner, account, settings);
+  e_source_set_3e_properties(source, calname, owner, account, title, color);
   return source;
+}
+
+ESource* e_source_new_3e_with_attrs(const char* calname, const char* owner, EeeAccount* account, GSList* attrs)
+{
+  ESource* source = e_source_new("[No Title]", "");
+  e_source_set_3e_properties_with_attrs(source, calname, owner, account, attrs);
+  return source;
+}
+
+void e_source_set_3e_properties_with_attrs(ESource* source, const char* calname, const char* owner, EeeAccount* account, GSList* attrs)
+{
+  char* title = NULL;
+  guint32 color = 0;
+  GSList* iter;
+
+  for (iter = attrs; iter; iter = iter->next)
+  {
+    ESAttribute* attr = iter->data;
+    if (!strcmp(attr->name, "title"))
+      title = attr->value;
+    else if (!strcmp(attr->name, "color"))
+      sscanf(attr->value, "%x", &color);
+  }
+
+  e_source_set_3e_properties(source, calname, owner, account, title, color);
 }
 
 /* get ESource by 3E calendar name */

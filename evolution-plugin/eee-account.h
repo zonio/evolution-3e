@@ -67,12 +67,18 @@ gboolean          eee_account_calendar_acl_set_public   (EeeAccount* self,
 gboolean          eee_account_calendar_acl_set_shared   (EeeAccount* self, 
                                                          const char* calname, 
                                                          GSList* new_perms);
+gboolean          eee_account_set_calendar_attribute    (EeeAccount* self, 
+                                                         const char* owner, 
+                                                         const char* calname, 
+                                                         const char* name, 
+                                                         const char* value, 
+                                                         gboolean is_public);
 gboolean          eee_account_update_calendar_settings  (EeeAccount* self, 
                                                          const char* owner, 
                                                          const char* calname, 
-                                                         const char* settings);
+                                                         const char* title, 
+                                                         guint32 color);
 gboolean          eee_account_create_new_calendar       (EeeAccount* self, 
-                                                         const char* settings, 
                                                          char** calname);
 gboolean          eee_account_unsubscribe_calendar      (EeeAccount* self, 
                                                          const char* owner, 
