@@ -36,7 +36,7 @@ struct _EeeAccountsManagerPriv
 /* sync finish phase */
 gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
 {
-  GSList *iter, *iter2;
+  GSList *iter, *iter2, *iter_next, *iter2_next;
 
   g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), FALSE);
 
@@ -161,17 +161,21 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
   }
 
   // remove non-marked sources/groups
-  for (iter = e_source_list_peek_groups(self->priv->eslist); iter; iter = iter->next)
+  for (iter = e_source_list_peek_groups(self->priv->eslist); iter; iter = iter_next)
   {
     ESourceGroup* group = E_SOURCE_GROUP(iter->data);
+    iter_next = iter->next;
+
     if (!e_source_group_is_3e(group))
       continue;
 
     if (g_object_get_data(G_OBJECT(group), "synced"))
     {
-      for (iter2 = e_source_group_peek_sources(group); iter2; iter2 = iter2->next)
+      for (iter2 = e_source_group_peek_sources(group); iter2; iter2 = iter2_next)
       {
         ESource* source = E_SOURCE(iter2->data);
+        iter2_next = iter2->next;
+
         if (!g_object_get_data(G_OBJECT(source), "synced"))
         {
           g_debug("EEE: removing source %s", e_source_peek_name(source));
