@@ -147,6 +147,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   GtkTreeModel *model;
   char* name = NULL;
   char* owner = NULL;
+  char* perm = NULL;
   EeeAccount* account = NULL;
   gboolean is_calendar = FALSE;
   ESource* source;
@@ -159,6 +160,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
 
   gtk_tree_model_get(model, &iter, 
     SUB_NAME_COLUMN, &name,
+    SUB_PERM_COLUMN, &perm,
     SUB_OWNER_COLUMN, &owner,
     SUB_ACCOUNT_COLUMN, &account,
     SUB_IS_CALENDAR_COLUMN, &is_calendar, -1);
@@ -178,7 +180,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   }
   g_free(group_name);
 
-  source = e_source_new_3e(name, owner, account, name, 0);
+  source = e_source_new_3e(name, owner, account, perm, name, 0);
   e_source_group_add_source(group, source, -1);
   e_source_list_sync(eee_accounts_manager_peek_source_list(ctx->mgr), NULL);
   eee_accounts_manager_abort_current_sync(ctx->mgr);
@@ -186,6 +188,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
  err1:
   g_free(name);
   g_free(owner);
+  g_free(perm);
  err0:
   gtk_widget_destroy(GTK_WIDGET(ctx->win));
 }
