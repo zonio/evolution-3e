@@ -155,12 +155,12 @@ gboolean eee_account_calendar_acl_set_shared(EeeAccount* self, const char* calna
   return remove_acl(self->priv->conn, calname) && add_acl(self->priv->conn, calname, new_perms);
 }
 
-GSList* eee_account_load_calendars(EeeAccount* self)
+gboolean eee_account_load_calendars(EeeAccount* self, GSList** cals)
 {
   GError* err = NULL;
 
   if (!eee_account_auth(self))
-    return NULL;
+    return FALSE;
 
   eee_account_free_calendars_list(self->priv->cals);
 
@@ -169,10 +169,13 @@ GSList* eee_account_load_calendars(EeeAccount* self)
   {
     g_warning("** EEE ** Failed to get calendars for account '%s'. (%d:%s)", self->name, err->code, err->message);
     g_clear_error(&err);
-    return NULL;
+    return FALSE;
   }
 
-  return self->priv->cals;
+  if (cals)
+    *cals = self->priv->cals;
+
+  return TRUE;
 }
 
 GSList* eee_account_peek_calendars(EeeAccount* self)

@@ -53,7 +53,7 @@ gboolean          eee_account_auth                (EeeAccount* self);
 xr_client_conn*   eee_account_connect             (EeeAccount* self);
 void              eee_account_disconnect          (EeeAccount* self);
 gboolean          eee_account_find_server         (EeeAccount* self);
-GSList*           eee_account_load_calendars      (EeeAccount* self);
+gboolean          eee_account_load_calendars      (EeeAccount* self, GSList** cals);
 GSList*           eee_account_peek_calendars      (EeeAccount* self);
 gboolean          eee_account_load_users          (EeeAccount* self,
                                                    char* prefix, 

@@ -226,7 +226,7 @@ gboolean eee_accounts_manager_sync_phase1(EeeAccountsManager* self)
       continue;
     }
 
-    eee_account_load_calendars(account);
+    eee_account_load_calendars(account, NULL);
     eee_account_disconnect(account);
   }
 
