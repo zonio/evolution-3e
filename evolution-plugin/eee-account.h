@@ -92,10 +92,8 @@ gboolean          eee_account_subscribe_calendar        (EeeAccount* self,
                                                          const char* calname);
 gboolean          eee_account_delete_calendar           (EeeAccount* self, 
                                                          const char* calname);
-
-gboolean          eee_account_get_shared_calendars_by_username_prefix
-                                                        (EeeAccount* self, 
-                                                         const char* prefix, 
+gboolean          eee_account_search_shared_calendars   (EeeAccount* self, 
+                                                         const char* query, 
                                                          GSList** cals);
 gboolean          eee_account_get_shared_calendars      (EeeAccount* self, 
                                                          const char* query, 

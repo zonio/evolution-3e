@@ -55,7 +55,7 @@ static gboolean reload_data(struct subscribe_context* ctx, const char* query)
 
   gtk_tree_store_clear(ctx->model);
 
-  if (!eee_account_get_shared_calendars_by_username_prefix(ctx->account, query, &cals) ||
+  if (!eee_account_search_shared_calendars(ctx->account, query, &cals) ||
       !eee_account_load_calendars(ctx->account, &existing_cals))
   {
     eee_account_disconnect(ctx->account);

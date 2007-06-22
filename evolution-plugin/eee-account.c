@@ -183,16 +183,21 @@ GSList* eee_account_peek_calendars(EeeAccount* self)
   return self->priv->cals;
 }
 
-gboolean eee_account_get_shared_calendars_by_username_prefix(EeeAccount* self, const char* prefix, GSList** cals)
+gboolean eee_account_search_shared_calendars(EeeAccount* self, const char* query_string, GSList** cals)
 {
   char* query = NULL;
   gboolean retval;
 
-  if (prefix != NULL && prefix[0] != '\0')
+  if (query_string != NULL && query_string[0] != '\0')
   {
-    char* escaped_prefix = qp_escape_string(prefix);
-    query = g_strdup_printf("match_username_prefix(%s)", escaped_prefix);
-    g_free(escaped_prefix);
+    char* escaped_query = qp_escape_string(query_string);
+    query = g_strdup_printf(
+      "match_username_substr(%1$s)"
+      " OR match_user_attribute_substr('realname', %1$s)"
+      " OR match_calendar_name_substr(%1$s)"
+      " OR match_calendar_attribute_substr('title', %1$s)",
+      escaped_query);
+    g_free(escaped_query);
   }
 
   retval = eee_account_get_shared_calendars(self, query ? query : "", cals);
