@@ -9,6 +9,7 @@
 enum
 {
   SUB_NAME_COLUMN = 0,
+  SUB_TITLE_COLUMN,
   SUB_PERM_COLUMN,
   SUB_IS_CALENDAR_COLUMN,
   SUB_OWNER_COLUMN,
@@ -51,21 +52,21 @@ static gboolean reload_data(struct subscribe_context* ctx, const char* query)
   GSList *cals, *existing_cals, *iter;
   GtkTreeIter titer_user;
   GtkTreeIter titer_cal;
-  gboolean rs = TRUE;
 
   gtk_tree_store_clear(ctx->model);
 
-  rs = eee_account_get_shared_calendars_by_username_prefix(ctx->account, query, &cals);
-  if (rs)
-    rs &= eee_account_load_calendars(ctx->account, &existing_cals);
-  eee_account_disconnect(ctx->account);
-  if (!rs)
+  if (!eee_account_get_shared_calendars_by_username_prefix(ctx->account, query, &cals) ||
+      !eee_account_load_calendars(ctx->account, &existing_cals))
+  {
+    eee_account_disconnect(ctx->account);
     return FALSE;
+  }
 
   // for each user get his calendars
   char* prev_owner = NULL;
   for (iter = cals; iter; iter = iter->next)
   {
+    const char* cal_title = NULL;
     ESCalendar* cal = iter->data;
 
     // skip already subscribed cals
@@ -74,23 +75,42 @@ static gboolean reload_data(struct subscribe_context* ctx, const char* query)
 
     if (!prev_owner || strcmp(prev_owner, cal->owner))
     {
+      GSList* attrs = NULL;
+      const char* realname = NULL;
+      char* title;
+
+      eee_account_get_user_attributes(ctx->account, cal->owner, &attrs);
+      realname = eee_find_attribute_value(attrs, "realname");
+      if (realname)
+        title = g_strdup_printf("%s (%s)", cal->owner, realname);
+      else
+        title = g_strdup_printf("%s", cal->owner);
+
       gtk_tree_store_append(ctx->model, &titer_user, NULL);
       gtk_tree_store_set(ctx->model, &titer_user, 
-        SUB_NAME_COLUMN, cal->owner, 
+        SUB_NAME_COLUMN, cal->owner,
+        SUB_TITLE_COLUMN, title,
         SUB_PERM_COLUMN, "", 
         SUB_OWNER_COLUMN, cal->owner, 
         SUB_IS_CALENDAR_COLUMN, FALSE, -1);
       prev_owner = cal->owner;
+
+      g_free(title);
+      eee_account_free_attributes_list(attrs);
     }
+
+    cal_title = eee_find_attribute_value(cal->attrs, "title");
 
     gtk_tree_store_append(ctx->model, &titer_cal, &titer_user);
     gtk_tree_store_set(ctx->model, &titer_cal,
       SUB_NAME_COLUMN, cal->name,
+      SUB_TITLE_COLUMN, cal_title ? cal_title : cal->name,
       SUB_PERM_COLUMN, cal->perm, 
       SUB_OWNER_COLUMN, cal->owner, 
       SUB_IS_CALENDAR_COLUMN, TRUE, -1);
   }
 
+  eee_account_disconnect(ctx->account);
   eee_account_free_calendars_list(cals);
 
   gtk_tree_view_expand_all(ctx->tview);
@@ -238,12 +258,12 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   c->tview = GTK_TREE_VIEW(glade_xml_get_widget(c->xml, "treeview_calendars"));
 
   // create model for calendar list
-  c->model = gtk_tree_store_new(SUB_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN, G_TYPE_STRING);
+  c->model = gtk_tree_store_new(SUB_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN, G_TYPE_STRING);
   gtk_tree_view_set_model(c->tview, GTK_TREE_MODEL(c->model));
   // add columns to the tree view
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "xalign", 0.0, NULL);
-  col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Calendar Name", renderer, "text", SUB_NAME_COLUMN, NULL);
+  col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Calendar Name", renderer, "text", SUB_TITLE_COLUMN, NULL);
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "xalign", 0.0, NULL);
   col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Permission", renderer, "text", SUB_PERM_COLUMN, NULL);
