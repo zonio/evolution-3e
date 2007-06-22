@@ -67,6 +67,10 @@ gboolean          eee_account_calendar_acl_set_public   (EeeAccount* self,
 gboolean          eee_account_calendar_acl_set_shared   (EeeAccount* self, 
                                                          const char* calname, 
                                                          GSList* new_perms);
+gboolean          eee_account_get_user_attributes       (EeeAccount* self, 
+                                                         const char* username, 
+                                                         GSList** attrs);
+void              eee_account_free_attributes_list      (GSList* l);
 gboolean          eee_account_set_calendar_attribute    (EeeAccount* self, 
                                                          const char* owner, 
                                                          const char* calname, 

@@ -227,6 +227,32 @@ void eee_account_free_calendars_list(GSList* l)
   g_slist_free(l);
 }
 
+gboolean eee_account_get_user_attributes(EeeAccount* self, const char* username, GSList** attrs)
+{
+  GError* err = NULL;
+
+  if (username == NULL || attrs == NULL || !eee_account_auth(self))
+    return FALSE;
+
+  *attrs = ESClient_getUserAttributes(self->priv->conn, (char*)username, &err);
+  if (err)
+  {
+    g_warning("** EEE ** Failed to get calendars for account '%s'. (%d:%s)", self->name, err->code, err->message);
+    g_clear_error(&err);
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+void eee_account_free_attributes_list(GSList* l)
+{
+  if (l == NULL)
+    return;
+  g_slist_foreach(l, (GFunc)ESAttribute_free, NULL);
+  g_slist_free(l);
+}
+
 gboolean eee_account_set_calendar_attribute(EeeAccount* self, const char* owner, const char* calname, const char* name, const char* value, gboolean is_public)
 {
   GError* err = NULL;
