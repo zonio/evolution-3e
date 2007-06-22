@@ -37,6 +37,7 @@ void eee_account_copy(EeeAccount* self, EeeAccount* ref)
   self->name = g_strdup(ref->name);
   g_free(self->server);
   self->server = g_strdup(ref->server);
+  self->disabled = ref->disabled;
 }
 
 void eee_account_disable(EeeAccount* self)
