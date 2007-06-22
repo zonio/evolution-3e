@@ -38,6 +38,10 @@ void                   e_source_set_3e_properties_with_attrs             (ESourc
                                                                           GSList* attrs);
 ESource*               e_source_group_peek_source_by_calname             (ESourceGroup *group,
                                                                           const char *name);
+ESAttribute*           eee_find_attribute                                (GSList* attrs, 
+                                                                          const char* name);
+const char*            eee_find_attribute_value                          (GSList* attrs, 
+                                                                          const char* name);
 
 G_END_DECLS
 

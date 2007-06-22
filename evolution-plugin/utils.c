@@ -97,19 +97,12 @@ ESource* e_source_new_3e_with_attrs(const char* calname, const char* owner, EeeA
 
 void e_source_set_3e_properties_with_attrs(ESource* source, const char* calname, const char* owner, EeeAccount* account, const char* perm, GSList* attrs)
 {
-  char* title = NULL;
+  const char* title = eee_find_attribute_value(attrs, "title");
+  const char* color_string = eee_find_attribute_value(attrs, "color");
   guint32 color = 0;
-  GSList* iter;
 
-  for (iter = attrs; iter; iter = iter->next)
-  {
-    ESAttribute* attr = iter->data;
-    if (!strcmp(attr->name, "title"))
-      title = attr->value;
-    else if (!strcmp(attr->name, "color"))
-      sscanf(attr->value, "%x", &color);
-  }
-
+  if (color_string)
+    sscanf(color_string, "%x", &color);
   e_source_set_3e_properties(source, calname, owner, account, perm, title, color);
 }
 
@@ -123,5 +116,27 @@ ESource* e_source_group_peek_source_by_calname(ESourceGroup *group, const char *
     if (cal_name && !strcmp(cal_name, name))
       return E_SOURCE(iter->data);
   }
+  return NULL;
+}
+
+ESAttribute* eee_find_attribute(GSList* attrs, const char* name)
+{
+  GSList *iter;
+
+  for (iter = attrs; iter; iter = iter->next)
+  {
+    ESAttribute* attr = iter->data;
+    if (!strcmp(attr->name, name))
+      return attr;
+  }
+
+  return NULL;
+}
+
+const char* eee_find_attribute_value(GSList* attrs, const char* name)
+{
+  ESAttribute* attr = eee_find_attribute(attrs, name);
+  if (attr)
+    return attr->value;
   return NULL;
 }
