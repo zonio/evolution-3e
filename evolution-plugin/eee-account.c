@@ -42,6 +42,8 @@ void eee_account_copy(EeeAccount* self, EeeAccount* ref)
 
 void eee_account_disable(EeeAccount* self)
 {
+  g_return_if_fail(IS_EEE_ACCOUNT(self));
+
   self->disabled = TRUE;
 }
 
@@ -160,8 +162,7 @@ GSList* eee_account_load_calendars(EeeAccount* self)
   if (!eee_account_auth(self))
     return NULL;
 
-  g_slist_foreach(self->priv->cals, (GFunc)ESCalendar_free, NULL);
-  g_slist_free(self->priv->cals);
+  eee_account_free_calendars_list(self->priv->cals);
 
   self->priv->cals = ESClient_getCalendars(self->priv->conn, &err);
   if (err)
@@ -487,6 +488,8 @@ xr_client_conn* eee_account_connect(EeeAccount* self)
   GError* err = NULL;
   char* server_uri;
 
+  g_return_val_if_fail(IS_EEE_ACCOUNT(self), NULL);
+
   if (self->server == NULL)
     return NULL;
 
@@ -527,6 +530,8 @@ xr_client_conn* eee_account_connect(EeeAccount* self)
 
 void eee_account_disconnect(EeeAccount* self)
 {
+  g_return_if_fail(IS_EEE_ACCOUNT(self));
+
   if (self->priv->conn)
     xr_client_free(self->priv->conn);
   self->priv->conn = NULL;
