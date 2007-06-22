@@ -10,7 +10,6 @@ enum
 {
   SUB_NAME_COLUMN = 0,
   SUB_PERM_COLUMN,
-  SUB_ACCOUNT_COLUMN,
   SUB_IS_CALENDAR_COLUMN,
   SUB_OWNER_COLUMN,
   SUB_NUM_COLUMNS
@@ -22,92 +21,88 @@ struct subscribe_context
   GtkWindow* win;
   GtkTreeStore *model;
   GtkTreeView *tview;
-  EeeAccountsManager* mgr;
   GtkWidget* subscribe_button;
   GtkTreeSelection* selection;
+  GtkEditable* search;
+  EeeAccountsManager* mgr;
+  EeeAccount* account;
 };
 
 static struct subscribe_context* active_ctx = NULL;
 
-static gboolean load_calendars(EeeAccount* account, char* prefix, GtkTreeStore* model, struct subscribe_context* ctx)
+static gboolean reload_data(struct subscribe_context* ctx, const char* query)
 {
   GSList *cals, *iter;
   GtkTreeIter titer_user;
   GtkTreeIter titer_cal;
   gboolean rs;
 
-  rs = eee_account_get_shared_calendars_by_username_prefix(account, prefix, &cals);
-  eee_account_disconnect(account);
+  gtk_tree_store_clear(ctx->model);
+
+  rs = eee_account_get_shared_calendars_by_username_prefix(ctx->account, query, &cals);
+  eee_account_disconnect(ctx->account);
   if (!rs)
     return FALSE;
 
   // for each user get his calendars
   char* prev_owner = NULL;
-  //XXX: probably we shouldn't assume that calendar list is sorted by calendar
-  // owner by the server
   for (iter = cals; iter; iter = iter->next)
   {
     ESCalendar* cal = iter->data;
-    // skip calendars owned by logegd in user
-    if (!strcmp(account->name, cal->owner))
-      continue;
-
     if (!prev_owner || strcmp(prev_owner, cal->owner))
     {
-      gtk_tree_store_append(model, &titer_user, NULL);
-      gtk_tree_store_set(model, &titer_user, 
+      gtk_tree_store_append(ctx->model, &titer_user, NULL);
+      gtk_tree_store_set(ctx->model, &titer_user, 
         SUB_NAME_COLUMN, cal->owner, 
         SUB_PERM_COLUMN, "", 
         SUB_OWNER_COLUMN, cal->owner, 
-        SUB_ACCOUNT_COLUMN, account, 
         SUB_IS_CALENDAR_COLUMN, FALSE, -1);
       prev_owner = cal->owner;
     }
 
-    gtk_tree_store_append(model, &titer_cal, &titer_user);
-    gtk_tree_store_set(model, &titer_cal,
+    gtk_tree_store_append(ctx->model, &titer_cal, &titer_user);
+    gtk_tree_store_set(ctx->model, &titer_cal,
       SUB_NAME_COLUMN, cal->name,
       SUB_PERM_COLUMN, cal->perm, 
       SUB_OWNER_COLUMN, cal->owner, 
-      SUB_ACCOUNT_COLUMN, account, 
       SUB_IS_CALENDAR_COLUMN, TRUE, -1);
   }
-  g_slist_foreach(cals, (GFunc)ESCalendar_free, NULL);
-  g_slist_free(cals);
+
+  eee_account_free_calendars_list(cals);
 
   gtk_tree_view_expand_all(ctx->tview);
 
   return TRUE;
 }
 
-static gboolean user_selected(GtkEntryCompletion *widget, GtkTreeModel *model, GtkTreeIter *iter, struct subscribe_context* ctx)
+static void account_selected(GtkComboBox *combo, struct subscribe_context* ctx)
 {
-  char* user = NULL;
+  GtkTreeIter iter;
   EeeAccount* account = NULL;
-  gtk_tree_model_get(model, iter, 0, &user, 1, &account, -1);
-  gtk_tree_store_clear(ctx->model);
-  if (user && account)
-    load_calendars(account, user, ctx->model, ctx);
-  g_free(user);
-  return FALSE;
+
+  ctx->account = NULL;
+  if (gtk_combo_box_get_active_iter(combo, &iter))
+  {
+    gtk_tree_model_get(gtk_combo_box_get_model(combo), &iter, 1, &account, -1);
+    gtk_tree_store_clear(ctx->model);
+    if (account)
+    {
+      ctx->account = account;
+      char* text = gtk_editable_get_chars(ctx->search, 0, -1);
+      reload_data(ctx, text);
+      g_free(text);
+    }
+  }
 }
 
-static gboolean user_insert_prefix(GtkEntryCompletion *widget, char* prefix, struct subscribe_context* ctx)
+static void search_entry_changed(GtkEditable* editable, struct subscribe_context* ctx)
 {
-  GSList* iter, *list;
+  char* text = gtk_editable_get_chars(editable, 0, -1);
 
-  if (prefix == NULL)
-    return FALSE;
+  if (text)
+    reload_data(ctx, text);
 
-  gtk_tree_store_clear(ctx->model);
-  list = eee_accounts_manager_peek_accounts_list(ctx->mgr);
-  for (iter = list; iter; iter = iter->next)
-  {
-    EeeAccount* account = iter->data;
-    load_calendars(account, prefix, ctx->model, ctx);
-  }
-  
-  return FALSE;
+  g_free(text);
 }
 
 static void calendar_selection_changed(GtkTreeSelection *selection, struct subscribe_context* ctx)
@@ -116,7 +111,6 @@ static void calendar_selection_changed(GtkTreeSelection *selection, struct subsc
   GtkTreeModel *model;
   char* name = NULL;
   char* perm = NULL;
-  EeeAccount* account = NULL;
   gboolean is_calendar = FALSE;
 
   if (gtk_tree_selection_get_selected(selection, &model, &iter))
@@ -124,7 +118,6 @@ static void calendar_selection_changed(GtkTreeSelection *selection, struct subsc
     gtk_tree_model_get(model, &iter, 
       SUB_NAME_COLUMN, &name,
       SUB_PERM_COLUMN, &perm,
-      SUB_ACCOUNT_COLUMN, &account,
       SUB_IS_CALENDAR_COLUMN, &is_calendar, -1);
 
     if (is_calendar)
@@ -146,7 +139,6 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   char* name = NULL;
   char* owner = NULL;
   char* perm = NULL;
-  EeeAccount* account = NULL;
   gboolean is_calendar = FALSE;
   ESource* source;
   ESourceGroup* group;
@@ -160,13 +152,12 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
     SUB_NAME_COLUMN, &name,
     SUB_PERM_COLUMN, &perm,
     SUB_OWNER_COLUMN, &owner,
-    SUB_ACCOUNT_COLUMN, &account,
     SUB_IS_CALENDAR_COLUMN, &is_calendar, -1);
 
-  if (!is_calendar || account == NULL || name == NULL)
+  if (!is_calendar || ctx->account == NULL || name == NULL)
     goto err1;
 
-  if (!eee_account_subscribe_calendar(account, owner, name))
+  if (!eee_account_subscribe_calendar(ctx->account, owner, name))
     goto err1;
 
   group_name = g_strdup_printf("3E: %s", owner);
@@ -178,7 +169,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   }
   g_free(group_name);
 
-  source = e_source_new_3e(name, owner, account, perm, name, 0);
+  source = e_source_new_3e(name, owner, ctx->account, perm, name, 0);
   e_source_group_add_source(group, source, -1);
   e_source_list_sync(eee_accounts_manager_peek_source_list(ctx->mgr), NULL);
   eee_accounts_manager_abort_current_sync(ctx->mgr);
@@ -223,53 +214,49 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   c->win = GTK_WINDOW(gtk_widget_ref(glade_xml_get_widget(c->xml, "subs_window")));
   c->tview = GTK_TREE_VIEW(glade_xml_get_widget(c->xml, "treeview_calendars"));
 
-  // create model
-  c->model = gtk_tree_store_new(SUB_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_OBJECT, G_TYPE_BOOLEAN, G_TYPE_STRING);
+  // create model for calendar list
+  c->model = gtk_tree_store_new(SUB_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN, G_TYPE_STRING);
   gtk_tree_view_set_model(c->tview, GTK_TREE_MODEL(c->model));
-
   // add columns to the tree view
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "xalign", 0.0, NULL);
   col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Calendar Name", renderer, "text", SUB_NAME_COLUMN, NULL);
-  //column = gtk_tree_view_get_column(c->tview, col_offset - 1);
-  //gtk_tree_view_column_set_clickable(column, TRUE);
-
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "xalign", 0.0, NULL);
   col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Permission", renderer, "text", SUB_PERM_COLUMN, NULL);
-  //column = gtk_tree_view_get_column(c->tview, col_offset - 1);
-  //gtk_tree_view_column_set_clickable(column, TRUE);
-
   // setup the selection handler
   c->selection = gtk_tree_view_get_selection(c->tview);
   gtk_tree_selection_set_mode(c->selection, GTK_SELECTION_SINGLE);
   g_signal_connect(c->selection, "changed", G_CALLBACK(calendar_selection_changed), c);
 
-  // setup autocompletion (0 == username, 1 == EeeAccount*)
-  GtkListStore* users_store = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_POINTER);
+  // setup account list combo box
   GSList* iter, *list;
+  GtkListStore* accounts_store = gtk_list_store_new(2, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
+  GtkWidget* accounts_combo = glade_xml_get_widget(c->xml, "combo_account");
   list = eee_accounts_manager_peek_accounts_list(mgr);
   for (iter = list; iter; iter = iter->next)
   {
+    GtkTreeIter titer;
     EeeAccount* account = iter->data;
-    eee_account_load_users(account, "", NULL, users_store);
-    load_calendars(account, "", c->model, c);
+    if (account->disabled)
+      continue;
+    gtk_list_store_append(accounts_store, &titer);
+    gtk_list_store_set(accounts_store, &titer, 0, account->name, 1, account, -1);
   }
-  GtkEntryCompletion *completion;
-  completion = gtk_entry_completion_new();
-  gtk_entry_set_completion(GTK_ENTRY(glade_xml_get_widget(c->xml, "entry_email")), completion);
-  g_object_unref(completion);
-  gtk_entry_completion_set_model(completion, GTK_TREE_MODEL(users_store));
-  g_object_unref(users_store);
-  gtk_entry_completion_set_text_column(completion, 0);
-  gtk_entry_completion_set_inline_completion(completion, TRUE);
-  gtk_entry_completion_set_popup_single_match(completion, FALSE);
-  g_signal_connect(completion, "match-selected", G_CALLBACK(user_selected), c);
-  g_signal_connect(completion, "insert-prefix", G_CALLBACK(user_insert_prefix), c);
+  gtk_combo_box_set_model(GTK_COMBO_BOX(accounts_combo), GTK_TREE_MODEL(accounts_store));
+  renderer = gtk_cell_renderer_text_new();
+  g_object_set(renderer, "xalign", 0.0, NULL);
+  gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(accounts_combo), renderer, TRUE);
+  gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(accounts_combo), renderer, "text", 0, NULL);
+  g_signal_connect(accounts_combo, "changed", G_CALLBACK(account_selected), c);
+  gtk_combo_box_set_active(GTK_COMBO_BOX(accounts_combo), 0);
 
+  c->search = GTK_EDITABLE(glade_xml_get_widget(c->xml, "entry_search"));
+  g_signal_connect(c->search, "changed", G_CALLBACK(search_entry_changed), c);
+
+  // activate buttons
   c->subscribe_button = glade_xml_get_widget(c->xml, "subs_button_subscribe");
   gtk_widget_set(c->subscribe_button, "sensitive", FALSE, NULL);
-
   glade_xml_signal_connect_data(c->xml, "on_subs_button_subscribe_clicked", G_CALLBACK(on_subs_button_subscribe_clicked), c);
   glade_xml_signal_connect_data(c->xml, "on_subs_button_cancel_clicked", G_CALLBACK(on_subs_button_cancel_clicked), c);
   glade_xml_signal_connect_data(c->xml, "on_subs_window_destroy", G_CALLBACK(on_subs_window_destroy), c);

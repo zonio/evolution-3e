@@ -7,28 +7,53 @@
     <property name="border_width">4</property>
     <property name="title" translatable="yes">Subscribe To Calendar</property>
     <property name="window_position">GTK_WIN_POS_CENTER</property>
-    <property name="default_width">400</property>
+    <property name="default_width">500</property>
     <property name="default_height">300</property>
     <signal name="destroy" handler="on_subs_window_destroy"/>
     <child>
       <widget class="GtkVBox" id="vbox">
         <property name="visible">True</property>
-        <property name="border_width">2</property>
+        <property name="border_width">8</property>
+        <property name="spacing">4</property>
         <child>
           <widget class="GtkTable" id="table">
             <property name="visible">True</property>
-            <property name="n_rows">1</property>
+            <property name="n_rows">2</property>
             <property name="n_columns">2</property>
             <property name="column_spacing">10</property>
             <property name="row_spacing">5</property>
             <child>
-              <widget class="GtkEntry" id="entry_email">
+              <widget class="GtkComboBox" id="combo_account">
+                <property name="visible">True</property>
+                <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+              </widget>
+              <packing>
+                <property name="left_attach">1</property>
+                <property name="right_attach">2</property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkLabel" id="label3">
+                <property name="visible">True</property>
+                <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
+                <property name="xalign">0</property>
+                <property name="label" translatable="yes">Account:</property>
+              </widget>
+              <packing>
+                <property name="x_options">GTK_FILL</property>
+                <property name="y_options"></property>
+              </packing>
+            </child>
+            <child>
+              <widget class="GtkEntry" id="entry_search">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
               </widget>
               <packing>
                 <property name="left_attach">1</property>
                 <property name="right_attach">2</property>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
                 <property name="y_options"></property>
               </packing>
             </child>
@@ -36,9 +61,11 @@
               <widget class="GtkLabel" id="label">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Calendar Owner</property>
+                <property name="label" translatable="yes">Search:</property>
               </widget>
               <packing>
+                <property name="top_attach">1</property>
+                <property name="bottom_attach">2</property>
                 <property name="x_options">GTK_FILL</property>
                 <property name="y_options"></property>
               </packing>
@@ -81,6 +108,7 @@
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <property name="label" translatable="yes">gtk-close</property>
                 <property name="use_stock">True</property>
+                <property name="response_id">0</property>
                 <signal name="clicked" handler="on_subs_button_cancel_clicked"/>
               </widget>
             </child>
@@ -91,8 +119,9 @@
                 <property name="has_default">True</property>
                 <property name="receives_default">True</property>
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                <property name="label" translatable="yes">gtk-apply</property>
+                <property name="label" translatable="yes">gtk-add</property>
                 <property name="use_stock">True</property>
+                <property name="response_id">0</property>
                 <signal name="clicked" handler="on_subs_button_subscribe_clicked"/>
               </widget>
               <packing>
@@ -111,7 +140,7 @@
   </widget>
   <widget class="GtkWindow" id="acl_window">
     <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-    <property name="border_width">4</property>
+    <property name="border_width">8</property>
     <property name="title" translatable="yes">Calendar ACL Setup...</property>
     <property name="window_position">GTK_WIN_POS_CENTER</property>
     <property name="default_width">500</property>
@@ -122,6 +151,7 @@
         <property name="visible">True</property>
         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
         <property name="border_width">2</property>
+        <property name="spacing">4</property>
         <child>
           <widget class="GtkFrame" id="frame1">
             <property name="visible">True</property>
@@ -143,6 +173,7 @@
                         <property name="can_focus">True</property>
                         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                         <property name="label" translatable="yes">Private Calendar</property>
+                        <property name="response_id">0</property>
                         <property name="active">True</property>
                         <property name="draw_indicator">True</property>
                         <signal name="toggled" handler="on_rb_perm_private_toggled"/>
@@ -154,6 +185,7 @@
                         <property name="can_focus">True</property>
                         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                         <property name="label" translatable="yes">Public Calendar - Read-only access to everyone.</property>
+                        <property name="response_id">0</property>
                         <property name="active">True</property>
                         <property name="draw_indicator">True</property>
                         <property name="group">rb_perm_private</property>
@@ -169,6 +201,7 @@
                         <property name="can_focus">True</property>
                         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                         <property name="label" translatable="yes">Shared Calendar - Allow access to selected users.</property>
+                        <property name="response_id">0</property>
                         <property name="active">True</property>
                         <property name="draw_indicator">True</property>
                         <property name="group">rb_perm_private</property>
@@ -196,6 +229,7 @@
           </widget>
           <packing>
             <property name="expand">False</property>
+            <property name="padding">2</property>
           </packing>
         </child>
         <child>
@@ -213,28 +247,19 @@
                   <widget class="GtkVBox" id="vbox3">
                     <property name="visible">True</property>
                     <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                    <property name="spacing">2</property>
+                    <property name="spacing">4</property>
                     <child>
-                      <widget class="GtkHBox" id="hbox1">
+                      <widget class="GtkComboBoxEntry" id="comboboxentry1">
                         <property name="visible">True</property>
                         <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                        <child>
-                          <widget class="GtkComboBoxEntry" id="comboboxentry1">
+                        <child internal-child="entry">
+                          <widget class="GtkEntry" id="comboboxentry-entry1">
                             <property name="visible">True</property>
+                            <property name="can_focus">True</property>
                             <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                            <child internal-child="entry">
-                              <widget class="GtkEntry" id="comboboxentry-entry1">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
-                              </widget>
-                            </child>
                           </widget>
                         </child>
                       </widget>
-                      <packing>
-                        <property name="expand">False</property>
-                      </packing>
                     </child>
                     <child>
                       <widget class="GtkScrolledWindow" id="scrolledwindow1">
@@ -283,6 +308,7 @@
             </child>
           </widget>
           <packing>
+            <property name="padding">2</property>
             <property name="position">1</property>
           </packing>
         </child>
@@ -300,6 +326,7 @@
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <property name="label" translatable="yes">gtk-cancel</property>
                 <property name="use_stock">True</property>
+                <property name="response_id">0</property>
                 <signal name="clicked" handler="on_acl_button_cancel_clicked"/>
               </widget>
             </child>
@@ -311,6 +338,7 @@
                 <property name="events">GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK</property>
                 <property name="label" translatable="yes">gtk-apply</property>
                 <property name="use_stock">True</property>
+                <property name="response_id">0</property>
                 <signal name="clicked" handler="on_acl_button_ok_clicked"/>
               </widget>
               <packing>
