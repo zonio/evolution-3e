@@ -56,7 +56,7 @@ gboolean eee_account_find_server(EeeAccount* self)
   }
   else
   {
-    g_debug("** EEE ** 3E server NOT found for account '%s'.", self->name);
+    g_warning("** EEE ** 3E server NOT found for account '%s'.", self->name);
     return FALSE;
   }
 }
@@ -369,8 +369,6 @@ gboolean eee_account_load_users(EeeAccount* self, char* prefix, GSList* exclude_
   GError* err = NULL;
   GSList *users, *iter;
   GtkTreeIter titer_user;
-
-  g_debug("** EEE ** load_users self=%s prefix=%s", self->name, prefix);
 
   if (!eee_account_auth(self))
     return FALSE;

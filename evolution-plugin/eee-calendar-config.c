@@ -105,7 +105,7 @@ GtkWidget *eee_calendar_properties_factory(EPlugin* epl, EConfigHookItemFactoryD
   ESourceGroup *group = e_source_peek_group(target->source);
   EeeAccount* account;
 
-  g_debug("** EEE ** Properties Dialog Items Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
+  //g_debug("** EEE ** Properties Dialog Items Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
   if (!hidden)
     hidden = gtk_label_new("");
@@ -142,7 +142,7 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(target->source);
 
-  g_debug("** EEE ** Properties Dialog Check Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
+  //g_debug("** EEE ** Properties Dialog Check Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
   if (!e_source_group_is_3e(group))
     return TRUE;
@@ -170,7 +170,8 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
   ESource* source = target->source;
   ESourceGroup *group = e_source_peek_group(source);
   guint32 color = 0;
-  g_debug("** EEE ** Properties Dialog Commit Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
+
+  //g_debug("** EEE ** Properties Dialog Commit Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
   if (!e_source_group_is_3e(group))
     return;
@@ -268,7 +269,7 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
     ECal* ecal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
     if (!e_cal_remove(ecal, &err))
     {
-      g_debug("** EEE ** on_delete_cb: ECal remove failed (%d:%s)", err->code, err->message);
+      g_warning("** EEE ** ECal remove failed (%d:%s)", err->code, err->message);
       g_clear_error(&err);
     }
     g_object_unref(ecal);
@@ -357,7 +358,7 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 {
   int online = target->state;
 
-  g_debug("** EEE ** State changed to: %s", online ? "online" : "offline");
+  //g_debug("** EEE ** State changed to: %s", online ? "online" : "offline");
 
   eee_plugin_online = !!online;
   if (online)
@@ -433,8 +434,6 @@ GtkWidget* eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
   const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
   GtkWidget *panel, *section, *checkbutton_status, *label;
 
-  g_debug("EEE: properties factory called");
-
 	if (data->old)
 		return data->old;
 	
@@ -474,8 +473,6 @@ gboolean eee_account_properties_check(EPlugin *epl, EConfigHookPageCheckData *da
   const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
 	int status = TRUE;
 
-  g_debug("EEE: properties check called");
-
 	if (data->pageid == NULL || !strcmp(data->pageid, "40.eee")) 
   {
 	}
@@ -487,6 +484,4 @@ void eee_account_properties_commit(EPlugin *epl, EConfigHookItemFactoryData *dat
 {
 	EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
   const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
-
-  g_debug("EEE: properties commit called");
 }

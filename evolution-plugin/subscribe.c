@@ -36,8 +36,6 @@ static gboolean load_calendars(EeeAccount* account, char* prefix, GtkTreeStore* 
   GtkTreeIter titer_cal;
   gboolean rs;
 
-  g_debug("** EEE ** load_users account=%s prefix=%s", account->name, prefix);
-
   rs = eee_account_get_shared_calendars_by_username_prefix(account, prefix, &cals);
   eee_account_disconnect(account);
   if (!rs)

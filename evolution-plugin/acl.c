@@ -61,7 +61,6 @@ static int get_acl_mode(struct acl_context* ctx)
     return ACL_MODE_PUBLIC;
   else if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(ctx->rb_shared)))
     return ACL_MODE_SHARED;
-  g_debug("*** EEE *** should not happen");
   return ACL_MODE_PRIVATE;
 }
 
@@ -79,7 +78,6 @@ static int set_acl_mode(struct acl_context* ctx, int mode)
       gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(ctx->rb_shared), TRUE);
       break;
     default:
-      g_debug("*** EEE *** should not happen");
       return FALSE;
   }
   return TRUE;
@@ -185,7 +183,7 @@ static gboolean load_state(struct acl_context* ctx)
 
   if (err)
   {
-    g_debug("** EEE ** can't get permissions (%d:%s)", err->code, err->message);
+    g_warning("** EEE ** Can't get permissions. (%d:%s)", err->code, err->message);
     g_clear_error(&err);
     return FALSE;
   }

@@ -39,7 +39,6 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
 
   g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), FALSE);
 
-  g_debug("EEE: sync phase 2");
   if (self->priv->sync_abort)
   {
     self->priv->sync_abort = FALSE;
@@ -54,13 +53,11 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
     if (!e_source_group_is_3e(group))
       continue;
 
-    g_debug("EEE: group %s", e_source_group_peek_name(group));
     g_object_set_data(G_OBJECT(group), "synced", (gpointer)FALSE);
     for (iter2 = e_source_group_peek_sources(group); iter2; iter2 = iter2->next)
     {
       ESource* source = E_SOURCE(iter2->data);
       g_object_set_data(G_OBJECT(source), "synced", (gpointer)FALSE);
-      g_debug("EEE: source %s", e_source_peek_name(source));
     }
   }
 
@@ -72,8 +69,6 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
     EeeAccount* current_account;
     ESourceGroup* group;
     char* group_name = g_strdup_printf("3E: %s", account->name);
-
-    g_debug("EEE: account %s", account->name);
 
     // find ESourceGroup and EeeAccount
     group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
@@ -100,7 +95,6 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
     {
       group = e_source_group_new(group_name, EEE_URI_PREFIX);
       e_source_list_add_group(self->priv->eslist, group, -1);
-      g_debug("EEE: creating group %s", group_name);
     }
     g_free(group_name);
 
@@ -112,30 +106,23 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
 
       if (!strcmp(cal->owner, account->name))
       {
-        g_debug("EEE: owner's calendar %s:%s", cal->owner, cal->name);
         // calendar owned by owner of account that represents current group
         source = e_source_group_peek_source_by_calname(group, cal->name);
         if (source == NULL)
         {
-          g_debug("EEE: source not found");
           source = e_source_new_3e_with_attrs(cal->name, cal->owner, account, cal->perm, cal->attrs);
           e_source_group_add_source(group, source, -1);
         }
         else
-        {
-          g_debug("EEE: source found");
           e_source_set_3e_properties_with_attrs(source, cal->name, cal->owner, account, cal->perm, cal->attrs);
-        }
       }
       else
       {
-        g_debug("EEE: shared calendar %s:%s", cal->owner, cal->name);
         char* owner_group_name = g_strdup_printf("3E: %s", cal->owner);
         // shared calendar, it should be put into another group
         ESourceGroup* owner_group = e_source_list_peek_group_by_name(self->priv->eslist, owner_group_name);
         if (owner_group == NULL)
         {
-          g_debug("EEE: shared group not found");
           owner_group = e_source_group_new(owner_group_name, EEE_URI_PREFIX);
           e_source_list_add_group(self->priv->eslist, owner_group, -1);
         }
@@ -144,7 +131,6 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
         source = e_source_group_peek_source_by_calname(owner_group, cal->name);
         if (source == NULL)
         {
-          g_debug("EEE: shared source not found");
           source = e_source_new_3e_with_attrs(cal->name, cal->owner, account, cal->perm, cal->attrs);
           e_source_group_add_source(owner_group, source, -1);
         }
@@ -176,17 +162,11 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
         iter2_next = iter2->next;
 
         if (!g_object_get_data(G_OBJECT(source), "synced"))
-        {
-          g_debug("EEE: removing source %s", e_source_peek_name(source));
           e_source_group_remove_source(group, source);
-        }
       }
     }
     else
-    {
-      g_debug("EEE: removing group %s", e_source_group_peek_name(group));
       e_source_list_remove_group(self->priv->eslist, group);
-    }
   }
 
   e_source_list_sync(self->priv->eslist, NULL);
