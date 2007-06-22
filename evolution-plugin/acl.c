@@ -16,6 +16,13 @@ enum
   ACL_NUM_COLUMNS
 };
 
+enum
+{
+  USERS_USERNAME_COLUMN,
+  USERS_ACCOUNT_COLUMN,
+  USERS_NUM_COLUMNS
+};
+
 struct acl_context
 {
   ESource* source;
@@ -120,7 +127,9 @@ static gboolean store_acl(struct acl_context* ctx)
       do
       {
         ESPermission* p = ESPermission_new();
-        gtk_tree_model_get(GTK_TREE_MODEL(ctx->acl_model), &iter, 0, &p->user, 1, &p->perm, -1);
+        gtk_tree_model_get(GTK_TREE_MODEL(ctx->acl_model), &iter, 
+          ACL_USERNAME_COLUMN, &p->user, 
+          ACL_PERM_COLUMN, &p->perm, -1);
         perms = g_slist_append(perms, p);
       }
       while (gtk_tree_model_iter_next(GTK_TREE_MODEL(ctx->acl_model), &iter));
@@ -290,7 +299,7 @@ static void add_user(const char* user, struct acl_context* ctx)
   do
   {
     char* user_name;
-    gtk_tree_model_get(GTK_TREE_MODEL(ctx->users_model), &iter, 0, &user_name, -1);
+    gtk_tree_model_get(GTK_TREE_MODEL(ctx->users_model), &iter, USERS_USERNAME_COLUMN, &user_name, -1);
     if (user_name && !strcmp(user, user_name))
     {
       GtkTreeIter iter2;
@@ -317,9 +326,9 @@ static void on_remove_clicked(GtkMenuItem *menuitem, struct acl_list_click_data*
   GtkTreeIter iter_user;
 
   // put user back to users_model
-  gtk_tree_model_get(GTK_TREE_MODEL(cd->ctx->acl_model), &cd->iter, 0, &username, -1);
+  gtk_tree_model_get(GTK_TREE_MODEL(cd->ctx->acl_model), &cd->iter, ACL_USERNAME_COLUMN, &username, -1);
   gtk_list_store_append(cd->ctx->users_model, &iter_user);
-  gtk_list_store_set(cd->ctx->users_model, &iter_user, 0, username, -1);
+  gtk_list_store_set(cd->ctx->users_model, &iter_user, USERS_USERNAME_COLUMN, username, -1);
   g_free(username);
 
   // remove him
@@ -369,7 +378,7 @@ static gboolean combo_entry_keypress(GtkEntry* entry, GdkEventKey* event, struct
 static gboolean user_selected(GtkEntryCompletion *widget, GtkTreeModel *model, GtkTreeIter *iter, struct acl_context* ctx)
 {
   char* user = NULL;
-  gtk_tree_model_get(model, iter, 0, &user, -1);
+  gtk_tree_model_get(model, iter, USERS_USERNAME_COLUMN, &user, -1);
   add_user(user, ctx);
   g_free(user);
   return FALSE;
@@ -382,7 +391,8 @@ static void cbe_changed(GtkComboBoxEntry* cbe, struct acl_context* ctx)
   if (gtk_combo_box_get_active_iter(GTK_COMBO_BOX(cbe), &iter))
   {
     char* user = NULL;
-    gtk_tree_model_get(gtk_combo_box_get_model(GTK_COMBO_BOX(cbe)), &iter, 0, &user, -1);
+    gtk_tree_model_get(gtk_combo_box_get_model(GTK_COMBO_BOX(cbe)), &iter, 
+      USERS_USERNAME_COLUMN, &user, -1);
     add_user(user, ctx);
     g_free(user);
   }
@@ -404,7 +414,7 @@ static void combo_add_completion(GtkComboBoxEntry *cbe, struct acl_context* ctx)
   completion = gtk_entry_completion_new();
   model = gtk_combo_box_get_model(GTK_COMBO_BOX(cbe));
   gtk_entry_completion_set_model(completion, model);
-  gtk_entry_completion_set_text_column(completion, 0);
+  gtk_entry_completion_set_text_column(completion, USERS_USERNAME_COLUMN);
   gtk_entry_completion_set_inline_completion(completion, TRUE);
   gtk_entry_completion_set_popup_single_match(completion, TRUE);
   gtk_entry_set_completion(entry, completion);
@@ -440,13 +450,13 @@ void acl_gui_create(EeeAccountsManager* mgr, EeeAccount* account, ESource* sourc
   c->user_entry = glade_xml_get_widget(c->xml, "comboboxentry1");
 
   // users list for autocompletion inside acl table combo cells
-  c->users_model = gtk_list_store_new(2, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
+  c->users_model = gtk_list_store_new(USERS_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
   gtk_combo_box_set_model(GTK_COMBO_BOX(c->user_entry), GTK_TREE_MODEL(c->users_model));
   combo_add_completion(GTK_COMBO_BOX_ENTRY(c->user_entry), c);
-  g_object_set(c->user_entry, "text-column", 0, NULL);
+  g_object_set(c->user_entry, "text-column", USERS_USERNAME_COLUMN, NULL);
 
   // acl list
-  c->acl_model = gtk_list_store_new(ACL_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING);
+  c->acl_model = gtk_list_store_new(ACL_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
   gtk_tree_view_set_model(c->tview, GTK_TREE_MODEL(c->acl_model));
   // add columns to the tree view
   renderer = gtk_cell_renderer_text_new();
