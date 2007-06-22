@@ -2,16 +2,12 @@ Evolution Plugin
 ~~~~~~~~~~~~~~~~
 
 future separate commits:
-  - add perm property to the ESource
-  - improve account disabling heuristics (switch to local-offline mode
-    automatically)
-  - set/get attributes instead of settings string
-  - show users real name in acl and subscribe
-  - search by user realname
-  - search by calname
   - subscribe: hide already subscribed calendars from the subscribe dialog list
   - subscribe: select account user wants to subscribe from
   - subscribe: too many users handling
+  - show users real name in acl and subscribe
+  - search by user realname
+  - search by calname
 
   - refactor offline/shared cal warnings in new calendar dialogs
   - show error when trying to open subscribe dialog in offline mode
