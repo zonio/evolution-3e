@@ -30,16 +30,34 @@ struct subscribe_context
 
 static struct subscribe_context* active_ctx = NULL;
 
+static gboolean calendar_exists(GSList* cals, ESCalendar* ref_cal)
+{
+  GSList* iter;
+
+  for (iter = cals; iter; iter = iter->next)
+  {
+    ESCalendar* cal = iter->data;
+
+    if (!strcmp(cal->name, ref_cal->name) &&
+        !strcmp(cal->owner, ref_cal->owner))
+      return TRUE;
+  }
+
+  return FALSE;
+}
+
 static gboolean reload_data(struct subscribe_context* ctx, const char* query)
 {
-  GSList *cals, *iter;
+  GSList *cals, *existing_cals, *iter;
   GtkTreeIter titer_user;
   GtkTreeIter titer_cal;
-  gboolean rs;
+  gboolean rs = TRUE;
 
   gtk_tree_store_clear(ctx->model);
 
   rs = eee_account_get_shared_calendars_by_username_prefix(ctx->account, query, &cals);
+  if (rs)
+    rs &= eee_account_load_calendars(ctx->account, &existing_cals);
   eee_account_disconnect(ctx->account);
   if (!rs)
     return FALSE;
@@ -49,6 +67,11 @@ static gboolean reload_data(struct subscribe_context* ctx, const char* query)
   for (iter = cals; iter; iter = iter->next)
   {
     ESCalendar* cal = iter->data;
+
+    // skip already subscribed cals
+    if (calendar_exists(existing_cals, cal))
+      continue;
+
     if (!prev_owner || strcmp(prev_owner, cal->owner))
     {
       gtk_tree_store_append(ctx->model, &titer_user, NULL);
