@@ -229,11 +229,17 @@ gboolean eee_accounts_manager_sync_phase1(EeeAccountsManager* self)
 
     if (!eee_account_find_server(account))
     {
-      eee_account_disable(account);
+      //eee_account_disable(account);
       continue;
     }
 
-    if (!eee_account_connect(account) || !eee_account_auth(account))
+    if (!eee_account_connect(account))
+    {
+      //eee_account_disable(account);
+      continue;
+    }
+
+    if (!eee_account_auth(account))
     {
       eee_account_disable(account);
       eee_account_disconnect(account);
