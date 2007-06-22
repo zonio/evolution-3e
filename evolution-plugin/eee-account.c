@@ -51,7 +51,7 @@ gboolean eee_account_find_server(EeeAccount* self)
   self->server = get_eee_server_hostname(self->name);
   if (self->server)
   {
-    g_debug("** EEE ** Found 3E server '%s' for account '%s'.", self->server, self->name);
+    //g_debug("** EEE ** Found 3E server '%s' for account '%s'.", self->server, self->name);
     return TRUE;
   }
   else
@@ -492,7 +492,7 @@ xr_client_conn* eee_account_connect(EeeAccount* self)
   if (self->priv->conn)
     return self->priv->conn;
 
-  g_debug("** EEE ** Connecting to 3E server: server=%s user=%s", self->server, self->name);
+  //g_debug("** EEE ** Connecting to 3E server: server=%s user=%s", self->server, self->name);
 
   self->priv->conn = xr_client_new(&err);
   if (err)
