@@ -384,7 +384,10 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
 
 void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
 {
-  subscribe_gui_create(mgr());
+  if (!eee_plugin_online)
+    e_error_run(NULL, "eee:subscribe-offline", NULL);
+  else
+    subscribe_gui_create(mgr());
 }
 
 /* mail account 3E configuration */
