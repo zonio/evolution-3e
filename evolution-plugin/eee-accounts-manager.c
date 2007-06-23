@@ -321,11 +321,15 @@ gboolean eee_accounts_manager_account_is_disabled(EeeAccountsManager* self, cons
 
 GSList* eee_accounts_manager_peek_accounts_list(EeeAccountsManager* self)
 {
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), NULL);
+
   return self->priv->accounts;
 }
 
 ESourceList* eee_accounts_manager_peek_source_list(EeeAccountsManager* self)
 {
+  g_return_val_if_fail(IS_EEE_ACCOUNTS_MANAGER(self), NULL);
+
   return self->priv->eslist;
 }
 
@@ -495,6 +499,8 @@ EeeAccountsManager* eee_accounts_manager_new()
 
 void eee_accounts_manager_force_sync(EeeAccountsManager* self)
 {
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
+
   self->priv->sync_force = TRUE;
 }
 
