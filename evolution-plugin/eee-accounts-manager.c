@@ -81,6 +81,7 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
       if (group)
         e_source_list_remove_group(self->priv->eslist, group);
       eee_accounts_manager_disable_account(self, account->name);
+      g_object_unref(account);
       continue;
     }
 
@@ -143,7 +144,11 @@ gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
     }
 
     g_object_set_data(G_OBJECT(group), "synced", (gpointer)TRUE);
+    g_object_unref(account);
   }
+
+  g_slist_free(self->priv->sync_accounts);
+  self->priv->sync_accounts = NULL;
 
   // remove non-marked sources/groups
   for (iter = e_source_list_peek_groups(self->priv->eslist); iter; iter = iter_next)
