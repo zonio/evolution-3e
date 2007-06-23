@@ -2,7 +2,7 @@
 
   <commands>
     <cmd name="FolderSubscription" _label="Subscribe to calendar..."
-      _tip="Subscribe to other user's calendar."/>
+      tip="Subscribe to other user's calendar."/>
   </commands>
 
   <menu>
