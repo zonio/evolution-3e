@@ -352,11 +352,12 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
   eee_plugin_online = !!online;
   if (online)
   {
-    mgr();
+    eee_accounts_manager_sync_enable(mgr(), TRUE);
     hide_offline_labels();
   }
   else
   {
+    eee_accounts_manager_sync_enable(mgr(), FALSE);
     show_offline_labels();
     acl_gui_destroy();
     subscribe_gui_destroy();

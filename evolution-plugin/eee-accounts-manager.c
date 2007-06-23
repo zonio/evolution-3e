@@ -553,7 +553,7 @@ static void eee_accounts_manager_init(EeeAccountsManager *self)
   g_signal_connect(self->priv->ealist, "account_changed", G_CALLBACK(account_list_changed), self);
   g_signal_connect(self->priv->ealist, "account_removed", G_CALLBACK(account_list_changed), self);    
 
-  self->priv->sync_thread_running = TRUE;
+  self->priv->sync_thread_running = FALSE;
   self->priv->sync_thread = g_thread_create(sync_thread_func, self, FALSE, NULL);
 }
 
