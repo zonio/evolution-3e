@@ -1,6 +1,5 @@
 #include <string.h>
 #include <stdlib.h>
-#include <e-util/e-error.h>
 #include <libedataserverui/e-passwords.h>
 
 #include "dns-txt-search.h"

@@ -8,6 +8,7 @@
 #include <shell/es-event.h>
 #include <mail/em-menu.h>
 #include <mail/em-config.h>
+#include <e-util/e-error.h>
 
 #include "eee-accounts-manager.h"
 #include "eee-calendar-config.h"
