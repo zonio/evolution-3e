@@ -14,7 +14,8 @@ CLEANFILES = \
   $(BUILT_SOURCES)
 
 EXTRA_DIST = \
-  $(BUILT_SOURCES)
+  $(BUILT_SOURCES) \
+  server.xdl
 
 AM_CFLAGS= \
   -std=gnu99 \
