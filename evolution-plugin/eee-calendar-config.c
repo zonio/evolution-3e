@@ -37,8 +37,6 @@ int e_plugin_lib_enable(EPluginLib* ep, int enable)
 /* calendar add/properties dialog */
 
 static GtkWidget* hidden = NULL;
-static GtkWidget* notice_label = NULL;
-static GtkWidget* offline_label = NULL;
 
 static gboolean is_new_calendar_dialog(ESource* source)
 {
@@ -57,46 +55,23 @@ static gboolean is_new_calendar_dialog(ESource* source)
   return is_new;
 }
 
-/* create toplevel notices in dialog (offline mode notice, inaccessible calendar account notice) */
-GtkWidget *eee_calendar_properties_factory_top(EPlugin* epl, EConfigHookItemFactoryData* data)
+// handle offline notes list
+
+static GSList* offline_labels = NULL;
+
+static void on_label_destroy(GtkObject* object, gpointer data)
 {
-  ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
-  ESourceGroup *group = e_source_peek_group(target->source);
+  offline_labels = g_slist_remove(offline_labels, object);
+}
 
-  if (!hidden)
-    hidden = gtk_label_new("");
-  if (!e_source_group_is_3e(group))
-    return hidden;
+static void hide_offline_labels()
+{
+  g_slist_foreach(offline_labels, (GFunc)gtk_widget_hide, NULL);
+}
 
-  /*
-  if (data->old)
-  {
-    //XXX: free widgets? WTF?
-    gtk_widget_destroy(notice_label);
-    gtk_widget_destroy(offline_label);
-    notice_label = NULL;
-    offline_label = NULL;
-  }*/
-
-  int row = GTK_TABLE(data->parent)->nrows;
-
-  char* msg = g_markup_printf_escaped("<span weight=\"bold\" foreground=\"#ff0000\">%s</span>", 
-    "Evolution is in offline mode. You cannot create or modify calendars now.\n"
-    "Please switch to online mode for such operations.");
-  offline_label = gtk_label_new("");
-  gtk_label_set_markup(GTK_LABEL(offline_label), msg);
-  g_free(msg);
-  gtk_table_attach(GTK_TABLE(data->parent), offline_label, 0, 2, row, row+1, GTK_FILL|GTK_EXPAND, 0, 0, 0);
-
-  row++;
-  msg = g_markup_printf_escaped("<span weight=\"bold\" foreground=\"#ff0000\">%s</span>", 
-    "You cannot create calendars for this account.");
-  notice_label = gtk_label_new("");
-  gtk_label_set_markup(GTK_LABEL(notice_label), msg);
-  g_free(msg);
-  gtk_table_attach(GTK_TABLE(data->parent), notice_label, 0, 2, row, row+1, GTK_FILL|GTK_EXPAND, 0, 0, 0);
-
-  return notice_label;
+static void show_offline_labels()
+{
+  g_slist_foreach(offline_labels, (GFunc)gtk_widget_show, NULL);
 }
 
 GtkWidget *eee_calendar_properties_factory(EPlugin* epl, EConfigHookItemFactoryData* data)
@@ -104,34 +79,48 @@ GtkWidget *eee_calendar_properties_factory(EPlugin* epl, EConfigHookItemFactoryD
   ECalConfigTargetSource *target = (ECalConfigTargetSource*)data->target;
   ESourceGroup *group = e_source_peek_group(target->source);
   EeeAccount* account;
+  GtkWidget* label;
+  int row = GTK_TABLE(data->parent)->nrows;
+  char* msg;
 
   //g_debug("** EEE ** Properties Dialog Items Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
   if (!hidden)
     hidden = gtk_label_new("");
+
   if (!e_source_group_is_3e(group))
     return hidden;
+  
+  account = eee_accounts_manager_find_account_by_group(mgr(), group);
+
+  msg = g_markup_printf_escaped("<span weight=\"bold\" foreground=\"#ff0000\">%s</span>", 
+    "Evolution is in offline mode. You cannot create or modify calendars now.\n"
+    "Please switch to online mode for such operations.");
+  label = gtk_label_new("");
+  gtk_label_set_markup(GTK_LABEL(label), msg);
+  g_free(msg);
+  gtk_table_attach(GTK_TABLE(data->parent), label, 0, 2, row, row+1, GTK_FILL|GTK_EXPAND, 0, 0, 0);
+  offline_labels = g_slist_append(offline_labels, label);
+  g_signal_connect(label, "destroy", G_CALLBACK(on_label_destroy), NULL);
 
   // can't do anything in offline mode
   if (!eee_plugin_online)
-  {
-    gtk_widget_show(offline_label);
-    return hidden;
-  }
-
-  //XXX: check if account is online
-  account = eee_accounts_manager_find_account_by_group(mgr(), group);
-  if (account == NULL)
-    return hidden;    
+    gtk_widget_show(label);
 
   if (is_new_calendar_dialog(target->source))
   {
     target->disable_source_update = TRUE;
-  }
-  else
-  {
-    if (!e_source_is_3e_owned_calendar(target->source))
-      gtk_widget_show(notice_label);
+    if (account == NULL)
+    {
+      row++;
+      msg = g_markup_printf_escaped("<span weight=\"bold\" foreground=\"#ff0000\">%s</span>", 
+        "You cannot create calendars for this 3E account.");
+      label = gtk_label_new("");
+      gtk_label_set_markup(GTK_LABEL(label), msg);
+      g_free(msg);
+      gtk_table_attach(GTK_TABLE(data->parent), label, 0, 2, row, row+1, GTK_FILL|GTK_EXPAND, 0, 0, 0);
+      gtk_widget_show(label);
+    }
   }
 
   return hidden;
@@ -364,15 +353,11 @@ void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
   if (online)
   {
     mgr();
-    // hacky hacky hack hack
-    if (offline_label)
-      gtk_widget_hide(offline_label);
+    hide_offline_labels();
   }
   else
   {
-    // shutdown open acl/subscribe dialogs, etc.
-    if (offline_label)
-      gtk_widget_show(offline_label);
+    show_offline_labels();
     acl_gui_destroy();
     subscribe_gui_destroy();
   }
