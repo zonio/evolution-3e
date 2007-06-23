@@ -504,6 +504,13 @@ void eee_accounts_manager_force_sync(EeeAccountsManager* self)
   self->priv->sync_force = TRUE;
 }
 
+void eee_accounts_manager_sync_enable(EeeAccountsManager* self, gboolean value)
+{
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
+
+  self->priv->sync_thread_running = value;
+}
+
 /* sync thread */
 static gpointer sync_thread_func(gpointer data)
 {
