@@ -1,15 +1,11 @@
 Evolution Plugin
 ~~~~~~~~~~~~~~~~
 
+- check for cross-subscription in evolution (two EAccounts both with 3e support,
+  one is subscribing from other)
 - improve ACL GUI (better users search, use user attributes)
-- refactor offline/shared cal warnings in new calendar dialogs
-- show error when trying to open subscribe dialog in offline mode
-- open (treeview) added source groups in the sourcelist panel
-- inform user that server can't be contacted
+- per account access disabling when connection problems are detected
 - subscribe: too many users handling
-- check for cross-subscription in evolution (two EAccounts both with 3e
-  support, one is subscribing from other)
-- check for multiple EAcounts with same email
 - documentation update
 
 Evolution/EDS
