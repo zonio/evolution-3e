@@ -388,6 +388,8 @@ void eee_accounts_manager_load_access_accounts_list(EeeAccountsManager* self)
     const char* name = e_account_get_string(account, E_ACCOUNT_ID_ADDRESS);
     if (eee_accounts_manager_account_is_disabled(self, name))
       continue;
+    if (g_slist_find_custom(self->priv->access_accounts, (gpointer)name, (GCompareFunc)strcmp))
+      continue;
     self->priv->access_accounts = g_slist_append(self->priv->access_accounts, g_strdup(name));
   }
   g_mutex_unlock(self->priv->accounts_lock);
