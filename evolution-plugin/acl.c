@@ -154,6 +154,9 @@ static gboolean store_acl(struct acl_context* ctx)
 
   g_slist_foreach(perms, (GFunc)ESPermission_free, NULL);
   g_slist_free(perms);
+
+  eee_account_disconnect(ctx->account);
+
   return retval;
 }
 
@@ -268,6 +271,7 @@ static void update_users_list(struct acl_context* ctx)
   gtk_list_store_clear(ctx->users_model);
   eee_account_load_users(ctx->account, NULL, users, ctx->users_model);
   g_slist_free(users);
+  eee_account_disconnect(ctx->account);
 }
 
 // acl permission for given user in the treeview was changed, update acl

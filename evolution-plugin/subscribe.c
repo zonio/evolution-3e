@@ -218,6 +218,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   eee_accounts_manager_abort_current_sync(ctx->mgr);
 
  err1:
+  eee_account_disconnect(ctx->account);
   g_free(name);
   g_free(owner);
   g_free(perm);
