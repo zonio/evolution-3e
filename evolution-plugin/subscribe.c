@@ -26,7 +26,7 @@ struct subscribe_context
   GtkTreeSelection* selection;
   GtkEditable* search;
   EeeAccountsManager* mgr;
-  EeeAccount* account;
+  EeeAccount* account; // no-ref, reference is held by model
 };
 
 static struct subscribe_context* active_ctx = NULL;
