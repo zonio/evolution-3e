@@ -45,9 +45,7 @@ e_cal_sync_server_open(ECalBackend3e* cb)
     goto err0;
   }
 
-  // FIXME
-  ESClient_auth(priv->conn, priv->username, priv->password, &err);
-  //ESClient_auth(priv->conn, priv->username, "qwe", &err);
+  ESClient_auth(priv->conn, priv->owner, priv->password, &err);
   if (err != NULL)
   {
     e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
@@ -595,9 +593,7 @@ e_cal_sync_incremental_synchronization(ECalBackend* backend)
     goto err0;
   }
 
-  // FIXME
-  ESClient_auth(priv->conn, priv->username, priv->password, &err);
-  // ESClient_auth(priv->conn, priv->username, "qwe", &err);
+  ESClient_auth(priv->conn, priv->owner, priv->password, &err);
   if (err != NULL)
   {
     e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),

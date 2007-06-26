@@ -211,13 +211,15 @@ initialize_backend(ECalBackend3e* cb)
 
   source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
   server_hostname = e_source_get_property(source, "eee-server");
-  cal_name = e_source_get_property(source, "eee-calendar-name");
+  cal_name = e_source_get_property(source, "eee-calname");
 
   g_free(priv->server_uri);
   g_free(priv->calname);
+  g_free(priv->owner);
   priv->server_uri = g_strdup_printf("https://%s/ESClient", server_hostname);
   priv->calname = g_strdup(cal_name);
   priv->settings = e_cal_sync_find_settings(cb);
+  priv->owner = g_strdup(e_source_get_property(source, "eee-owner"));
 
   if (server_hostname == NULL || cal_name == NULL)
   {
@@ -339,6 +341,7 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
   D("USERNAME: %s", priv->username);
   D("CALNAME: %s", priv->calname);
   D("PASSWORD: %s", priv->password);
+  D("OWNER: %s", priv->owner);
   source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
 
   if (status != GNOME_Evolution_Calendar_Success)
@@ -346,7 +349,7 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
 
   g_free(priv->calspec);
   g_free(priv->sync_stamp);
-  priv->calspec = g_strdup_printf("%s:%s", priv->username, priv->calname);
+  priv->calspec = g_strdup_printf("%s:%s", priv->owner, priv->calname);
   priv->is_open = TRUE;
   e_cal_sync_load_stamp(cb, &priv->sync_stamp);
   rebuild_clients_changes_list(cb);
@@ -1098,7 +1101,7 @@ e_cal_backend_3e_get_free_busy(ECalBackendSync * backend,
 {
   ECalBackend3e *cb;
   ECalBackend3ePrivate *priv;
-  gchar *address, *name;
+  gchar *address, *name = NULL;
   // icalcomponent *vfb;
   char *calobj;
   GList* l;
@@ -1138,15 +1141,16 @@ e_cal_backend_3e_get_free_busy(ECalBackendSync * backend,
     {
       g_debug("F/B for %s", (char*)l->data);
       address = l->data;     
-      if (e_cal_backend_mail_account_is_valid (address, &name))
+      // FIXME:
+      // if (e_cal_backend_mail_account_is_valid (address, &name))
       {
         calobj = create_user_free_busy(cb, address, name, start, end);
         *freebusy = g_list_append(*freebusy, g_strdup(calobj));
         g_free(calobj);
-        g_free (name);
+       // g_free (name);
       }    
-      else
-        D("No valid mail account: %s", address);
+      // else
+      //  D("No valid mail account: %s", address);
     }    
   }
 
@@ -1317,6 +1321,9 @@ static void e_cal_backend_3e_finalize(GObject * object)
 
   g_free(priv->calname);
   priv->calname = NULL;
+
+  g_free(priv->owner);
+  priv->owner = NULL;
 
   g_free(priv->username);
   priv->username = NULL;

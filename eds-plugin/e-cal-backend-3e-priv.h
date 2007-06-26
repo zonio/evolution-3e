@@ -24,6 +24,7 @@ struct _ECalBackend3ePrivate
   char                                   *username;
   char                                   *password;
   char                                   *calname;
+  char                                   *owner;
   char                                   *calspec;
   GConfClient                            *gconf;
 
