@@ -1054,6 +1054,39 @@ out:
 
 /* not yet implemented functions */
 
+static char*
+create_user_free_busy (ECalBackend3e* cb, const char* address, const char* name,
+                       time_t start, time_t end)
+{
+  ECalBackend3ePrivate *priv;
+  char                 *retval;
+  GError               *error = NULL;
+  char                 from_date[256];
+  char                 to_date[256];
+  struct tm            tm;
+
+  priv = cb->priv;
+  g_return_val_if_fail(priv->conn != NULL, NULL);
+
+  gmtime_r(&start, &tm);
+  if (!(strftime(from_date, sizeof(from_date), "%F %T", &tm)))
+    return NULL;
+
+  gmtime_r(&end, &tm);
+  if (!(strftime(to_date, sizeof(to_date), "%F %T", &tm)))
+    return NULL;
+
+  if (!e_cal_sync_server_open(cb))
+    return NULL;
+
+  // FIXME: do we need g_strdup?
+  retval = ESClient_freeBusy(priv->conn, g_strdup(address), from_date, to_date, &error);
+
+  xr_client_close(priv->conn);
+
+  return retval;
+}
+
 // returns F/B information for a list of users
 static ECalBackendSyncStatus
 e_cal_backend_3e_get_free_busy(ECalBackendSync * backend,
@@ -1066,10 +1099,9 @@ e_cal_backend_3e_get_free_busy(ECalBackendSync * backend,
   ECalBackend3e *cb;
   ECalBackend3ePrivate *priv;
   gchar *address, *name;
-  icalcomponent *vfb;
+  // icalcomponent *vfb;
   char *calobj;
-  
-  // FIXME: what to do here ?
+  GList* l;
 
   T("");
 
@@ -1081,6 +1113,44 @@ e_cal_backend_3e_get_free_busy(ECalBackendSync * backend,
 
   if (!priv->cache)
     return GNOME_Evolution_Calendar_NoSuchCal;
+
+  if (priv->mode == CAL_MODE_LOCAL)
+    return GNOME_Evolution_Calendar_RepositoryOffline;
+
+  *freebusy = NULL;
+
+  g_mutex_lock(priv->sync_mutex);
+
+  if (users == NULL)
+  {
+    if (e_cal_backend_mail_account_get_default (&address, &name))
+    {
+      calobj = create_user_free_busy (cb, address, name, start, end);
+      *freebusy = g_list_append(*freebusy, g_strdup (calobj));
+      g_free(calobj);
+      g_free(address);
+      g_free(name);
+    }    
+  }
+  else
+  {
+    for (l = users; l != NULL; l = l->next )
+    {
+      g_debug("F/B for %s", (char*)l->data);
+      address = l->data;     
+      if (e_cal_backend_mail_account_is_valid (address, &name))
+      {
+        calobj = create_user_free_busy(cb, address, name, start, end);
+        *freebusy = g_list_append(*freebusy, g_strdup(calobj));
+        g_free(calobj);
+        g_free (name);
+      }    
+      else
+        D("No valid mail account: %s", address);
+    }    
+  }
+
+  g_mutex_unlock(priv->sync_mutex);
 
   return GNOME_Evolution_Calendar_Success;
 }
