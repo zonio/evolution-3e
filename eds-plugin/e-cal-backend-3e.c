@@ -18,6 +18,7 @@
 #include "e-cal-backend-3e-utils.h"
 #include "e-cal-backend-3e-sync.h"
 #include "e-cal-backend-3e-priv.h"
+#include "dns-txt-search.h"
 
 extern char       *e_passwords_get_password(const char *component, const char *key);
 
@@ -185,15 +186,13 @@ e_cal_backend_3e_set_mode(ECalBackend * backend,
 }
 
 static ECalBackendSyncStatus
-initialize_backend(ECalBackend3e* cb)
+initialize_backend(ECalBackend3e* cb, const gchar* username)
 { 
   GError*                       err = NULL;
   ECalBackend3ePrivate          *priv;
   ESource                       *source;
-  const char                    *server_hostname;
+  char                          *server_hostname;
   const char                    *cal_name;
-
-  D("INITALIZING BACKEND");
 
   g_return_val_if_fail(cb != NULL, GNOME_Evolution_Calendar_OtherError);
 
@@ -210,13 +209,22 @@ initialize_backend(ECalBackend3e* cb)
     e_cal_backend_cache_put_default_timezone(priv->cache, priv->default_zone);
 
   source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
-  server_hostname = e_source_get_property(source, "eee-server");
-  cal_name = e_source_get_property(source, "eee-calname");
+
+  /*
+   * server_hostname = e_source_get_property(source, "eee-server");
+   *
+   * This method sometimes does not work (race condition...).
+   * So we find out server hostname from dns record by ourselves,
+   * we will not ask evolution.
+  */
 
   g_free(priv->server_uri);
   g_free(priv->calname);
   g_free(priv->owner);
+  cal_name = e_source_get_property(source, "eee-calname");
+  server_hostname = get_eee_server_hostname(username);
   priv->server_uri = g_strdup_printf("https://%s/ESClient", server_hostname);
+  g_free(server_hostname);
   priv->calname = g_strdup(cal_name);
   priv->settings = e_cal_sync_find_settings(cb);
   priv->owner = g_strdup(e_source_get_property(source, "eee-owner"));
@@ -228,9 +236,6 @@ initialize_backend(ECalBackend3e* cb)
     return GNOME_Evolution_Calendar_OtherError;
 
   }
-
-  D("3es uri=%s\n", priv->server_uri);
-  D("3es calname=%s\n", priv->calname);
 
   if (priv->conn == NULL)
   {
@@ -280,7 +285,7 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
 
   status = (priv->is_loaded == TRUE)
     ? GNOME_Evolution_Calendar_Success
-    : initialize_backend (cb);
+    : initialize_backend(cb, username);
 
   g_return_val_if_fail(priv->calname != 0, GNOME_Evolution_Calendar_OtherError);
 
@@ -291,44 +296,8 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
   {
     source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
     priv->username = g_strdup(e_source_get_property(source, "username"));
-
-    if (!priv->username)
-    {
-      ESourceList* eslist;
-      GSList* iter;
-
-      D("WHAT USERNAME for CALENDAR %s", priv->calname);
-
-      eslist = e_source_list_new_for_gconf(priv->gconf, CALENDAR_SOURCES);
-      GSList* groups_list = g_slist_copy(e_source_list_peek_groups(eslist));
-      for (iter = groups_list; iter; iter = iter->next)
-      {
-        ESourceGroup* group = E_SOURCE_GROUP(iter->data);
-        const char* group_name = e_source_group_peek_name(group);
-
-        // skip non eee groups
-        if (strcmp(e_source_group_peek_base_uri(group), EEE_URI_PREFIX))
-          continue;
-
-        if (group_name && g_str_has_prefix(group_name, "3E: "))
-        {
-          GSList *p;
-          for (p = e_source_group_peek_sources(group); p != NULL; p = p->next)
-          {
-            const char* cal_name = e_source_get_property(E_SOURCE(p->data), "eee-calendar-name");
-            if (priv->calname && cal_name && !strcmp(cal_name, priv->calname))
-              priv->username = g_strdup(e_source_get_property(E_SOURCE(p->data), "username"));
-          }
-        }
-
-        g_slist_free(groups_list);
-      }
-    }
-    else
-    {
-      priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT,
-                                                e_source_get_property(source, "auth-key"));
-    }
+    priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT,
+                                              e_source_get_property(source, "auth-key"));
   }
   else
   {
@@ -338,10 +307,11 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
 
   g_return_val_if_fail(priv->username && *priv->username != 0, GNOME_Evolution_Calendar_OtherError);
 
-  D("USERNAME: %s", priv->username);
-  D("CALNAME: %s", priv->calname);
-  D("PASSWORD: %s", priv->password);
-  D("OWNER: %s", priv->owner);
+  D("username  %s", priv->username);
+  D("calname %s", priv->calname);
+  D("password %s", priv->password);
+  D("owner %s", priv->owner);
+  D("server uri %s", priv->server_uri);
   source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
 
   if (status != GNOME_Evolution_Calendar_Success)
@@ -357,7 +327,6 @@ e_cal_backend_3e_open(ECalBackendSync* backend,
   if (priv->mode == CAL_MODE_REMOTE)
   {
     priv->sync_mode = SYNC_WORK;
-    D("waking sync thread");
     g_cond_signal(priv->sync_cond);
   }
   else
