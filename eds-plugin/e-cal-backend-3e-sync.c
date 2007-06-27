@@ -815,6 +815,14 @@ e_cal_sync_total_synchronization(ECalBackend3e* cb)
     {
       if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
         g_warning("Could not remove component from cache!");
+      else
+      {
+        char* str_comp = g_strdup(e_cal_component_get_as_string(ccomp));
+        ECalComponentId* id;
+        id = e_cal_component_get_id(ccomp);
+        e_cal_backend_notify_object_removed(E_CAL_BACKEND(cb), id,
+                                            e_cal_component_get_as_string(ccomp), NULL);
+      }
     }
     else
     {
@@ -849,12 +857,10 @@ e_cal_sync_total_synchronization(ECalBackend3e* cb)
           goto out2;
         }
         e_cal_component_set_sync_state(escomp, E_CAL_COMPONENT_IN_SYNCH);
-        D("INSERTING COMPONENT");
         if (!e_cal_backend_cache_put_component(priv->cache, escomp))
           g_warning("Cannot put component into the cache!");
         else
         {
-          D("INSERTED OK");
           char* compstr;
           compstr = e_cal_component_get_as_string(escomp);	
           e_cal_backend_notify_object_created(E_CAL_BACKEND(cb), compstr);
