@@ -62,7 +62,9 @@ err0:
   return FALSE;
 }
 
-// delete component from server
+/*
+ *  delete component from server
+ */
 gboolean
 e_cal_sync_server_object_delete(ECalBackend3e* cb,
                                 ECalComponent* comp,
@@ -109,7 +111,9 @@ e_cal_sync_server_object_delete(ECalBackend3e* cb,
   return ok;
 }
 
-// update component on server
+/*
+ *  update component on server
+ */
 gboolean
 e_cal_sync_server_object_update(ECalBackend3e* cb,
                                 ECalComponent* ccomp,
@@ -155,7 +159,9 @@ e_cal_sync_server_object_update(ECalBackend3e* cb,
   return ok;
 }
 
-// add component on server
+/*
+ *  add component on server
+ */
 gboolean
 e_cal_sync_server_object_add(ECalBackend3e* cb,
                              ECalComponent* ccomp,
@@ -201,7 +207,9 @@ e_cal_sync_server_object_add(ECalBackend3e* cb,
   return ok;
 }
 
-// free result with icalcomponent_free
+/*
+ *  free result with icalcomponent_free
+ */
 static icalcomponent*
 e_cal_sync_query_server_objects(ECalBackend3e* cb,
                                 const char* sync_start,
@@ -215,7 +223,7 @@ e_cal_sync_query_server_objects(ECalBackend3e* cb,
 
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(sync_stop != NULL, FALSE);
-  // sync_start can be NULL
+  /* sync_start can be NULL */
 
   priv = cb->priv;
 
@@ -234,8 +242,9 @@ e_cal_sync_query_server_objects(ECalBackend3e* cb,
     goto out1;
   }
 
-  // queried_comps is one big component with subcomponents
-  // returned from queryObjects call
+  /* queried_comps is one big component with subcomponents
+     returned from queryObjects call 
+   */
   queried_comps = icalparser_parse_string(str_server_objects);
   if (queried_comps == NULL)
   {
@@ -250,8 +259,9 @@ out1:
   return NULL;
 }
 
-// create a list with server objects
-// if last_synchro_time is NULL, queries all server objects
+/* create a list with server objects
+   if last_synchro_time is NULL, queries all server objects
+ */
 gboolean
 e_cal_sync_server_to_client_sync(ECalBackend* backend,
                                  const char* sync_start,
@@ -289,29 +299,29 @@ e_cal_sync_server_to_client_sync(ECalBackend* backend,
 
   if (kind == ICAL_VCALENDAR_COMPONENT)
   {
-    // scomp is subcomponent of queried_comps
+    /* scomp is subcomponent of queried_comps */
     scomp = icalcomponent_get_first_component (queried_comps, bkind);
 
     while (scomp)
     {
       T("appending new component to server list");
 
-      // scomp will be modified to ECalComponent escomp
+      /* scomp will be modified to ECalComponent escomp */
       escomp = e_cal_component_new();
       if (!e_cal_component_set_icalcomponent(escomp, icalcomponent_new_clone(scomp)))
       {
         g_warning("Cannot parse component queried from server!");
         goto out2;
       }
-      // eccomp is corresponding ECalComponent in client's cache (if any)
+      /* eccomp is corresponding ECalComponent in client's cache (if any) */
       eccomp = e_cal_sync_find_this_in_cache(cb, escomp);
 
       if (!eccomp)
       {
-        // this component was is not yet in client's cache
+        /* this component was is not yet in client's cache */
         if (!icomp_get_deleted_status(scomp))
         {
-          // REMOTELY CREATED
+          /* REMOTELY CREATED */
           e_cal_component_set_sync_state(escomp, E_CAL_COMPONENT_IN_SYNCH);
           if (!e_cal_backend_cache_put_component(priv->cache, escomp))
           {
@@ -324,14 +334,14 @@ e_cal_sync_server_to_client_sync(ECalBackend* backend,
           e_cal_backend_notify_object_created(backend, compstr);
           g_free(compstr);
         }
-        // otherwise do nothing
+        /* otherwise do nothing */
       }
       else
       {
-        // we already have it in client's cache
+        /* we already have it in client's cache */
         if (!icomp_get_deleted_status(scomp))
         {
-          // REMOTELY MODIFIED
+          /* REMOTELY MODIFIED */
           e_cal_component_set_sync_state(escomp, E_CAL_COMPONENT_IN_SYNCH);
           if (!e_cal_backend_cache_put_component(priv->cache, escomp))
           {
@@ -347,7 +357,7 @@ e_cal_sync_server_to_client_sync(ECalBackend* backend,
         }
         else
         {
-          // REMOTELY DELETED
+          /* REMOTELY DELETED */
           e_cal_component_get_ids(escomp, &uid, &rid);
           if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
           {
@@ -371,15 +381,19 @@ e_cal_sync_server_to_client_sync(ECalBackend* backend,
   icalcomponent_free(queried_comps);
   ok = TRUE;
 out2:
-  // g_free(escomp);
-  // g_free(queried_comps);
+  /*
+   * g_free(escomp);
+   * g_free(queried_comps);
+   */
 out1:
 
   return ok;
 }
 
-// synchronizes objects, from client's perspective
-// component is only in the client's cache, not on server yet
+/*
+ * synchronizes objects, from client's perspective
+ * component is only in the client's cache, not on server yet
+ */
 gboolean
 e_cal_sync_client_to_server_sync(ECalBackend3e* cb)
 {
@@ -443,7 +457,9 @@ e_cal_sync_client_to_server_sync(ECalBackend3e* cb)
   return ok;
 }
 
-// wake up synchronization thread
+/*
+ *  wake up synchronization thread
+ */
 void
 server_sync_signal(ECalBackend3e* cb,
                    gboolean stop)
@@ -628,7 +644,9 @@ err0:
   return;
 }
 
-// synchro thread main
+/*
+ *  synchro thread main
+ */
 gpointer
 e_cal_sync_main_thread(gpointer data)
 {
@@ -718,7 +736,7 @@ e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
 
   priv->sync_clients_changes = g_list_delete_link(priv->sync_clients_changes,
                                                   node);
-  // g_object_unref(comp);
+  /* g_object_unref(comp); */
 
   D("unmarking component as changed, now %d changes",
     g_list_length(priv->sync_clients_changes));
@@ -798,10 +816,16 @@ e_cal_sync_total_synchronization(ECalBackend3e* cb)
 
   gmtime_r(&now_time, &tm_now);
   if (!(strftime(now, sizeof(now), "%F %T", &tm_now)))
+  {
+    g_warning("Cannot convert time_now to string format!");
     return;
+  }
 
   if (!e_cal_sync_server_open(cb))
+  {
+    g_warning("Unable to open connection to the server");
     return;
+  }
 
   uidindex = g_hash_table_new(g_str_hash, g_str_equal);
   cobjs = e_cal_backend_cache_get_components(bcache);
@@ -840,7 +864,7 @@ e_cal_sync_total_synchronization(ECalBackend3e* cb)
 
   if (kind == ICAL_VCALENDAR_COMPONENT)
   {
-    // scomp is subcomponent of queried_comps
+    /* scomp is subcomponent of queried_comps */
     scomp = icalcomponent_get_first_component(server_components, bkind);
 
     while (scomp)
