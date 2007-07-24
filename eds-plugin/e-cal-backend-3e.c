@@ -194,8 +194,15 @@ initialize_backend (ECalBackend3e * cb, const gchar * username)
 
   if (server_hostname == NULL || cal_name == NULL)
   {
-    e_cal_backend_notify_error (E_CAL_BACKEND (cb),
-                                "Invalid calendar source list setup.");
+    /*
+     * This sometimes happens ... When starting evolution in offline mode,
+     * we do not know this... do not throw error message.
+     *
+     * */
+    /*
+       e_cal_backend_notify_error (E_CAL_BACKEND (cb),
+       "Invalid calendar source list setup.");
+    */
     return GNOME_Evolution_Calendar_OtherError;
 
   }
