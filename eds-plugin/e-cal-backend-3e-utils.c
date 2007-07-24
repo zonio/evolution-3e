@@ -1,3 +1,14 @@
+/**************************************************************************************************
+ *  3E plugin for Evolution Data Server                                                           * 
+ *                                                                                                *
+ *  Copyright (C) 2007 by Zonio                                                                   *
+ *  www.zonio.net                                                                                 *
+ *  stanislav.slusny@zonio.net                                                                    *
+ *                                                                                                *
+ **************************************************************************************************/
+
+#include "e-cal-backend-3e.h"
+#include "e-cal-backend-3e-priv.h"
 #include "e-cal-backend-3e-utils.h"
 
 void
@@ -115,6 +126,18 @@ icomp_get_uid(icalcomponent* comp)
   return NULL;
 }
 
+gboolean
+e_cal_component_has_deleted_status(ECalComponent* comp)
+{
+  /* extract deleted flag */
+  icalcomponent *icomp;
+
+  g_return_val_if_fail(comp != NULL, FALSE);
+ 
+  icomp = e_cal_component_get_icalcomponent(comp);
+  return icomp_get_deleted_status(icomp);
+}
+
 // set internal synchro state
 void
 e_cal_component_set_sync_state(ECalComponent *comp,
@@ -129,6 +152,99 @@ e_cal_component_set_sync_state(ECalComponent *comp,
   state_string = g_strdup_printf ("%d", state);
   icomp_x_prop_set(icomp, "X-EEE-SYNC-STATE", state_string);
   g_free (state_string);
+}
+
+void
+e_cal_component_set_local_state(ECalBackend * backend, ECalComponent* comp)
+{
+  icalcomponent              *icomp;
+  ECalComponentText          comp_summary;
+  const gchar                      *text;
+  ECalBackend3e*              cb;
+  ECalBackend3ePrivate*       priv;
+
+  g_return_if_fail(comp != NULL);
+  g_return_if_fail(backend != NULL);
+
+  cb = E_CAL_BACKEND_3E(backend);
+  priv = cb->priv;
+
+  g_debug("SETTING LOCAL FOR %s",
+          e_cal_component_get_as_string(comp));
+
+  if (!e_cal_component_is_local(comp))
+  {
+    icomp = e_cal_component_get_icalcomponent(comp);
+    icomp_x_prop_set(icomp, "X-EEE-LOCAL", "1");
+    e_cal_component_get_summary(comp, &comp_summary);
+    text = comp_summary.value;
+    /* FIXME: memory leak ? */
+    char* oldstr = e_cal_component_get_as_string(comp);
+    comp_summary.value = g_strdup_printf("EEE-LOCAL-EEE %s", text);
+    comp_summary.altrep = NULL;
+    e_cal_component_set_summary(comp, &comp_summary);
+    char* newstr = e_cal_component_get_as_string(comp);
+    e_cal_backend_cache_put_component(priv->cache, comp);
+    e_cal_backend_notify_object_modified(backend, oldstr, newstr);
+    g_free(oldstr);
+    g_free(newstr);
+  }
+  else
+    g_debug("LOCAL already set!");
+}
+
+void
+e_cal_component_unset_local_state(ECalBackend* backend, ECalComponent* comp)
+{
+  icalcomponent *icomp;
+  ECalComponentText          comp_summary;
+  const gchar* text;
+  ECalBackend3e*              cb;
+  ECalBackend3ePrivate*       priv;
+
+  g_return_if_fail(comp != NULL);
+  g_return_if_fail(backend != NULL);
+
+  cb = E_CAL_BACKEND_3E(backend);
+  priv = cb->priv;
+
+  e_cal_component_get_summary(comp, &comp_summary);
+  text = comp_summary.value;
+
+  //FXIME: memory leak ?
+  if (g_str_has_prefix(text, "EEE-LOCAL-EEE"))
+  {
+    comp_summary.value = g_strdup(text + 13);
+    comp_summary.altrep = NULL;
+  }
+
+  icomp = e_cal_component_get_icalcomponent(comp);
+  icomp_x_prop_set(icomp, "X-EEE-LOCAL", "0");
+
+  e_cal_component_set_summary(comp, &comp_summary);
+  e_cal_backend_cache_put_component(priv->cache, comp);
+}
+
+time_t
+e_cal_component_get_dtstamp_as_timet(ECalComponent* comp)
+{
+  struct icaltimetype     itt;
+
+  g_return_val_if_fail(comp != NULL, 0);
+
+  e_cal_component_get_dtstamp(comp, &itt);
+  return icaltime_as_timet_with_zone(itt, icaltimezone_get_utc_timezone());
+}
+
+time_t
+icomp_get_dtstamp_as_timet(icalcomponent* comp)
+{
+  struct icaltimetype     itt;
+
+  g_return_val_if_fail(comp != NULL, 0);
+
+  itt = icalcomponent_get_dtstamp(comp);
+  return icaltime_as_timet_with_zone(itt, icaltimezone_get_utc_timezone());
 }
 
 void
@@ -178,9 +294,37 @@ e_cal_component_get_stamp(ECalComponent* comp)
   return summary->value;
 }
 
+ECalComponentSyncState
+icomp_get_sync_state(icalcomponent* icomp)
+{
+  const char          *state_string;
+  char                *endptr;
+  int                 int_state ;
+
+  state_string = icomp_x_prop_get(icomp, "X-EEE-SYNC-STATE");
+  int_state = g_ascii_strtoull(state_string, &endptr, 0);
+
+  // unknown state: do not synchronize
+  if (endptr == state_string || (int_state < 0 || int_state > E_CAL_COMPONENT_LOCALLY_MODIFIED))
+    int_state = E_CAL_COMPONENT_IN_SYNCH;
+
+  return (ECalComponentSyncState)int_state;
+}
+
 // get internal synchro state
 ECalComponentSyncState
 e_cal_component_get_sync_state(ECalComponent* comp)
+{
+  icalcomponent       *icomp;
+
+  g_return_val_if_fail(comp != NULL, E_CAL_COMPONENT_IN_SYNCH);
+
+  icomp = e_cal_component_get_icalcomponent(comp);
+  return icomp_get_sync_state(icomp);
+}
+
+gboolean
+e_cal_component_is_local(ECalComponent* comp)
 {
   icalcomponent       *icomp;
   const char          *state_string;
@@ -190,14 +334,18 @@ e_cal_component_get_sync_state(ECalComponent* comp)
   g_return_val_if_fail(comp != NULL, E_CAL_COMPONENT_IN_SYNCH);
 
   icomp = e_cal_component_get_icalcomponent(comp);
-  state_string = icomp_x_prop_get(icomp, "X-EEE-SYNC-STATE");
+  state_string = icomp_x_prop_get(icomp, "X-EEE-LOCAL");
+
+  if (!state_string)
+    return FALSE;
+
   int_state = g_ascii_strtoull(state_string, &endptr, 0);
 
   // unknown state: do not synchronize
-  if (endptr == state_string || (int_state < 0 || int_state > E_CAL_COMPONENT_LOCALLY_MODIFIED))
-    int_state = E_CAL_COMPONENT_IN_SYNCH;
+  if (endptr == state_string || (int_state < 0 || int_state > 1))
+    return FALSE;
 
-  return (ECalComponentSyncState)int_state;
+  return int_state == 1;
 }
 
 void
@@ -249,3 +397,7 @@ e_cal_component_compare(gconstpointer ptr1,
   return result;
 }
 
+gboolean e_cal_has_write_permission(const char* perm_string)
+{
+  return strcmp(perm_string, "write") == 0;
+}

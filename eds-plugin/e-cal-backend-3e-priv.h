@@ -1,3 +1,12 @@
+/**************************************************************************************************
+ *  3E plugin for Evolution Data Server                                                           * 
+ *                                                                                                *
+ *  Copyright (C) 2007 by Zonio                                                                   *
+ *  www.zonio.net                                                                                 *
+ *  stanislav.slusny@zonio.net                                                                    *
+ *                                                                                                *
+ **************************************************************************************************/
+
 #ifndef E_CAL_BACKEND_3E_PRIV
 #define E_CAL_BACKEND_3E_PRIV
 
@@ -21,12 +30,15 @@ struct _ECalBackend3ePrivate
   xr_client_conn                         *conn;
   gboolean                                is_open;
   gboolean                                is_loaded;
+  gboolean                                is_owned;
   char                                   *username;
   char                                   *password;
   char                                   *calname;
   char                                   *owner;
+  gboolean                                has_write_permission;
   char                                   *calspec;
   GConfClient                            *gconf;
+  guint                                   source_changed_perm;
 
   /* Local/remote mode */
   CalMode                                 mode;

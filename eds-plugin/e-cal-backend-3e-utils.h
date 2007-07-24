@@ -1,3 +1,12 @@
+/**************************************************************************************************
+ *  3E plugin for Evolution Data Server                                                           * 
+ *                                                                                                *
+ *  Copyright (C) 2007 by Zonio                                                                   *
+ *  www.zonio.net                                                                                 *
+ *  stanislav.slusny@zonio.net                                                                    *
+ *                                                                                                *
+ **************************************************************************************************/
+
 #ifndef E_CAL_BACKEND_3E_UTILS
 #define  E_CAL_BACKEND_3E_UTILS
 
@@ -71,4 +80,21 @@ e_cal_component_set_stamp(ECalComponent *comp,
 
 const gchar*
 e_cal_component_get_stamp(ECalComponent* comp);
+
+gboolean e_cal_has_write_permission(const char* perm_string);
+
+void e_cal_component_set_local_state(ECalBackend * backend, ECalComponent* comp);
+
+void e_cal_component_unset_local_state(ECalBackend* backend, ECalComponent* comp);
+
+
+gboolean e_cal_component_is_local(ECalComponent* comp);
+
+ECalComponentSyncState icomp_get_sync_state(icalcomponent* comp);
+
+time_t e_cal_component_get_dtstamp_as_timet(ECalComponent* comp);
+
+time_t icomp_get_dtstamp_as_timet(icalcomponent* comp);
+
+gboolean e_cal_component_has_deleted_status(ECalComponent* comp);
 #endif

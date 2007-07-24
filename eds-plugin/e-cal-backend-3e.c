@@ -1,3 +1,12 @@
+/**************************************************************************************************
+ *  3E plugin for Evolution Data Server                                                           * 
+ *                                                                                                *
+ *  Copyright (C) 2007 by Zonio                                                                   *
+ *  www.zonio.net                                                                                 *
+ *  stanislav.slusny@zonio.net                                                                    *
+ *                                                                                                *
+ **************************************************************************************************/
+
 #include <config.h>
 #include <string.h>
 #include <unistd.h>
@@ -115,6 +124,16 @@ e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
   g_mutex_unlock (priv->sync_mutex);
 }
 
+static void
+source_changed_perm(ESource *source, ECalBackend3e *cb)
+{
+  /* FIXME
+   * We should force a reload of the data when this gets called. Unfortunately,
+   * this signal isn't getting through from evolution to the backend
+   */
+  g_debug("SOURCE CHANGED");
+}
+
 static ECalBackendSyncStatus
 initialize_backend (ECalBackend3e * cb, const gchar * username)
 {
@@ -125,6 +144,7 @@ initialize_backend (ECalBackend3e * cb, const gchar * username)
   const char                                       *cal_name;
 
   g_return_val_if_fail (cb != NULL, GNOME_Evolution_Calendar_OtherError);
+  T("");
 
   priv = cb->priv;
   priv->cache =
@@ -161,6 +181,16 @@ initialize_backend (ECalBackend3e * cb, const gchar * username)
   priv->calname = g_strdup (cal_name);
   priv->settings = e_cal_sync_find_settings (cb);
   priv->owner = g_strdup (e_source_get_property (source, "eee-owner"));
+  priv->is_owned = strcmp(username, priv->owner) == 0;
+  if (priv->is_owned)
+    priv->has_write_permission = TRUE;
+  else
+    priv->has_write_permission = strcmp(e_source_get_property(source, "eee-perm"), "write") == 0;
+
+  if (priv->source_changed_perm == 0)
+    priv->source_changed_perm = g_signal_connect(G_OBJECT(source), "changed",
+                                                 G_CALLBACK (source_changed_perm), cb);
+
 
   if (server_hostname == NULL || cal_name == NULL)
   {
@@ -250,6 +280,7 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   D ("password %s", priv->password);
   D ("owner %s", priv->owner);
   D ("server uri %s", priv->server_uri);
+  D ("PERMISSION:");
   source = e_cal_backend_get_source (E_CAL_BACKEND (cb));
 
   if (status != GNOME_Evolution_Calendar_Success)
@@ -285,14 +316,19 @@ e_cal_backend_3e_is_read_only (ECalBackendSync * backend,
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
+  ESource                                          *source;
 
   g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
   g_return_val_if_fail (read_only != NULL,
                         GNOME_Evolution_Calendar_OtherError);
 
+  /*
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
-  *read_only = !priv->is_open;
+  *read_only = priv->is_open == FALSE || priv->has_write_permission == FALSE;
+  D("READONLY %d", *read_only);
+  */
+  *read_only = FALSE;
 
   T ("backend=%p, cal=%p, read_only=%s", backend, cal,
      *read_only ? "true" : "false");
@@ -724,11 +760,14 @@ e_cal_backend_3e_start_query (ECalBackend * backend, EDataCalView * query)
     comp = E_CAL_COMPONENT (l->data);
     state = e_cal_component_get_sync_state (comp);
 
-    if (e_cal_backend_sexp_match_comp
-        (cbsexp, comp, E_CAL_BACKEND (backend))
+    /*
+    if (e_cal_backend_sexp_match_comp(cbsexp, comp, E_CAL_BACKEND (backend))
         && state != E_CAL_COMPONENT_LOCALLY_DELETED)
-      objects =
-        g_list_append (objects, e_cal_component_get_as_string (l->data));
+      objects = g_list_append (objects, e_cal_component_get_as_string (l->data));
+      */
+    if (e_cal_backend_sexp_match_comp(cbsexp, comp, E_CAL_BACKEND (backend))
+        && !e_cal_component_has_deleted_status(comp))
+      objects = g_list_append (objects, e_cal_component_get_as_string (l->data));
 
   }
 
@@ -758,6 +797,7 @@ e_cal_backend_3e_create_object (ECalBackendSync * backend,
   ECalComponent                                    *comp;
   ECalBackendSyncStatus                             status =
       GNOME_Evolution_Calendar_Success;
+  GError                                           *local_err = NULL;
 
   T ("backend=%p, cal=%p, calobj=%s, uid=%s", backend, cal, *calobj, *uid);
 
@@ -765,6 +805,12 @@ e_cal_backend_3e_create_object (ECalBackendSync * backend,
   g_return_val_if_fail (calobj != NULL, GNOME_Evolution_Calendar_OtherError);
 
   g_mutex_lock (priv->sync_mutex);
+
+  if (!priv->has_write_permission)
+  {
+    status = GNOME_Evolution_Calendar_PermissionDenied;
+    goto out;
+  }
 
   if (!(comp = e_cal_component_new_from_string (*calobj)))
   {
@@ -774,9 +820,16 @@ e_cal_backend_3e_create_object (ECalBackendSync * backend,
 
   if (priv->mode == CAL_MODE_REMOTE)
   {
-    if (!e_cal_sync_server_object_add (cb, comp, FALSE))
+    if (!e_cal_sync_server_object_add (cb, comp, FALSE, &local_err))
     {
-      g_warning ("Could not add object to server");
+      e_cal_sync_error_message(E_CAL_BACKEND(backend), comp, local_err);
+      g_error_free(local_err);
+/*        
+      const gchar* rid = e_cal_component_get_recurid_as_string(comp);
+      e_cal_backend_cache_remove_component(priv->cache, *uid, rid);
+ *        we could not add component, error was not catched by evolution,
+ *        but by server. we do not want to resend the component.
+*/
       e_cal_component_set_sync_state (comp,
                                       E_CAL_COMPONENT_LOCALLY_CREATED);
       e_cal_sync_client_changes_insert (cb, comp);
@@ -824,6 +877,7 @@ e_cal_backend_3e_modify_object (ECalBackendSync * backend,
   const char                                       *uid = NULL;
   ECalBackendSyncStatus                             status =
       GNOME_Evolution_Calendar_Success;
+  GError                                           *local_err = NULL;
 
   T ("Modify object");
 
@@ -840,6 +894,13 @@ e_cal_backend_3e_modify_object (ECalBackendSync * backend,
 
   g_mutex_lock (priv->sync_mutex);
 
+  if (!priv->has_write_permission)
+  {
+    // status = GNOME_Evolution_Calendar_PermissionDenied;
+     status = GNOME_Evolution_Calendar_OtherError;
+    goto out;
+  }
+
   updated_comp = e_cal_component_new_from_string (calobj);
   if (updated_comp == NULL)
   {
@@ -848,6 +909,7 @@ e_cal_backend_3e_modify_object (ECalBackendSync * backend,
   }
 
   e_cal_component_get_uid (updated_comp, &uid);
+  e_cal_component_unset_local_state(E_CAL_BACKEND(backend), updated_comp);
   cache_comp = e_cal_backend_cache_get_component (priv->cache, uid, NULL);
 
   if (cache_comp == NULL)
@@ -858,12 +920,28 @@ e_cal_backend_3e_modify_object (ECalBackendSync * backend,
 
   if (priv->mode == CAL_MODE_REMOTE)
   {
-    if (!e_cal_sync_server_object_update (cb, updated_comp, FALSE))
+    switch (e_cal_component_get_sync_state (cache_comp))
     {
-      g_warning ("Could not update component on server");
-      e_cal_component_set_sync_state (updated_comp,
-                                      E_CAL_COMPONENT_LOCALLY_MODIFIED);
-      e_cal_sync_client_changes_insert (cb, updated_comp);
+      case E_CAL_COMPONENT_LOCALLY_CREATED:
+        if (!e_cal_sync_server_object_add (cb, updated_comp, FALSE, &local_err))
+        {
+          e_cal_sync_error_message(E_CAL_BACKEND(backend), updated_comp, local_err);
+          g_error_free(local_err);
+          e_cal_component_set_sync_state (updated_comp,
+                                          E_CAL_COMPONENT_LOCALLY_CREATED);
+          e_cal_sync_client_changes_insert (cb, updated_comp);
+        }
+        break;
+      default:
+        if (!e_cal_sync_server_object_update (cb, updated_comp, FALSE, &local_err))
+        {
+          e_cal_sync_error_message(E_CAL_BACKEND(backend), updated_comp, local_err);
+          g_error_free(local_err);
+
+          if (e_cal_component_get_sync_state(updated_comp) == E_CAL_COMPONENT_IN_SYNCH)
+            e_cal_component_set_sync_state (updated_comp,
+                                            E_CAL_COMPONENT_LOCALLY_MODIFIED);
+        }
     }
   }
   else
@@ -909,6 +987,7 @@ e_cal_backend_3e_remove_object (ECalBackendSync * backend,
   ECalBackendSyncStatus                             status =
       GNOME_Evolution_Calendar_Success;
   ECalComponentSyncState                            state;
+  GError                                            *local_err = NULL;
 
   T ("backend=%p, cal=%p, rid=%s, uid=%s", backend, cal, rid, uid);
   g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
@@ -919,6 +998,12 @@ e_cal_backend_3e_remove_object (ECalBackendSync * backend,
   *old_object = *object = NULL;
 
   g_mutex_lock (priv->sync_mutex);
+
+  if (!priv->has_write_permission)
+  {
+    status = GNOME_Evolution_Calendar_PermissionDenied;
+    goto out;
+  }
 
   cache_comp = e_cal_backend_cache_get_component (priv->cache, uid, rid);
   if (cache_comp == NULL)
@@ -935,11 +1020,10 @@ e_cal_backend_3e_remove_object (ECalBackendSync * backend,
 
       if (priv->mode == CAL_MODE_REMOTE)
       {
-        if (!e_cal_sync_server_object_delete (cb, cache_comp, FALSE))
+        if (!e_cal_sync_server_object_delete (cb, cache_comp, FALSE, &local_err))
         {
-          g_warning ("Could not delete component!");
-          e_cal_component_set_sync_state (cache_comp,
-                                          E_CAL_COMPONENT_IN_SYNCH);
+          e_cal_sync_error_message(E_CAL_BACKEND(cb), cache_comp, local_err);
+          g_error_free(local_err);
           status = GNOME_Evolution_Calendar_OtherError;
           break;
         }
@@ -990,8 +1074,6 @@ out:
   return status;
 }
 
-/* not yet implemented functions */
-
 static char *
 create_user_free_busy (ECalBackend3e * cb, const char *address,
                        const char *name, time_t start, time_t end)
@@ -1002,6 +1084,7 @@ create_user_free_busy (ECalBackend3e * cb, const char *address,
   char                                              from_date[256];
   char                                              to_date[256];
   struct tm                                         tm;
+  GError                                            *local_err = NULL;
 
   priv = cb->priv;
   g_return_val_if_fail (priv->conn != NULL, NULL);
@@ -1014,8 +1097,13 @@ create_user_free_busy (ECalBackend3e * cb, const char *address,
   if (!(strftime (to_date, sizeof (to_date), "%F %T", &tm)))
     return NULL;
 
-  if (!e_cal_sync_server_open (cb))
+  if (!e_cal_sync_server_open (cb, &local_err))
+  {
+    g_warning("Could not open connection to server(%d): %s!",
+              local_err->code, local_err->message);
+    g_error_free(local_err);
     return NULL;
+  }
 
   /* FIXME: do we need g_strdup? */
   retval =
@@ -1214,6 +1302,7 @@ e_cal_backend_3e_internal_get_timezone (ECalBackend * backend,
 
 static ECalBackendSyncClass *parent_class;
 
+
 static void
 e_cal_backend_3e_init (ECalBackend3e * cb, ECalBackend3eClass * klass)
 {
@@ -1229,6 +1318,7 @@ e_cal_backend_3e_init (ECalBackend3e * cb, ECalBackend3eClass * klass)
   cb->priv->sync_thread =
     g_thread_create (e_cal_sync_main_thread, cb, TRUE, NULL);
   cb->priv->gconf = gconf_client_get_default ();
+  cb->priv->source_changed_perm = 0;
 
   e_cal_backend_sync_set_lock (E_CAL_BACKEND_SYNC (cb), TRUE);
 }
@@ -1256,7 +1346,7 @@ e_cal_backend_3e_finalize (GObject * object)
   cb = E_CAL_BACKEND_3E (object);
   priv = cb->priv;
 
-  server_sync_signal (cb, TRUE);
+  server_sync_signal (cb);
   g_thread_join (priv->sync_thread);
   g_cond_free (priv->sync_cond);
   g_mutex_free (priv->sync_mutex);
