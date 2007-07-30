@@ -169,9 +169,6 @@ e_cal_component_set_local_state(ECalBackend * backend, ECalComponent* comp)
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
 
-  g_debug("SETTING LOCAL FOR %s",
-          e_cal_component_get_as_string(comp));
-
   if (!e_cal_component_is_local(comp))
   {
     icomp = e_cal_component_get_icalcomponent(comp);

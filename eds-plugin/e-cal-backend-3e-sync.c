@@ -14,7 +14,12 @@
 
 #define EEE_SYNC_STAMP "EEE-SYNC-STAMP"
 
-GQuark es_server_error_quark();
+// FIXME
+GQuark es_server_error_quark()
+{
+  static GQuark quark;
+  return quark ? quark : (quark = g_quark_from_static_string("es_server_error"));
+}
 
 GQuark e_cal_eds_error_quark()
 {
@@ -813,7 +818,7 @@ e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
   }
 
   priv->sync_clients_changes = g_list_delete_link(priv->sync_clients_changes, node);
-  /* FIXME: g_object_unref(comp); */
+  g_object_unref(comp);
 
   D("unmarking component as changed, now %d changes", g_list_length(priv->sync_clients_changes));
 }
@@ -901,6 +906,7 @@ e_cal_sync_mirror_server_change(ECalBackend3e* cb, icalcomponent* scomp)
     {
       id = e_cal_component_get_id(escomp);
       e_cal_backend_notify_object_removed(E_CAL_BACKEND(cb), id, compstr, NULL);
+      e_cal_component_free_id(id);
     }
 
     g_free(compstr);
@@ -967,6 +973,7 @@ e_cal_sync_collect_cache_hash(ECalBackend3e* cb, gboolean remove_unchanged)
           id = e_cal_component_get_id(ccomp);
           e_cal_backend_notify_object_removed(E_CAL_BACKEND(cb), id,
                                               e_cal_component_get_as_string(ccomp), NULL);
+          e_cal_component_free_id(id);
         }
       }
     }
