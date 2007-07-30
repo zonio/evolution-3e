@@ -1832,7 +1832,8 @@ e_cal_backend_3e_finalize (GObject * object)
     priv->default_zone = NULL;
   }
 
-  g_object_unref(priv->settings);
+  if (priv->settings)
+    g_object_unref(priv->settings);
   g_object_unref (priv->gconf);
   priv->gconf = NULL;
 
