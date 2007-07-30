@@ -578,9 +578,13 @@ e_cal_sync_find_settings(ECalBackend3e* cb)
     e_cal_component_get_summary(comp, &summary);
     if ((e_cal_component_get_vtype(comp) == E_CAL_COMPONENT_EVENT)
       && g_ascii_strcasecmp(summary.value, EEE_SYNC_STAMP) == 0)
-        found = comp;
+    {
+      found = comp;
+      g_object_ref(found);
+    }
   }
 
+  g_list_foreach(components, (GFunc) g_object_unref, NULL);
   g_list_free(components);
 
   return found;
@@ -862,6 +866,7 @@ rebuild_clients_changes_list(ECalBackend3e* cb)
       g_object_unref(ccomp);
   }
 
+  g_list_foreach(cobjs, (GFunc) g_object_unref, NULL);
   g_list_free(cobjs);
 }
 
@@ -984,9 +989,8 @@ e_cal_sync_collect_cache_hash(ECalBackend3e* cb, gboolean remove_unchanged)
     }
   }
 
-  // FIXME:
-  //g_list_foreach(cobjs, (GFunc)g_object_unref, NULL);
-  //g_list_free(cobjs);
+  g_list_foreach(cobjs, (GFunc) g_object_unref, NULL);
+  g_list_free(cobjs);
 
   return cache_hash;
 }
