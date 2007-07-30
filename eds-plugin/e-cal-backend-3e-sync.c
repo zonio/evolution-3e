@@ -1041,6 +1041,7 @@ e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalCompone
     e_cal_component_set_sync_state(new_escomp, E_CAL_COMPONENT_IN_SYNCH);
     if (!e_cal_backend_cache_put_component(priv->cache, new_escomp))
       g_warning("Cannot put component into the cache!");
+    g_object_unref(new_escomp);
   }
 
   return TRUE;
