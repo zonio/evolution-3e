@@ -143,10 +143,10 @@ e_cal_sync_error_resolve(ECalBackend3e* cb, GError* err)
  * @param err Error 
  */
 gint
-e_cal_sync_server_object_delete(ECalBackend3e* cb,
-                                ECalComponent* comp,
-                                gboolean conn_opened,
-                                GError** err)
+e_cal_sync_rpc_deleteObject(ECalBackend3e* cb,
+                            ECalComponent* comp,
+                            gboolean conn_opened,
+                            GError** err)
 {
   ECalBackend3ePrivate*        priv;
   const char*                  uid;
@@ -207,10 +207,10 @@ e_cal_sync_server_object_delete(ECalBackend3e* cb,
  * @return 
  */
 gboolean
-e_cal_sync_server_object_update(ECalBackend3e* cb,
-                                ECalComponent* ccomp,
-                                gboolean conn_opened, /* connection already opened */
-                                GError** err)
+e_cal_sync_rpc_updateObject(ECalBackend3e* cb,
+                            ECalComponent* ccomp,
+                            gboolean conn_opened, /* connection already opened */
+                            GError** err)
 {
   gchar*                       object;
   ECalBackend3ePrivate*        priv;
@@ -273,10 +273,10 @@ e_cal_sync_server_object_update(ECalBackend3e* cb,
  * @return 
  */
 gboolean
-e_cal_sync_server_object_add(ECalBackend3e* cb,
-                             ECalComponent* ccomp,
-                             gboolean conn_opened, /* connection already opened */
-                             GError** err)
+e_cal_sync_rpc_addObject(ECalBackend3e* cb,
+                         ECalComponent* ccomp,
+                         gboolean conn_opened, /* connection already opened */
+                         GError** err)
 {
   gchar*                       object;
   ECalBackend3ePrivate*        priv;
@@ -481,13 +481,13 @@ gboolean e_cal_sync_client_to_server_sync(ECalBackend3e* cb, GError** err)
     switch (e_cal_component_get_sync_state(ccomp))
     {
       case E_CAL_COMPONENT_LOCALLY_CREATED:
-        ok = e_cal_sync_server_object_add(cb, ccomp, TRUE, &local_err);
+        ok = e_cal_sync_rpc_addObject(cb, ccomp, TRUE, &local_err);
         break;
       case E_CAL_COMPONENT_LOCALLY_MODIFIED:
-        ok = e_cal_sync_server_object_update(cb, ccomp, TRUE, &local_err);
+        ok = e_cal_sync_rpc_updateObject(cb, ccomp, TRUE, &local_err);
         break;
       case E_CAL_COMPONENT_LOCALLY_DELETED:
-        if ((ok = e_cal_sync_server_object_delete(cb, ccomp, TRUE, &local_err)))
+        if ((ok = e_cal_sync_rpc_deleteObject(cb, ccomp, TRUE, &local_err)))
         {
           e_cal_component_get_ids(ccomp, &uid, &rid);
           if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))

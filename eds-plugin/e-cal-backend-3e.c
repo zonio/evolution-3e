@@ -299,7 +299,7 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   g_free (priv->sync_stamp);
   priv->calspec = g_strdup_printf ("%s:%s", priv->owner, priv->calname);
   priv->is_open = TRUE;
-  e_cal_sync_load_stamp (cb, &priv->sync_stamp);
+  e_cal_sync_load_stamp(cb, &priv->sync_stamp);
   rebuild_clients_changes_list (cb);
 
   if (priv->mode == CAL_MODE_REMOTE)
@@ -766,6 +766,7 @@ e_cal_backend_3e_start_query (ECalBackend * backend, EDataCalView * query)
 
   g_list_foreach (components, (GFunc) g_object_unref, NULL);
   g_list_free (components);
+
   g_list_foreach (objects, (GFunc) g_free, NULL);
   g_list_free (objects);
   g_object_unref (cbsexp);
@@ -798,7 +799,7 @@ e_cal_backend_3e_server_object_add(ECalBackend3e* cb, ECalComponent* comp, char*
   if (priv->mode == CAL_MODE_REMOTE)
   {
     /* send to server */
-    if (!e_cal_sync_server_object_add (cb, comp, FALSE, &local_err))
+    if (!e_cal_sync_rpc_addObject(cb, comp, FALSE, &local_err))
     {
       g_propagate_error(err, local_err);
       /* could not send change to server, component always contains changes */
@@ -918,14 +919,14 @@ e_cal_backend_3e_server_object_update(ECalBackend3e* cb, ECalComponent* cache_co
     switch (cache_comp_state)
     {
       case E_CAL_COMPONENT_LOCALLY_CREATED:
-        if (!e_cal_sync_server_object_add(cb, updated_comp, FALSE, &local_err))
+        if (!e_cal_sync_rpc_addObject(cb, updated_comp, FALSE, &local_err))
         {
           g_propagate_error(err, local_err);
           mark_as_changed = TRUE;
         }
         break;
       default:
-        if (!e_cal_sync_server_object_update(cb, updated_comp, FALSE, &local_err))
+        if (!e_cal_sync_rpc_updateObject(cb, updated_comp, FALSE, &local_err))
         {
           g_propagate_error(err, local_err);
           mark_as_changed = TRUE;
@@ -1082,7 +1083,7 @@ e_cal_backend_3e_server_object_remove(ECalBackend3e* cb,
 
       if (priv->mode == CAL_MODE_REMOTE)
       {
-        if (!e_cal_sync_server_object_delete(cb, cache_comp, FALSE, &local_err))
+        if (!e_cal_sync_rpc_deleteObject(cb, cache_comp, FALSE, &local_err))
         {
           e_cal_sync_error_message(E_CAL_BACKEND(cb), cache_comp, local_err);
           g_propagate_error(err, local_err);
@@ -1408,6 +1409,8 @@ e_cal_backend_3e_receive_object(ECalBackend3e *cb, EDataCal *cal, icalcomponent 
     method = toplevel_method;
 
   cache_comp = e_cal_backend_cache_get_component(priv->cache, uid, rid);
+  if (!cache_comp)
+    goto out;
 
   /* update the cache */
   switch (method)
@@ -1437,11 +1440,14 @@ e_cal_backend_3e_receive_object(ECalBackend3e *cb, EDataCal *cal, icalcomponent 
       break;
   }
 
+  g_object_unref(cache_comp);
+
   if (local_err)
   {
     g_propagate_error(err, local_err);
   }
 
+out:
   g_object_unref(comp);
   return status;
 }
@@ -1826,6 +1832,7 @@ e_cal_backend_3e_finalize (GObject * object)
     priv->default_zone = NULL;
   }
 
+  g_object_unref(priv->settings);
   g_object_unref (priv->gconf);
   priv->gconf = NULL;
 

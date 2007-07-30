@@ -16,14 +16,14 @@ ECalComponent* e_cal_sync_find_this_in_cache(ECalBackend3e* cb, ECalComponent* n
 
 gboolean e_cal_sync_server_open(ECalBackend3e* cb, GError** err);
 
-gboolean e_cal_sync_server_object_delete(ECalBackend3e* cb, ECalComponent* comp,
-                                         gboolean conn_opened, GError** err);
+gboolean e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp,
+                                     gboolean conn_opened, GError** err);
 
-gboolean e_cal_sync_server_object_update(ECalBackend3e* cb, ECalComponent* ccomp,
-                                         gboolean conn_opened, GError** err);
+gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp,
+                                     gboolean conn_opened, GError** err);
 
-gboolean e_cal_sync_server_object_add(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened,
-                                      GError** err);
+gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened,
+                                  GError** err);
 
 gboolean e_cal_sync_server_to_client_sync(ECalBackend* backend, const char* sync_start,
                                           const char* sync_stop);
