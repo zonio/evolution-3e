@@ -888,19 +888,26 @@ e_cal_sync_mirror_server_change(ECalBackend3e* cb, icalcomponent* scomp)
   ECalComponentId             *id;
 
   g_return_val_if_fail(cb != NULL, FALSE);
-  priv = cb->priv;
+  g_return_val_if_fail(scomp != NULL, FALSE);
 
+  priv = cb->priv;
   T("");
 
   escomp = e_cal_component_new();
+
   if (!e_cal_component_set_icalcomponent(escomp, icalcomponent_new_clone(scomp)))
   {
     g_warning("Cannot parse component queried from server!");
     goto out;
   }
+
   e_cal_component_set_sync_state(escomp, E_CAL_COMPONENT_IN_SYNCH);
+
   if (!e_cal_backend_cache_put_component(priv->cache, escomp))
+  {
     g_warning("Cannot put component into the cache!");
+    goto out;
+  }
   else
   {
     compstr = e_cal_component_get_as_string(escomp);	
@@ -922,6 +929,7 @@ e_cal_sync_mirror_server_change(ECalBackend3e* cb, icalcomponent* scomp)
 
 out:
   // FIXME: e_cal_component_free(scomp);
+  g_object_unref(escomp);
  return FALSE;
 }
 
@@ -1036,15 +1044,30 @@ e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalCompone
     // FIXME: free old ccomp ?
     /* server's component is newer */
     new_escomp = e_cal_component_new();
+
     if (!e_cal_component_set_icalcomponent(new_escomp, icalcomponent_new_clone(scomp)))
+    {
       g_warning("Cannot parse component queried from server!");
+      goto error;
+    }
+
     e_cal_component_set_sync_state(new_escomp, E_CAL_COMPONENT_IN_SYNCH);
+
     if (!e_cal_backend_cache_put_component(priv->cache, new_escomp))
+    {
       g_warning("Cannot put component into the cache!");
+      goto error;
+    }
+
     g_object_unref(new_escomp);
   }
 
   return TRUE;
+
+error:
+    g_object_unref(new_escomp);
+
+  return FALSE;
 }
 
 /** 
