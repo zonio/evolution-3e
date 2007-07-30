@@ -862,12 +862,12 @@ rebuild_clients_changes_list(ECalBackend3e* cb)
 
     if (state != E_CAL_COMPONENT_IN_SYNCH)
       e_cal_sync_client_changes_insert(cb, ccomp);
-    else
-      g_object_unref(ccomp);
   }
 
   g_list_foreach(cobjs, (GFunc) g_object_unref, NULL);
   g_list_free(cobjs);
+
+  T("DONE");
 }
 
 /** 
