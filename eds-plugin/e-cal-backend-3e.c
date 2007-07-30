@@ -1198,15 +1198,18 @@ out:
 
 static char *
 create_user_free_busy (ECalBackend3e * cb, const char *address,
-                       const char *name, time_t start, time_t end)
+                       time_t start, time_t end)
 {
   ECalBackend3ePrivate                             *priv;
   char                                             *retval;
-  GError                                           *error = NULL;
   char                                              from_date[256];
   char                                              to_date[256];
   struct tm                                         tm;
   GError                                            *local_err = NULL;
+  char                                              *message;
+
+  g_return_val_if_fail(cb != NULL, NULL);
+  g_return_val_if_fail(address != NULL, NULL);
 
   priv = cb->priv;
   g_return_val_if_fail (priv->conn != NULL, NULL);
@@ -1220,21 +1223,26 @@ create_user_free_busy (ECalBackend3e * cb, const char *address,
     return NULL;
 
   if (!e_cal_sync_server_open (cb, &local_err))
-  {
-    g_warning("Could not open connection to server(%d): %s!",
-              local_err->code, local_err->message);
-    g_error_free(local_err);
-    return NULL;
-  }
+    goto error;
 
   /* FIXME: do we need g_strdup? */
-  retval =
-    ESClient_freeBusy (priv->conn, g_strdup (address), from_date, to_date,
-                       &error);
+  retval = ESClient_freeBusy (priv->conn, g_strdup (address), from_date, to_date, &local_err);
+
+  if (local_err)
+    goto error;
 
   xr_client_close (priv->conn);
 
   return retval;
+
+error:
+  message = g_strdup_printf("Error: %s", local_err->message);
+  g_warning(message);
+  e_cal_backend_notify_error(E_CAL_BACKEND(cb), message);
+  g_clear_error(&local_err);
+  g_free(message);
+
+  return NULL;
 }
 
 /*
@@ -1242,8 +1250,7 @@ create_user_free_busy (ECalBackend3e * cb, const char *address,
  */
 static ECalBackendSyncStatus
 e_cal_backend_3e_get_free_busy (ECalBackendSync * backend,
-                                EDataCal * cal,
-                                GList * users,
+                                EDataCal * cal, GList * users,
                                 time_t start, time_t end, GList ** freebusy)
 {
   ECalBackend3e                                    *cb;
@@ -1251,14 +1258,19 @@ e_cal_backend_3e_get_free_busy (ECalBackendSync * backend,
   gchar                                            *address, *name = NULL;
   char                                             *calobj;
   GList                                            *l;
+  GError                                           *local_err = NULL;
+  gboolean                                         error = FALSE;
 
   T ("");
+
+  g_return_val_if_fail(backend != NULL, GNOME_Evolution_Calendar_OtherError);
+  g_return_val_if_fail(cal != NULL, GNOME_Evolution_Calendar_OtherError);
+  g_return_val_if_fail(freebusy != NULL, GNOME_Evolution_Calendar_OtherError);
 
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
 
-  g_return_val_if_fail (start != -1
-                        && end != -1, GNOME_Evolution_Calendar_InvalidRange);
+  g_return_val_if_fail (start != -1 && end != -1, GNOME_Evolution_Calendar_InvalidRange);
   g_return_val_if_fail (start <= end, GNOME_Evolution_Calendar_InvalidRange);
 
   if (!priv->cache)
@@ -1273,37 +1285,40 @@ e_cal_backend_3e_get_free_busy (ECalBackendSync * backend,
 
   if (users == NULL)
   {
-    if (e_cal_backend_mail_account_get_default (&address, &name))
+    if (e_cal_backend_mail_account_get_default(&address, &name))
     {
-      calobj = create_user_free_busy (cb, address, name, start, end);
-      *freebusy = g_list_append (*freebusy, g_strdup (calobj));
-      g_free (calobj);
-      g_free (address);
-      g_free (name);
+      calobj = create_user_free_busy(cb, address, start, end);
+
+      if (!calobj)
+        error = TRUE;
+      else
+      {
+        *freebusy = g_list_append(*freebusy, g_strdup (calobj));
+        g_free(calobj);
+      }
+      g_free(address);
     }
   }
   else
   {
-    for (l = users; l != NULL; l = l->next)
+    for (l = users; !error && l != NULL; l = l->next)
     {
-      g_debug ("F/B for %s", (char *) l->data);
       address = l->data;
-      /* FIXME:
-       * if (e_cal_backend_mail_account_is_valid (address, &name))
-       {
-       calobj = create_user_free_busy (cb, address, name, start, end);
-       *freebusy = g_list_append (*freebusy, g_strdup (calobj));
-       g_free (calobj);
-       }
-       else
-       D("No valid mail account: %s", address);
-       */
+      calobj = create_user_free_busy(cb, address, start, end);
+
+      if (!calobj)
+        error = TRUE;
+      else
+      {
+        *freebusy = g_list_append (*freebusy, g_strdup (calobj));
+        g_free (calobj);
+      }
     }
   }
 
   g_mutex_unlock (priv->sync_mutex);
 
-  return GNOME_Evolution_Calendar_Success;
+  return error ? GNOME_Evolution_Calendar_OtherError : GNOME_Evolution_Calendar_Success;
 }
 
 /*
