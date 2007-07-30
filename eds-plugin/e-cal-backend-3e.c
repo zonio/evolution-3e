@@ -1184,6 +1184,8 @@ e_cal_backend_3e_remove_object (ECalBackendSync * backend,
   status = e_cal_backend_3e_server_object_remove(cb, cal, cache_comp, uid, rid, old_object,
                                                  &local_err);
 
+  g_object_unref(cache_comp);
+
   if (local_err)
   {
     e_cal_sync_error_message(E_CAL_BACKEND(cb), cache_comp, local_err);
@@ -1225,7 +1227,6 @@ create_user_free_busy (ECalBackend3e * cb, const char *address,
   if (!e_cal_sync_server_open (cb, &local_err))
     goto error;
 
-  /* FIXME: do we need g_strdup? */
   retval = ESClient_freeBusy (priv->conn, g_strdup (address), from_date, to_date, &local_err);
 
   if (local_err)
