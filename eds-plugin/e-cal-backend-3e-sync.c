@@ -1337,7 +1337,7 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
   }
 
   icalcomponent_free(server_components);
-  /* free cache_hash */
+  g_hash_table_destory(cache_hash);
   g_free(last_sync_stamp);
   xr_client_close(priv->conn);
   e_cal_sync_save_stamp(cb, now);
@@ -1350,7 +1350,7 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
 err3:
   icalcomponent_free(server_components);
 err2:
-  /* FIXME: free cache_hash */
+  g_hash_table_destory(cache_hash);
 err1:
   xr_client_close(priv->conn);
 err0:
