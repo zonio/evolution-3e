@@ -260,8 +260,11 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   if (status != GNOME_Evolution_Calendar_Success)
     goto out;
 
-  g_return_val_if_fail (priv->calname != 0,
-                        GNOME_Evolution_Calendar_OtherError);
+  if (!priv->calname)
+  {
+    status = GNOME_Evolution_Calendar_OtherError;
+    goto out;
+  }
 
   g_free (priv->username);
   g_free (priv->password);
@@ -280,9 +283,11 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
     priv->password = g_strdup (password);
   }
 
-  g_return_val_if_fail (priv->username
-                        && *priv->username != 0,
-                        GNOME_Evolution_Calendar_OtherError);
+  if (!priv->username || *priv->username == 0)
+  {
+    status = GNOME_Evolution_Calendar_OtherError;
+    goto out;
+  }
 
   D ("username  %s", priv->username);
   D ("calname %s", priv->calname);
@@ -312,6 +317,7 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
 
 out:
   g_mutex_unlock (priv->sync_mutex);
+  D("OPEN STATUS: %d", status);
 
   return status;
 }
@@ -801,7 +807,8 @@ e_cal_backend_3e_server_object_add(ECalBackend3e* cb, ECalComponent* comp, char*
     /* send to server */
     if (!e_cal_sync_rpc_addObject(cb, comp, FALSE, &local_err))
     {
-      g_propagate_error(err, local_err);
+      if (local_err)
+        g_propagate_error(err, local_err);
       /* could not send change to server, component always contains changes */
       mark_as_changed = TRUE;
     }
@@ -921,14 +928,16 @@ e_cal_backend_3e_server_object_update(ECalBackend3e* cb, ECalComponent* cache_co
       case E_CAL_COMPONENT_LOCALLY_CREATED:
         if (!e_cal_sync_rpc_addObject(cb, updated_comp, FALSE, &local_err))
         {
-          g_propagate_error(err, local_err);
+          if (local_err)
+            g_propagate_error(err, local_err);
           mark_as_changed = TRUE;
         }
         break;
       default:
         if (!e_cal_sync_rpc_updateObject(cb, updated_comp, FALSE, &local_err))
         {
-          g_propagate_error(err, local_err);
+          if (local_err)
+            g_propagate_error(err, local_err);
           mark_as_changed = TRUE;
         }
         break;
@@ -1086,7 +1095,8 @@ e_cal_backend_3e_server_object_remove(ECalBackend3e* cb,
         if (!e_cal_sync_rpc_deleteObject(cb, cache_comp, FALSE, &local_err))
         {
           e_cal_sync_error_message(E_CAL_BACKEND(cb), cache_comp, local_err);
-          g_propagate_error(err, local_err);
+          if (local_err)
+            g_propagate_error(err, local_err);
           mark_as_changed = TRUE;
         }
       }

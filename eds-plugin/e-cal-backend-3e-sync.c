@@ -175,7 +175,8 @@ e_cal_sync_rpc_deleteObject(ECalBackend3e* cb,
     if (!ESClient_deleteObject(priv->conn, priv->calspec, uid_copy, &local_err))
     {
       e_cal_sync_error_resolve(cb, local_err);
-      g_propagate_error(err, local_err);
+      if (local_err)
+        g_propagate_error(err, local_err);
       e_cal_component_set_local_state(E_CAL_BACKEND(cb), comp);
       ok = FALSE;
     }
@@ -187,7 +188,8 @@ e_cal_sync_rpc_deleteObject(ECalBackend3e* cb,
   }
   else
   {
-    g_propagate_error(err, local_err);
+    if (local_err)
+      g_propagate_error(err, local_err);
     ok = FALSE;
   }
 
@@ -232,7 +234,8 @@ e_cal_sync_rpc_updateObject(ECalBackend3e* cb,
     if (!ESClient_updateObject(priv->conn, priv->calspec, object, &local_err))
     {
       e_cal_sync_error_resolve(cb, local_err);
-      g_propagate_error(err, local_err);
+      if (local_err)
+        g_propagate_error(err, local_err);
       e_cal_component_set_local_state(E_CAL_BACKEND(cb), ccomp);
       ok = FALSE;
     }
@@ -253,7 +256,8 @@ e_cal_sync_rpc_updateObject(ECalBackend3e* cb,
   }
   else
   {
-    g_propagate_error(err, local_err);
+    if (local_err)
+      g_propagate_error(err, local_err);
     ok = FALSE;
   }
 
@@ -301,7 +305,8 @@ e_cal_sync_rpc_addObject(ECalBackend3e* cb,
 
       e_cal_component_set_local_state(E_CAL_BACKEND(cb), ccomp);
       e_cal_sync_error_resolve(cb, local_err);
-      g_propagate_error(err, local_err);
+      if (local_err)
+        g_propagate_error(err, local_err);
       ok = FALSE;
     }
     else
@@ -323,7 +328,8 @@ e_cal_sync_rpc_addObject(ECalBackend3e* cb,
   }
   else
   {
-    g_propagate_error(err, local_err);
+    if (local_err)
+      g_propagate_error(err, local_err);
     ok = FALSE;
   }
 
@@ -371,7 +377,8 @@ e_cal_sync_query_server_objects(ECalBackend3e* cb,
                                              &local_err);
   if (!str_server_objects)
   {
-    g_propagate_error(err, local_err);
+    if (local_err)
+      g_propagate_error(err, local_err);
     goto out;
   }
 
@@ -516,7 +523,8 @@ gboolean e_cal_sync_client_to_server_sync(ECalBackend3e* cb, GError** err)
        * only fatal errors stops synchronization process
        */
       finished = e_cal_sync_error_is_fatal(local_err);
-      g_propagate_error(err, local_err);
+      if (local_err)
+        g_propagate_error(err, local_err);
     }
   }
 
@@ -1228,7 +1236,8 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
 
   if (!e_cal_sync_refresh_permission(cb, &local_err))
   {
-    g_propagate_error(err, local_err);
+    if (local_err)
+      g_propagate_error(err, local_err);
     goto err1;
   }
 
@@ -1259,7 +1268,8 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
   server_components = e_cal_sync_query_server_objects(cb, last_sync_stamp, now, &local_err);
   if (!server_components)
   {
-    g_propagate_error(err, local_err);
+    if (local_err)
+      g_propagate_error(err, local_err);
     goto err2;
   }
 
@@ -1305,7 +1315,8 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
           }
           else if (!e_cal_sync_resolve_conflict(cb, scomp, ccomp, &local_err))
           { 
-            g_propagate_error(err, local_err);
+            if (local_err)
+              g_propagate_error(err, local_err);
             goto err3;
           }
         }
@@ -1319,7 +1330,8 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
   {
     if (!e_cal_sync_client_to_server_sync(cb, &local_err))
     {
-      g_propagate_error(err, local_err);
+      if (local_err)
+        g_propagate_error(err, local_err);
       goto err3;
     }
   }
@@ -1365,7 +1377,8 @@ e_cal_sync_total_synchronization(ECalBackend3e* cb, GError** err)
   {
     g_warning("Total synchronization failed: %s!", local_err ? local_err->message
               : "No error message");
-    g_propagate_error(err, local_err);
+    if (local_err)
+      g_propagate_error(err, local_err);
     return FALSE;
   }
 
@@ -1415,13 +1428,15 @@ e_cal_sync_incremental_synchronization(ECalBackend3e* cb, GError** err)
       {
         g_warning("Total synchronization failed: %s!", local_err ? local_err->message
                   : "No error message");
-        g_propagate_error(err, local_err);
+        if (local_err)
+          g_propagate_error(err, local_err);
         return FALSE;
       }
     }
     else
     {
-      g_propagate_error(err, local_err);
+      if (local_err)
+        g_propagate_error(err, local_err);
       return FALSE;
     }
   }
