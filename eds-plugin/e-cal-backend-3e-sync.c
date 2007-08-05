@@ -1008,22 +1008,29 @@ e_cal_sync_collect_cache_hash(ECalBackend3e* cb, gboolean remove_unchanged)
  * on server and client. The newer change wins.
  * 
  * @param cb EEE calendar backend.
- * @param scomp Server's change.
- * @param ccomp Client's change.
+ * @param scomp Component with server's change.
+ * @param ccomp Component with client's change.
  * 
  * @return TRUE, if no error occured.
  */
 gboolean
-e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalComponent* ccomp)
+e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalComponent* ccomp,
+                            GError** err)
 {
   ECalBackend3ePrivate*     priv;
   time_t                    ctime;
   time_t                    stime;
   ECalComponent*            new_escomp;
+  ECalComponentSyncState    sync_state;
+  char*                     new_uid;
+  GError*                   local_err = NULL;
 
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(scomp != NULL, FALSE);
   g_return_val_if_fail(ccomp != NULL, FALSE);
+
+  sync_state = e_cal_component_get_sync_state(ccomp);
+  g_return_val_if_fail(sync_state != E_CAL_COMPONENT_IN_SYNCH, FALSE);
 
   priv = cb->priv;
   ctime = e_cal_component_get_dtstamp_as_timet(ccomp);
@@ -1033,21 +1040,101 @@ e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalCompone
 
   if (ctime > stime)
   {
-    /* client's component is newer */
-    // FIXME: what to do...
     g_warning("Client's component is newer");
+    /* client's component is newer */
+    if (icomp_get_deleted_status(scomp))
+    {
+      /* server component was deleted */
+      if (e_cal_component_has_deleted_status(ccomp))
+        /* client component was deleted too => no conflict in fact */
+        return TRUE;
+
+      /* 
+       * server component was deleted and client's component was not deleted.
+       * we cannot send updateObject or addObject on deleted component,
+       * server does not allow this operation. we have to create copy of client's
+       * component - change it's UID
+       */
+
+        new_uid = e_cal_component_gen_uid();
+        e_cal_component_set_uid(ccomp, new_uid);
+        g_free(new_uid);
+    }
+    else
+    {
+      /* server component was not deleted, delete it */
+      new_escomp = e_cal_component_new();
+
+      if (!e_cal_component_set_icalcomponent(new_escomp, icalcomponent_new_clone(scomp)))
+      {
+        g_warning("Cannot parse component queried from server!");
+        g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_ICAL,
+                    "Cannot parse component queried from server!");
+        goto error;
+      }
+
+      if (!e_cal_sync_rpc_deleteObject(cb, new_escomp, FALSE, &local_err))
+      {
+        if (local_err)
+          g_propagate_error(err, local_err);
+
+        goto error;
+      }
+      
+      g_object_unref(new_escomp);
+
+      if (e_cal_component_has_deleted_status(ccomp))
+        /* client's component was deleted too, no more work */
+        return TRUE;
+    }
+
+    /* client's component was added or updated,
+       send client's version to server  */
+    if (sync_state == E_CAL_COMPONENT_LOCALLY_CREATED)
+    {
+      /* add ccomp */
+      if (!e_cal_sync_rpc_addObject(cb, ccomp, FALSE, &local_err))
+      {
+        if (local_err)
+          g_propagate_error(err, local_err);
+
+        return FALSE;
+      }
+    }
+    else if (sync_state == E_CAL_COMPONENT_LOCALLY_MODIFIED)
+    {
+      /* update ccomp */
+      if (!e_cal_sync_rpc_updateObject(cb, ccomp, FALSE, &local_err))
+      {
+        if (local_err)
+          g_propagate_error(err, local_err);
+
+        return FALSE;
+      }
+    }
+
+    /* insert client's version to the cache  */
+    if (!e_cal_backend_cache_put_component(priv->cache, ccomp))
+    {
+      g_warning("Cannot put component into the cache!");
+      g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_CONFLICT,
+                  "Cannot put component into the cache!");
+
+      return FALSE;
+    }
   }
   else
   {
     g_warning("Server's component is newer");
 
-    // FIXME: free old ccomp ?
     /* server's component is newer */
     new_escomp = e_cal_component_new();
 
     if (!e_cal_component_set_icalcomponent(new_escomp, icalcomponent_new_clone(scomp)))
     {
       g_warning("Cannot parse component queried from server!");
+      g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_ICAL,
+                  "Cannot parse component queried from server!");
       goto error;
     }
 
@@ -1056,6 +1143,8 @@ e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalCompone
     if (!e_cal_backend_cache_put_component(priv->cache, new_escomp))
     {
       g_warning("Cannot put component into the cache!");
+      g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_CONFLICT,
+                  "Cannot put component into the cache!");
       goto error;
     }
 
@@ -1160,7 +1249,6 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
 
   D("Synchronizing %s: %s - %s", priv->calname, last_sync_stamp ? last_sync_stamp : "", now);
 
-
   /* build hash map with components, that are locally changed.
    * if total synchro mode, unchanged components are removed from the cache.
    */
@@ -1215,10 +1303,9 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
                         "Conflicting components!");
             goto err3;
           }
-          else if (!e_cal_sync_resolve_conflict(cb, scomp, ccomp))
-          {
-            g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_CONFLICT,
-                        "Cannot resolve conflict!");
+          else if (!e_cal_sync_resolve_conflict(cb, scomp, ccomp, &local_err))
+          { 
+            g_propagate_error(err, local_err);
             goto err3;
           }
         }
