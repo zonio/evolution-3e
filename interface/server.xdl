@@ -2,7 +2,6 @@
 
 namespace ES;
 
-/* Error definitions. */
 error NOT_AUTHORIZED = 1;
 error AUTH_FAILED = 2;
 error USER_EXISTS = 3;
@@ -77,11 +76,13 @@ servlet Client
   string queryObjects(string calspec, string query);
   array<Message> getMessages();
   boolean deleteMessage(int msgid);
-  boolean sendMessage(array<string> recipients, string message);
+  boolean sendMessage(string calspec, array<string> recipients, string message);
   string freeBusy(string attendee, string from_date, string to_date);
 }
 
-servlet Admin
-{
+ servlet Admin
+ {
   boolean createUser(string username, string password);
-}
+ }
+
+

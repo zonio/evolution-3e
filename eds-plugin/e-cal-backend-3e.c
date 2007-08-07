@@ -1224,6 +1224,8 @@ create_user_free_busy (ECalBackend3e * cb, const char *address,
   g_return_val_if_fail(cb != NULL, NULL);
   g_return_val_if_fail(address != NULL, NULL);
 
+  T("");
+
   priv = cb->priv;
   g_return_val_if_fail (priv->conn != NULL, NULL);
 
@@ -1715,7 +1717,6 @@ e_cal_backend_3e_send_objects (ECalBackendSync * backend,
     goto out;
   }
   
-/*  
   if (!e_cal_sync_server_open(cb, &local_err))
   {
     g_warning("Cannot open connection to server: %s", local_err->message);
@@ -1723,21 +1724,19 @@ e_cal_backend_3e_send_objects (ECalBackendSync * backend,
     goto out;
   }
 
-  if (!ESClient_sendMessage(priv->conn, attendees_slist, g_strdup(calobj), &local_err))
+  if (!ESClient_sendMessage(priv->conn, priv->calspec, attendees_slist, g_strdup(calobj),
+                            &local_err))
   {
     g_warning("Cannot send messages to the server: %s", local_err->message);
     goto out1;
   }
-*/
 
   for (iter = attendees_slist; iter; iter = g_slist_next(iter))
     *users = g_list_append(*users, iter->data);
   *modified_calobj = g_strdup(calobj);
 
-/*
 out1:
   xr_client_close(priv->conn);
-*/
 out:
 	icalcomponent_free (icalcomp);
 
