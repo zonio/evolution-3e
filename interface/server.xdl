@@ -77,7 +77,7 @@ servlet Client
   array<Message> getMessages();
   boolean deleteMessage(int msgid);
   boolean sendMessage(string calspec, array<string> recipients, string message);
-  string freeBusy(string attendee, string from_date, string to_date);
+  string freeBusy(string attendee, string from_date, string to_date, string default_zone);
 }
 
  servlet Admin
