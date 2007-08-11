@@ -749,7 +749,7 @@ server_sync_signal(ECalBackend3e* cb)
   priv = cb->priv;
 
   g_mutex_lock(priv->sync_mutex);
-  priv->sync_mode = SYNC_DIE;
+  priv->sync_terminated = TRUE;
 
   g_cond_signal(priv->sync_cond);
   g_mutex_unlock(priv->sync_mutex);
@@ -943,7 +943,7 @@ e_cal_sync_main_thread(gpointer data)
   priv = cb->priv;
   g_mutex_lock(priv->sync_mutex);
 
-  while (priv->sync_mode != SYNC_DIE)
+  while (!priv->sync_terminated)
   {
     if (priv->sync_mode == SYNC_SLEEP)
     {
@@ -1554,7 +1554,7 @@ e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError**
   g_free(priv->sync_stamp);
   priv->sync_stamp = g_strdup(now);
 
-  D("Synchronization OK.");
+  D("Synchronization of %s:%s OK.", priv->username, priv->calname);
   return TRUE;
 
 err3:
@@ -1565,7 +1565,7 @@ err1:
   xr_client_close(priv->conn);
 err0:
   g_free(last_sync_stamp);
-  g_warning("Synchronization failed.");
+  g_warning("Synchronization of %s:%s failed.", priv->username, priv->calname);
   return FALSE;
 }
 
@@ -1580,13 +1580,16 @@ gboolean
 e_cal_sync_total_synchronization(ECalBackend3e* cb, GError** err)
 {
   GError* local_err = NULL;
+  ECalBackend3ePrivate* priv;
 
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
 
   if (!e_cal_sync_run_synchronization(cb, FALSE, &local_err))
   {
-    g_warning("Total synchronization failed: %s!", local_err ? local_err->message
-              : "No error message");
+    priv = cb->priv;
+
+    g_warning("Total synchronization of %s:%s failed: %s!", priv->username, priv->calname,
+              local_err ? local_err->message : "No error message");
     if (local_err)
       g_propagate_error(err, local_err);
     return FALSE;
@@ -1607,14 +1610,17 @@ e_cal_sync_incremental_synchronization(ECalBackend3e* cb, GError** err)
 {
   GError* local_err = NULL;
   gboolean go_on = TRUE;
+  ECalBackend3ePrivate* priv;
 
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
 
   if (!e_cal_sync_run_synchronization(cb, TRUE, &local_err))
   {
     // FIXME: decide, whether to run total synchronization...
-    g_warning("Incremental synchronization failed: %s!", local_err ? local_err->message
-              : "No error message");
+    priv = cb->priv;
+
+    g_warning("Incremental synchronization of %s:%s failed: %s!", priv->username, priv->calname,
+              local_err ? local_err->message : "No error message");
 
     if (local_err && local_err->domain == e_cal_eds_error_quark())
     {
@@ -1636,8 +1642,8 @@ e_cal_sync_incremental_synchronization(ECalBackend3e* cb, GError** err)
       g_clear_error(&local_err);
       if (!e_cal_sync_run_synchronization(cb, FALSE, &local_err))
       {
-        g_warning("Total synchronization failed: %s!", local_err ? local_err->message
-                  : "No error message");
+        g_warning("Total synchronization of %s:%s failed: %s!", priv->username, priv->calname,
+                  local_err ? local_err->message : "No error message");
         if (local_err)
           g_propagate_error(err, local_err);
         return FALSE;

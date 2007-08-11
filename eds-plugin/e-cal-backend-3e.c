@@ -411,6 +411,7 @@ e_cal_backend_3e_remove (ECalBackendSync * backend, EDataCal * cal)
   GError                                           *err;
 
   g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
+  T("");
 
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
@@ -426,17 +427,7 @@ e_cal_backend_3e_remove (ECalBackendSync * backend, EDataCal * cal)
   e_file_cache_remove (E_FILE_CACHE (priv->cache));
   priv->cache = NULL;
   priv->is_loaded = FALSE;
-  priv->sync_mode = SYNC_DIE;
-
-  /*
-   * FIXME: remove synchronization marks
-   D("unsetting gconf value");
-   path = g_strdup_printf("%s/%s:%s",
-   CALENDAR_STAMPS,
-   priv->username, priv->calname);
-
-   g_free(path);
-   */
+  priv->sync_terminated = TRUE;
 
   g_mutex_unlock (priv->sync_mutex);
 
@@ -1833,6 +1824,7 @@ e_cal_backend_3e_init (ECalBackend3e * cb, ECalBackend3eClass * klass)
     g_thread_init (NULL);
 
   cb->priv = g_new0 (ECalBackend3ePrivate, 1);
+  cb->priv->sync_terminated = FALSE;
   cb->priv->sync_mode = SYNC_SLEEP;
   cb->priv->sync_cond = g_cond_new ();
   cb->priv->sync_mutex = g_mutex_new ();

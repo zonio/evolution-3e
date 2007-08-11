@@ -20,7 +20,6 @@
 typedef enum {
 	SYNC_SLEEP,
 	SYNC_WORK,
-	SYNC_DIE
 } SyncMode;
 
 struct _ECalBackend3ePrivate
@@ -49,6 +48,7 @@ struct _ECalBackend3ePrivate
   ECalComponent                          *settings;
 
   /* synch thread variables */
+  gboolean                               sync_terminated;
   GCond                                  *sync_cond;
   GMutex                                 *sync_mutex;
   GThread                                *sync_thread;
