@@ -651,12 +651,12 @@ e_cal_backend_3e_add_timezone (ECalBackendSync * backend,
     return GNOME_Evolution_Calendar_InvalidObject;
   }
 
+  icomp_set_sync_state(tz_comp, E_CAL_COMPONENT_LOCALLY_CREATED);
   zone = icaltimezone_new ();
   icaltimezone_set_component (zone, tz_comp);
 
   g_mutex_lock (priv->sync_mutex);
-  /* FIXME: add timezone to the server */
-  //e_cal_backend_cache_put_timezone (priv->cache, zone);
+  e_cal_backend_cache_put_timezone (priv->cache, zone);
   g_mutex_unlock (priv->sync_mutex);
 
   return GNOME_Evolution_Calendar_Success;

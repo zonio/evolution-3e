@@ -196,74 +196,6 @@ e_cal_sync_rpc_deleteObject(ECalBackend3e* cb,
   return ok;
 }
 
-/** 
- * @brief Calls XML-RPC updateObject method on component ccomp.
- * 
- * @param cb Calendar backend.
- * @param ccomp 
- * @param conn_opened If TRUE, no new connection is opened and authorize XML-RPC method is not
- * called. Otherwise, new connection is opened, authorize XML RPC is callend and after calling
- * updateObject method, connection is closed.
- * @param err 
- * 
- * @return 
- */
-gboolean
-e_cal_sync_rpc_updateObject(ECalBackend3e* cb,
-                            ECalComponent* ccomp,
-                            gboolean conn_opened, /* connection already opened */
-                            GError** err)
-{
-  gchar*                       object;
-  ECalBackend3ePrivate*        priv;
-  gboolean                     ok = TRUE;
-  GError*                      local_err = NULL;
-
-  g_return_val_if_fail(cb != NULL, FALSE);
-  g_return_val_if_fail(ccomp != NULL, FALSE);
-  g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
-
-  T("Updating on server.");
-
-  priv = cb->priv;
-
-  if (conn_opened || e_cal_sync_server_open(cb, &local_err))
-  {
-    object = e_cal_component_get_as_string(ccomp);
-
-    if (!ESClient_updateObject(priv->conn, priv->calspec, object, &local_err))
-    {
-      e_cal_sync_error_resolve(cb, local_err);
-      if (local_err)
-        g_propagate_error(err, local_err);
-      e_cal_component_set_local_state(E_CAL_BACKEND(cb), ccomp);
-      ok = FALSE;
-    }
-    else
-    {
-      e_cal_component_set_sync_state(ccomp, E_CAL_COMPONENT_IN_SYNCH);
-      if (!e_cal_backend_cache_put_component(priv->cache, ccomp))
-      {
-        g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_CACHE,
-                    "Cannot put component into the cache!");
-        ok = FALSE; 
-      }
-    }
-
-    if (!conn_opened)
-      xr_client_close(priv->conn);
-    g_free(object);
-  }
-  else
-  {
-    if (local_err)
-      g_propagate_error(err, local_err);
-    ok = FALSE;
-  }
-
-  return ok;
-}
-
 typedef struct
 {
   GHashTable* tzids;
@@ -406,6 +338,99 @@ e_cal_sync_add_timezones(ECalBackend3e* cb,
   g_free(tzlist);
 
   return user_data.ok;
+}
+
+/** 
+ * @brief Calls XML-RPC updateObject method on component ccomp.
+ * 
+ * @param cb Calendar backend.
+ * @param ccomp 
+ * @param conn_opened If TRUE, no new connection is opened and authorize XML-RPC method is not
+ * called. Otherwise, new connection is opened, authorize XML RPC is callend and after calling
+ * updateObject method, connection is closed.
+ * @param err 
+ * 
+ * @return 
+ */
+
+gboolean
+e_cal_sync_rpc_updateObject(ECalBackend3e* cb,
+                            ECalComponent* ccomp,
+                            gboolean conn_opened, /* connection already opened */
+                            GError** err)
+{
+  gchar*                       object;
+  ECalBackend3ePrivate*        priv;
+  gboolean                     ok = TRUE;
+  GError*                      local_err = NULL;
+
+  g_return_val_if_fail(cb != NULL, FALSE);
+  g_return_val_if_fail(ccomp != NULL, FALSE);
+  g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
+
+  T("Updating on server.");
+
+  priv = cb->priv;
+
+  if (conn_opened || e_cal_sync_server_open(cb, &local_err))
+  {
+
+    /* add related timezones */
+    if (!e_cal_sync_add_timezones(cb, ccomp, &local_err))
+    {
+      if (!local_err)
+      {
+        g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_CACHE,
+                    "Cannot send timezones to the server!");
+      }
+      else
+        g_propagate_error(err, local_err);
+
+      goto err;
+    }
+
+    object = e_cal_component_get_as_string(ccomp);
+
+    if (!ESClient_updateObject(priv->conn, priv->calspec, object, &local_err))
+    {
+      e_cal_sync_error_resolve(cb, local_err);
+      if (local_err)
+        g_propagate_error(err, local_err);
+      e_cal_component_set_local_state(E_CAL_BACKEND(cb), ccomp);
+      goto err1;
+    }
+    else
+    {
+      e_cal_component_set_sync_state(ccomp, E_CAL_COMPONENT_IN_SYNCH);
+      if (!e_cal_backend_cache_put_component(priv->cache, ccomp))
+      {
+        g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_CACHE,
+                    "Cannot put component into the cache!");
+        goto err1;
+      }
+    }
+
+    if (!conn_opened)
+      xr_client_close(priv->conn);
+    g_free(object);
+  }
+  else
+  {
+    if (local_err)
+      g_propagate_error(err, local_err);
+
+    return FALSE;
+  }
+
+  return TRUE;
+
+err1:
+  g_free(object);
+err:
+  if (!conn_opened)
+    xr_client_close(priv->conn);
+
+  return FALSE;
 }
 
 /** 
