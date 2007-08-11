@@ -264,6 +264,150 @@ e_cal_sync_rpc_updateObject(ECalBackend3e* cb,
   return ok;
 }
 
+typedef struct
+{
+  GHashTable* tzids;
+} ECalBackend3eTzidList;
+
+typedef struct
+{
+  ECalBackend3e* cb;
+  gboolean ok;
+  GError** error;
+} ECalBackend3eTzidUserData;
+
+static void
+collect_tzids(icalparameter* param, void *data)
+{
+  const char* tzid = icalparameter_get_tzid(param);
+  ECalBackend3eTzidList* tlist = data;
+
+  if (tzid)
+    g_hash_table_insert(tlist->tzids, g_strdup(tzid), NULL);
+}
+
+/*
+ * Adds timezone to the server - calls XML RPC addoObject on the timezone.
+ */
+void
+e_cal_sync_add_timezone(gpointer key, gpointer value, gpointer user_data)
+{
+  char*                                     tzid;
+  ECalBackend3eTzidUserData*                data;
+  ECalBackend3ePrivate*                     priv;
+  const icaltimezone*                       cache_zone;
+  icaltimezone*                             new_zone;
+  icalcomponent*                            cache_tzcomp = NULL, *new_comp = NULL;
+  char*                                     zone_str;
+  GError*                                   local_err = NULL;
+
+  g_return_if_fail(key != NULL);
+  /* value is NULL */
+  g_return_if_fail(user_data != NULL);
+  data = user_data;
+  g_return_if_fail(data->ok);
+
+  tzid = key;
+  priv = data->cb->priv;
+
+  /* if error flag is set, do nothing */
+  if (!data->ok)
+    return;
+
+  /* otherwise error should be clear */
+  g_return_if_fail(data->error == NULL || *data->error == NULL);
+
+  /* find timezone component in cache */
+  cache_zone = e_cal_backend_cache_get_timezone(priv->cache, tzid);
+  cache_tzcomp = icaltimezone_get_component((icaltimezone*)cache_zone);
+
+  if (cache_zone)
+  {
+    /* zone found in cache. if it is synchronized, no work has to be done */
+    if (icomp_get_sync_state(cache_tzcomp) != E_CAL_COMPONENT_LOCALLY_CREATED)
+      return;
+
+    new_comp = icalcomponent_new_clone(cache_tzcomp);
+    new_zone = icaltimezone_new();
+    /* sets new_comp with new_zone */
+    icaltimezone_set_component(new_zone, new_comp);
+  }
+  else
+  {
+    /* it is not there! */
+    g_warning("Could not find timezone %s in the cache!", tzid);
+
+    g_set_error(data->error, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_CACHE,
+                "Internal client error. Please contact your IT support!");
+
+    data->ok = FALSE;
+
+    return;
+  }
+
+  if (!ESClient_addObject(priv->conn, priv->calspec, icalcomponent_as_ical_string(new_comp),
+                          &local_err))
+  {
+    if (local_err)
+    {
+      g_warning("Error, can't add timezone object(%d:%s)!", local_err->code, local_err->message);
+      g_propagate_error(data->error, local_err);
+    }
+    else
+    {
+      g_warning("Error, can't add timezone object, no error message!");
+
+      g_set_error(data->error, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_CACHE,
+                  "Internal client error. Please contact your IT support!");
+    }
+
+    data->ok = FALSE;
+    icaltimezone_free(new_zone, 1);
+  }
+  else
+  {
+    /* change synchronization state */
+    icomp_set_sync_state(new_comp, E_CAL_COMPONENT_IN_SYNCH);
+    e_cal_backend_cache_put_timezone(priv->cache, new_zone);
+  }
+}
+
+/*
+ * Extracts all timezones related to the compoment ccomp. Each component
+ * is checked, if it is already on the server. If not, it is added.
+ */
+gboolean
+e_cal_sync_add_timezones(ECalBackend3e* cb,
+                         ECalComponent* ccomp,
+                         GError** err)
+{
+  ECalBackend3eTzidList* tzlist;
+  icalcomponent* icomp;
+  ECalBackend3eTzidUserData user_data;
+
+  g_return_val_if_fail(cb != NULL, FALSE);
+  g_return_val_if_fail(ccomp != NULL, FALSE);
+  g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
+
+  /* extract component's timezones */
+  tzlist = g_new0(ECalBackend3eTzidList, 1);
+  tzlist->tzids = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+
+  icomp = e_cal_component_get_icalcomponent(ccomp);
+  icalcomponent_foreach_tzid(icomp, collect_tzids, tzlist);
+
+  user_data.cb = cb;
+  user_data.ok = TRUE;
+  user_data.error = err;
+  g_hash_table_foreach(tzlist->tzids, e_cal_sync_add_timezone, &user_data);
+
+  /* free tzlist */
+  g_hash_table_destroy(tzlist->tzids);
+  g_free(tzlist);
+
+  return user_data.ok;
+}
+
 /** 
  * @brief Calls XML-RPC addObject method on componnet ccomp.
  * 
@@ -297,6 +441,20 @@ e_cal_sync_rpc_addObject(ECalBackend3e* cb,
 
   if (conn_opened || e_cal_sync_server_open(cb, &local_err))
   {
+    /* add related timezones */
+    if (!e_cal_sync_add_timezones(cb, ccomp, &local_err))
+    {
+      if (!local_err)
+      {
+        g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_CACHE,
+                    "Cannot send timezones to the server!");
+      }
+      else
+        g_propagate_error(err, local_err);
+
+      goto err;
+    }
+
     object = e_cal_component_get_as_string(ccomp);
 
     if (!ESClient_addObject(priv->conn, priv->calspec, object, &local_err))
@@ -307,7 +465,7 @@ e_cal_sync_rpc_addObject(ECalBackend3e* cb,
       e_cal_sync_error_resolve(cb, local_err);
       if (local_err)
         g_propagate_error(err, local_err);
-      ok = FALSE;
+      goto err1;
     }
     else
     {
@@ -317,7 +475,7 @@ e_cal_sync_rpc_addObject(ECalBackend3e* cb,
       {
         g_set_error(err, E_CAL_EDS_ERROR, E_CAL_EDS_ERROR_BAD_CACHE,
                     "Cannot put component into the cache!");
-        ok = FALSE; 
+        goto err1;
       }
     }
 
@@ -330,10 +488,19 @@ e_cal_sync_rpc_addObject(ECalBackend3e* cb,
   {
     if (local_err)
       g_propagate_error(err, local_err);
-    ok = FALSE;
+
+    return FALSE;
   }
 
-  return ok;
+  return TRUE;
+
+err1:
+  g_free(object);
+err:
+  if (!conn_opened)
+    xr_client_close(priv->conn);
+
+  return FALSE;
 }
 
 /** 

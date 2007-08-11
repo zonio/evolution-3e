@@ -97,4 +97,6 @@ time_t e_cal_component_get_dtstamp_as_timet(ECalComponent* comp);
 time_t icomp_get_dtstamp_as_timet(icalcomponent* comp);
 
 gboolean e_cal_component_has_deleted_status(ECalComponent* comp);
+
+void icomp_set_sync_state(icalcomponent* icomp, ECalComponentSyncState state);
 #endif

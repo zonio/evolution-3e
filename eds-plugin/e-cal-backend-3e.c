@@ -154,10 +154,6 @@ e_cal_initialize_backend (ECalBackend3e * cb, const gchar * username)
     return GNOME_Evolution_Calendar_OtherError;
   }
 
-  if (priv->default_zone)
-    e_cal_backend_cache_put_default_timezone (priv->cache,
-                                              priv->default_zone);
-
   source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
 
   /*
@@ -243,6 +239,7 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   const char                                       *cal_name;
   ESourceGroup                                     *group;
   ESource                                          *source;
+  GError                                           *local_err = NULL;
 
   T ("backend=%p, cal=%p, only_if_exists=%d, username=%s, password=%s",
      backend, cal, only_if_exists, username, password);
@@ -307,17 +304,54 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   e_cal_sync_load_stamp(cb, &priv->sync_stamp);
   rebuild_clients_changes_list (cb);
 
+  if (!priv->sync_thread)
+    cb->priv->sync_thread = g_thread_create (e_cal_sync_main_thread, cb, TRUE, NULL);
+
   if (priv->mode == CAL_MODE_REMOTE)
   {
+    /* do the synchronization and wait until it ends */
+    if (!e_cal_sync_incremental_synchronization(cb, &local_err))
+    {
+      if (local_err)
+      {
+        g_warning("Synchronization failed with message %s", local_err->message);
+        g_clear_error(&local_err);
+      }
+      else
+        g_warning("Synchronization failed with no error message");
+    }
+
+    /* FIXME: when synchronization failed, open should not be ok */
+
+    /* run synchronization thread */
     priv->sync_mode = SYNC_WORK;
     g_cond_signal (priv->sync_cond);
   }
   else
     priv->sync_mode = SYNC_SLEEP;
 
+  /*
+   * solve the default zone: find out, if the default zone is in the cache or not.
+   * if it is not, put it there with E_CAL_COMPONENT_LOCALLY_CREATED status.
+   */
+  if (priv->default_zone)
+  {
+    char* default_tzid = icaltimezone_get_tzid(priv->default_zone);
+
+    const icaltimezone* cache_zone = e_cal_backend_cache_get_timezone(priv->cache, default_tzid);
+    if (!cache_zone)
+    {
+      /* default zone is not in cache yet. add it there */
+      icalcomponent* default_tzcomp = icaltimezone_get_component(priv->default_zone);
+      icomp_set_sync_state(default_tzcomp, E_CAL_COMPONENT_LOCALLY_CREATED);
+      e_cal_backend_cache_put_default_timezone(priv->cache, priv->default_zone);
+      e_cal_backend_cache_put_timezone(priv->cache, priv->default_zone);
+    }
+  }
+
 out:
   g_mutex_unlock (priv->sync_mutex);
-  D("OPEN STATUS: %d", status);
+  T("FINISHED");
 
   return status;
 }
@@ -367,45 +401,6 @@ e_cal_backend_3e_get_mode (ECalBackend * backend)
   priv = cb->priv;
 
   return priv->mode;
-}
-
-/*
- *  sets the timezone to be used as the default
- */
-  static ECalBackendSyncStatus
-e_cal_backend_3e_set_default_zone (ECalBackendSync * backend,
-                                   EDataCal * cal, const char *tzobj)
-{
-  icalcomponent                                    *tz_comp;
-  ECalBackend3e                                    *cb;
-  ECalBackend3ePrivate                             *priv;
-  icaltimezone                                     *zone;
-
-  T ("backend=%p, cal=%p, tzobj=%s", backend, cal, tzobj);
-
-  g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
-
-  cb = (ECalBackend3e *) backend;
-
-  g_return_val_if_fail (E_IS_CAL_BACKEND_3E (cb),
-                        GNOME_Evolution_Calendar_OtherError);
-  g_return_val_if_fail (tzobj != NULL, GNOME_Evolution_Calendar_OtherError);
-
-  priv = cb->priv;
-
-  if (!(tz_comp = icalparser_parse_string (tzobj)))
-    return GNOME_Evolution_Calendar_InvalidObject;
-
-  zone = icaltimezone_new();
-  icaltimezone_set_component (zone, tz_comp);
-
-  g_mutex_lock(priv->sync_mutex);
-  if (priv->default_zone)
-    icaltimezone_free (priv->default_zone, 1);
-  priv->default_zone = zone;
-  g_mutex_unlock(priv->sync_mutex);
-
-  return GNOME_Evolution_Calendar_Success;
 }
 
 /*
@@ -639,7 +634,6 @@ e_cal_backend_3e_add_timezone (ECalBackendSync * backend,
   icaltimezone                                     *zone;
 
   T ("backend=%p, cal=%p, tzobj=%s", backend, cal, tzobj);
-
   cb = (ECalBackend3e *) backend;
 
   g_return_val_if_fail (E_IS_CAL_BACKEND_3E (cb), GNOME_Evolution_Calendar_OtherError);
@@ -661,7 +655,8 @@ e_cal_backend_3e_add_timezone (ECalBackendSync * backend,
   icaltimezone_set_component (zone, tz_comp);
 
   g_mutex_lock (priv->sync_mutex);
-  e_cal_backend_cache_put_timezone (priv->cache, zone);
+  /* FIXME: add timezone to the server */
+  //e_cal_backend_cache_put_timezone (priv->cache, zone);
   g_mutex_unlock (priv->sync_mutex);
 
   return GNOME_Evolution_Calendar_Success;
@@ -842,6 +837,54 @@ e_cal_backend_3e_server_object_add(ECalBackend3e* cb, ECalComponent* comp, char*
 }
 
 /*
+ *  sets the timezone to be used as the default
+ *  called before opening connection, before creating cache...
+ */
+  static ECalBackendSyncStatus
+e_cal_backend_3e_set_default_zone (ECalBackendSync * backend,
+                                   EDataCal * cal, const char *tzobj)
+{
+  icalcomponent                                    *tz_comp;
+  ECalBackend3e                                    *cb;
+  ECalBackend3ePrivate                             *priv;
+  icaltimezone                                     *zone;
+  const icaltimezone                               *cache_zone;
+  ECalComponent                                    *ecomp;
+  char                                             *new_object;
+  GError                                           *local_error = NULL;
+  ECalBackendSyncStatus                            status = GNOME_Evolution_Calendar_OtherError;
+  char                                             *tzid;
+
+  T ("SETTING DEFAULT ZONE: tzobj=%s", tzobj);
+
+  g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
+
+  cb = (ECalBackend3e *) backend;
+
+  g_return_val_if_fail (E_IS_CAL_BACKEND_3E (cb),
+                        GNOME_Evolution_Calendar_OtherError);
+  g_return_val_if_fail (tzobj != NULL, GNOME_Evolution_Calendar_OtherError);
+
+
+  priv = cb->priv;
+
+  if (!(tz_comp = icalparser_parse_string (tzobj)))
+    return GNOME_Evolution_Calendar_InvalidObject;
+
+  zone = icaltimezone_new();
+  icaltimezone_set_component(zone, tz_comp);
+
+  g_mutex_lock(priv->sync_mutex);
+  if (priv->default_zone)
+    icaltimezone_free (priv->default_zone, 1);
+  priv->default_zone = zone;
+  g_mutex_unlock(priv->sync_mutex);
+
+  return GNOME_Evolution_Calendar_Success;
+}
+
+
+/*
  *  creates a new event/task in the calendar
  */
 static ECalBackendSyncStatus
@@ -1005,7 +1048,7 @@ e_cal_backend_3e_modify_object (ECalBackendSync * backend,
   ECalBackendSyncStatus                             status = GNOME_Evolution_Calendar_Success;
   GError                                           *local_err = NULL;
 
-  T ("Modify object");
+  T ("backend=%p, cal=%p, calobj=%s", backend, cal, calobj);
 
   g_return_val_if_fail (calobj != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
   g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
@@ -1240,7 +1283,10 @@ create_user_free_busy (ECalBackend3e * cb, const char *address,
   if (!e_cal_sync_server_open (cb, &local_err))
     goto error;
 
-  retval = ESClient_freeBusy (priv->conn, g_strdup (address), from_date, to_date, &local_err);
+  icalcomponent* comp = icaltimezone_get_component(priv->default_zone);
+  char * default_zone = icalcomponent_as_ical_string(comp);
+  retval = ESClient_freeBusy (priv->conn, g_strdup (address), from_date, to_date, default_zone,
+                              &local_err);
 
   if (local_err)
     goto error;
@@ -1324,6 +1370,8 @@ e_cal_backend_3e_get_free_busy (ECalBackendSync * backend,
         error = TRUE;
       else
       {
+        g_debug("F/B: %s", calobj);
+
         *freebusy = g_list_append (*freebusy, g_strdup (calobj));
         g_free (calobj);
       }
@@ -1780,8 +1828,7 @@ e_cal_backend_3e_init (ECalBackend3e * cb, ECalBackend3eClass * klass)
   cb->priv->sync_mode = SYNC_SLEEP;
   cb->priv->sync_cond = g_cond_new ();
   cb->priv->sync_mutex = g_mutex_new ();
-  cb->priv->sync_thread =
-    g_thread_create (e_cal_sync_main_thread, cb, TRUE, NULL);
+  cb->priv->sync_thread = NULL;
   cb->priv->gconf = gconf_client_get_default ();
   cb->priv->source_changed_perm = 0;
 

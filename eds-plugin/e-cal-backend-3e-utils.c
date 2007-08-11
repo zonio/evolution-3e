@@ -138,20 +138,27 @@ e_cal_component_has_deleted_status(ECalComponent* comp)
   return icomp_get_deleted_status(icomp);
 }
 
+void
+icomp_set_sync_state(icalcomponent* icomp, ECalComponentSyncState state)
+{
+  char *state_string;
+
+  state_string = g_strdup_printf ("%d", state);
+  icomp_x_prop_set(icomp, "X-EEE-SYNC-STATE", state_string);
+  g_free (state_string);
+}
+
 // set internal synchro state
 void
 e_cal_component_set_sync_state(ECalComponent *comp,
                                ECalComponentSyncState state)
 {
-  char *state_string;
   icalcomponent *icomp;
 
   g_return_if_fail(comp != NULL);
 
   icomp = e_cal_component_get_icalcomponent(comp);
-  state_string = g_strdup_printf ("%d", state);
-  icomp_x_prop_set(icomp, "X-EEE-SYNC-STATE", state_string);
-  g_free (state_string);
+  icomp_set_sync_state(icomp, state);
 }
 
 void
@@ -301,9 +308,9 @@ icomp_get_sync_state(icalcomponent* icomp)
   state_string = icomp_x_prop_get(icomp, "X-EEE-SYNC-STATE");
   int_state = g_ascii_strtoull(state_string, &endptr, 0);
 
-  // unknown state: do not synchronize
+  // unknown state: locally created 
   if (endptr == state_string || (int_state < 0 || int_state > E_CAL_COMPONENT_LOCALLY_MODIFIED))
-    int_state = E_CAL_COMPONENT_IN_SYNCH;
+    int_state = E_CAL_COMPONENT_LOCALLY_CREATED;
 
   return (ECalComponentSyncState)int_state;
 }
