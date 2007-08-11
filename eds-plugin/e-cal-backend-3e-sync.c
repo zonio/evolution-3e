@@ -1051,7 +1051,7 @@ e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
  * @param cb 3e calendar backend
  */
 void
-rebuild_clients_changes_list(ECalBackend3e* cb)
+e_cal_sync_rebuild_clients_changes_list(ECalBackend3e* cb)
 {
   ECalBackend3ePrivate        *priv;
   ECalComponentSyncState      state;

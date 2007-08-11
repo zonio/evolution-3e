@@ -134,7 +134,7 @@ source_changed_perm(ESource *source, ECalBackend3e *cb)
 }
 
 static ECalBackendSyncStatus
-e_cal_initialize_backend (ECalBackend3e * cb, const gchar * username)
+e_cal_backend_initialize(ECalBackend3e * cb, const gchar * username)
 {
   GError                                           *err = NULL;
   ECalBackend3ePrivate                             *priv;
@@ -149,8 +149,7 @@ e_cal_initialize_backend (ECalBackend3e * cb, const gchar * username)
                                         E_CAL_SOURCE_TYPE_EVENT);
   if (!priv->cache)
   {
-    e_cal_backend_notify_error (E_CAL_BACKEND (cb),
-                                "Could not create cache file");
+    e_cal_backend_notify_error (E_CAL_BACKEND (cb), "Could not create cache file");
     return GNOME_Evolution_Calendar_OtherError;
   }
 
@@ -208,8 +207,7 @@ e_cal_initialize_backend (ECalBackend3e * cb, const gchar * username)
     if (err != NULL)
     {
       e_cal_backend_notify_gerror_error (E_CAL_BACKEND (cb),
-                                         "Failed to initialize XML-RPC client library.",
-                                         err);
+                                         "Failed to initialize XML-RPC client library.", err);
       return GNOME_Evolution_Calendar_OtherError;
     }
   }
@@ -252,7 +250,7 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   g_mutex_lock (priv->sync_mutex);
 
   status = (priv->is_loaded == TRUE)
-    ? GNOME_Evolution_Calendar_Success : e_cal_initialize_backend(cb, username);
+    ? GNOME_Evolution_Calendar_Success : e_cal_backend_initialize(cb, username);
 
   if (status != GNOME_Evolution_Calendar_Success)
     goto out;
@@ -263,21 +261,20 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
     goto out;
   }
 
-  g_free (priv->username);
-  g_free (priv->password);
+  g_free(priv->username);
+  g_free(priv->password);
+  source = e_cal_backend_get_source(E_CAL_BACKEND (cb));
 
   if (!username || *username == 0)
   {
-    source = e_cal_backend_get_source (E_CAL_BACKEND (cb));
-    priv->username = g_strdup (e_source_get_property (source, "username"));
-    priv->password = e_passwords_get_password (EEE_PASSWORD_COMPONENT,
-                                               e_source_get_property
-                                               (source, "auth-key"));
+    priv->username = g_strdup(e_source_get_property (source, "username"));
+    priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT,
+                                              e_source_get_property(source, "auth-key"));
   }
   else
   {
-    priv->username = g_strdup (username);
-    priv->password = g_strdup (password);
+    priv->username = g_strdup(username);
+    priv->password = g_strdup(password);
   }
 
   if (!priv->username || *priv->username == 0)
@@ -291,8 +288,6 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   D ("password %s", priv->password);
   D ("owner %s", priv->owner);
   D ("server uri %s", priv->server_uri);
-  D ("PERMISSION:");
-  source = e_cal_backend_get_source (E_CAL_BACKEND (cb));
 
   if (status != GNOME_Evolution_Calendar_Success)
     goto out;
@@ -302,7 +297,7 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   priv->calspec = g_strdup_printf ("%s:%s", priv->owner, priv->calname);
   priv->is_open = TRUE;
   e_cal_sync_load_stamp(cb, &priv->sync_stamp);
-  rebuild_clients_changes_list (cb);
+  e_cal_sync_rebuild_clients_changes_list(cb);
 
   if (!priv->sync_thread)
     cb->priv->sync_thread = g_thread_create (e_cal_sync_main_thread, cb, TRUE, NULL);
@@ -319,13 +314,14 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
       }
       else
         g_warning("Synchronization failed with no error message");
-    }
 
-    /* FIXME: when synchronization failed, open should not be ok */
+      status = GNOME_Evolution_Calendar_OtherError;
+      goto out;
+    }
 
     /* run synchronization thread */
     priv->sync_mode = SYNC_WORK;
-    g_cond_signal (priv->sync_cond);
+    g_cond_signal(priv->sync_cond);
   }
   else
     priv->sync_mode = SYNC_SLEEP;

@@ -50,7 +50,7 @@ void e_cal_sync_client_changes_insert(ECalBackend3e* cb, ECalComponent* comp);
 
 void e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp);
 
-void rebuild_clients_changes_list(ECalBackend3e* cb);
+void e_cal_sync_rebuild_clients_changes_list(ECalBackend3e* cb);
 
 void e_cal_sync_error_message(ECalBackend* backend, ECalComponent* comp, GError* err);
 
