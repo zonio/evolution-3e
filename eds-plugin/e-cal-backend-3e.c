@@ -631,7 +631,7 @@ e_cal_backend_3e_add_timezone (ECalBackendSync * backend,
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
   icalcomponent                                    *tz_comp;
-  icaltimezone                                     *zone;
+  icaltimezone                                     *tz, *zone;
 
   T ("backend=%p, cal=%p, tzobj=%s", backend, cal, tzobj);
   cb = (ECalBackend3e *) backend;
@@ -651,12 +651,20 @@ e_cal_backend_3e_add_timezone (ECalBackendSync * backend,
     return GNOME_Evolution_Calendar_InvalidObject;
   }
 
-  icomp_set_sync_state(tz_comp, E_CAL_COMPONENT_LOCALLY_CREATED);
-  zone = icaltimezone_new ();
-  icaltimezone_set_component (zone, tz_comp);
+  zone = icaltimezone_new();
+  icaltimezone_set_component(zone, tz_comp);
+  const char* tzid = icaltimezone_get_tzid(zone);
 
   g_mutex_lock (priv->sync_mutex);
-  e_cal_backend_cache_put_timezone (priv->cache, zone);
+
+  const icaltimezone* cache_zone = e_cal_backend_cache_get_timezone(priv->cache, tzid);
+
+  if (!cache_zone)
+  {
+    icomp_set_sync_state(tz_comp, E_CAL_COMPONENT_LOCALLY_CREATED);
+    e_cal_backend_cache_put_timezone (priv->cache, zone);
+  }
+
   g_mutex_unlock (priv->sync_mutex);
 
   return GNOME_Evolution_Calendar_Success;
