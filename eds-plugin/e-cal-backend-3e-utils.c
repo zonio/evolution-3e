@@ -133,6 +133,7 @@ e_cal_component_has_deleted_status(ECalComponent* comp)
   icalcomponent *icomp;
 
   g_return_val_if_fail(comp != NULL, FALSE);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(comp), FALSE);
  
   icomp = e_cal_component_get_icalcomponent(comp);
   return icomp_get_deleted_status(icomp);
@@ -156,6 +157,7 @@ e_cal_component_set_sync_state(ECalComponent *comp,
   icalcomponent *icomp;
 
   g_return_if_fail(comp != NULL);
+  g_return_if_fail(E_IS_CAL_COMPONENT(comp));
 
   icomp = e_cal_component_get_icalcomponent(comp);
   icomp_set_sync_state(icomp, state);
@@ -172,6 +174,7 @@ e_cal_component_set_local_state(ECalBackend * backend, ECalComponent* comp)
 
   g_return_if_fail(comp != NULL);
   g_return_if_fail(backend != NULL);
+  g_return_if_fail(E_IS_CAL_COMPONENT(comp));
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
@@ -208,6 +211,7 @@ e_cal_component_unset_local_state(ECalBackend* backend, ECalComponent* comp)
 
   g_return_if_fail(comp != NULL);
   g_return_if_fail(backend != NULL);
+  g_return_if_fail(E_IS_CAL_COMPONENT(comp));
 
   cb = E_CAL_BACKEND_3E(backend);
   priv = cb->priv;
@@ -235,6 +239,7 @@ e_cal_component_get_dtstamp_as_timet(ECalComponent* comp)
   struct icaltimetype     itt;
 
   g_return_val_if_fail(comp != NULL, 0);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(comp), 0);
 
   e_cal_component_get_dtstamp(comp, &itt);
   return icaltime_as_timet_with_zone(itt, icaltimezone_get_utc_timezone());
@@ -260,6 +265,7 @@ e_cal_component_set_stamp(ECalComponent *comp,
 
   g_return_if_fail(comp != NULL);
   g_return_if_fail(stamp != NULL);
+  g_return_if_fail(E_IS_CAL_COMPONENT(comp));
 
   e_cal_component_get_comment_list(comp, &comments);
 
@@ -287,6 +293,7 @@ e_cal_component_get_stamp(ECalComponent* comp)
   ECalComponentText       *summary;
 
   g_return_val_if_fail(comp != NULL, NULL);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(comp), NULL);
 
   e_cal_component_get_comment_list(comp, &comments);
 
@@ -305,6 +312,8 @@ icomp_get_sync_state(icalcomponent* icomp)
   char                *endptr;
   int                 int_state ;
 
+  g_return_val_if_fail(icomp != NULL, GNOME_Evolution_Calendar_OtherError);
+
   state_string = icomp_x_prop_get(icomp, "X-EEE-SYNC-STATE");
   int_state = g_ascii_strtoull(state_string, &endptr, 0);
 
@@ -322,6 +331,7 @@ e_cal_component_get_sync_state(ECalComponent* comp)
   icalcomponent       *icomp;
 
   g_return_val_if_fail(comp != NULL, E_CAL_COMPONENT_IN_SYNCH);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(comp), E_CAL_COMPONENT_IN_SYNCH);
 
   icomp = e_cal_component_get_icalcomponent(comp);
   return icomp_get_sync_state(icomp);
@@ -335,7 +345,8 @@ e_cal_component_is_local(ECalComponent* comp)
   char                *endptr;
   int                 int_state ;
 
-  g_return_val_if_fail(comp != NULL, E_CAL_COMPONENT_IN_SYNCH);
+  g_return_val_if_fail(comp != NULL, TRUE);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(comp), TRUE);
 
   icomp = e_cal_component_get_icalcomponent(comp);
   state_string = icomp_x_prop_get(icomp, "X-EEE-LOCAL");
@@ -357,6 +368,10 @@ e_cal_component_get_ids(ECalComponent* comp,
                         const gchar** uid,
                         const gchar** rid)
 {
+  g_return_if_fail(E_IS_CAL_COMPONENT(comp));
+  g_return_if_fail(uid != NULL);
+  g_return_if_fail(rid != NULL);
+
   e_cal_component_get_uid(comp, uid);
   *rid = e_cal_component_get_recurid_as_string(comp);
 }

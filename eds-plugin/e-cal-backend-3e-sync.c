@@ -96,6 +96,7 @@ e_cal_sync_error_message(ECalBackend* backend, ECalComponent* comp, GError* err)
   g_return_if_fail(backend != NULL);
   g_return_if_fail(comp != NULL);
   g_return_if_fail(err != NULL);
+  g_return_if_fail(E_IS_CAL_COMPONENT(comp));
 
   e_cal_component_get_summary(comp, &summary);
 
@@ -160,6 +161,7 @@ e_cal_sync_rpc_deleteObject(ECalBackend3e* cb,
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(comp != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(comp), FALSE);
 
   D("Deleting from server.");
 
@@ -263,6 +265,8 @@ e_cal_sync_add_timezone(gpointer key, gpointer value, gpointer user_data)
     new_zone = icaltimezone_new();
     /* sets new_comp with new_zone */
     icaltimezone_set_component(new_zone, new_comp);
+    /* we want to have objects on server in state E_CAL_COMPONENT_IN_SYNCH */
+    icomp_set_sync_state(new_comp, E_CAL_COMPONENT_IN_SYNCH);
   }
   else
   {
@@ -320,6 +324,7 @@ e_cal_sync_add_timezones(ECalBackend3e* cb,
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(ccomp != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(ccomp), FALSE);
 
   /* extract component's timezones */
   tzlist = g_new0(ECalBackend3eTzidList, 1);
@@ -367,6 +372,7 @@ e_cal_sync_rpc_updateObject(ECalBackend3e* cb,
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(ccomp != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(ccomp), FALSE);
 
   T("Updating on server.");
 
@@ -459,6 +465,7 @@ e_cal_sync_rpc_addObject(ECalBackend3e* cb,
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(ccomp != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(ccomp), FALSE);
 
   T("Adding to server.");
 
@@ -953,10 +960,18 @@ e_cal_sync_main_thread(gpointer data)
       if (err)
       {
         g_warning("Synchronization failed with message %s", err->message);
+        char* message = g_strdup_printf("Synchronization failed: %s!", err->message);
+        e_cal_backend_notify_error(E_CAL_BACKEND(cb), message);
+        g_free(message);
         g_clear_error(&err);
       }
       else
+      {
         g_warning("Synchronization failed with no error message");
+        char* message = g_strdup_printf("Synchronization failed: no error message!");
+        e_cal_backend_notify_error(E_CAL_BACKEND(cb), message);
+        g_free(message);
+      }
     }
 
     /* get some rest :) */
@@ -988,6 +1003,7 @@ e_cal_sync_client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
 
   g_return_if_fail(cb != NULL);
   g_return_if_fail(comp != NULL);
+  g_return_if_fail(E_IS_CAL_COMPONENT(comp));
   priv = cb->priv;
 
   g_object_ref(comp);
@@ -1012,6 +1028,7 @@ e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
 
   g_return_if_fail(cb != NULL);
   g_return_if_fail(comp != NULL);
+  g_return_if_fail(E_IS_CAL_COMPONENT(comp));
   priv = cb->priv;
 
   node = g_list_find_custom(priv->sync_clients_changes, comp, e_cal_component_compare);
@@ -1228,6 +1245,7 @@ e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalCompone
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(scomp != NULL, FALSE);
   g_return_val_if_fail(ccomp != NULL, FALSE);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(ccomp), FALSE);
 
   sync_state = e_cal_component_get_sync_state(ccomp);
   g_return_val_if_fail(sync_state != E_CAL_COMPONENT_IN_SYNCH, FALSE);

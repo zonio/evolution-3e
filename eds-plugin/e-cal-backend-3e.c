@@ -791,6 +791,7 @@ e_cal_backend_3e_server_object_add(ECalBackend3e* cb, ECalComponent* comp, char*
   g_return_val_if_fail(cb != NULL, GNOME_Evolution_Calendar_OtherError);
   g_return_val_if_fail(comp != NULL, GNOME_Evolution_Calendar_OtherError);
   g_return_val_if_fail(new_object != NULL, GNOME_Evolution_Calendar_OtherError);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(comp), GNOME_Evolution_Calendar_InvalidObject);
 
   T("");
   priv = cb->priv;
@@ -958,7 +959,9 @@ e_cal_backend_3e_server_object_update(ECalBackend3e* cb, ECalComponent* cache_co
 
   g_return_val_if_fail(cb != NULL, GNOME_Evolution_Calendar_OtherError);
   g_return_val_if_fail(cache_comp != NULL, GNOME_Evolution_Calendar_OtherError);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(cache_comp), GNOME_Evolution_Calendar_InvalidObject);
   g_return_val_if_fail(updated_comp != NULL, GNOME_Evolution_Calendar_OtherError);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(updated_comp), GNOME_Evolution_Calendar_InvalidObject);
   g_return_val_if_fail(old_object != NULL, GNOME_Evolution_Calendar_OtherError);
   g_return_val_if_fail(new_object != NULL, GNOME_Evolution_Calendar_OtherError);
 
@@ -1120,6 +1123,7 @@ e_cal_backend_3e_server_object_remove(ECalBackend3e* cb,
   g_return_val_if_fail(cb != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
   g_return_val_if_fail(cal != NULL, GNOME_Evolution_Calendar_OtherError);
   g_return_val_if_fail(cache_comp != NULL, GNOME_Evolution_Calendar_OtherError);
+  g_return_val_if_fail(E_IS_CAL_COMPONENT(cache_comp), GNOME_Evolution_Calendar_InvalidObject);
   g_return_val_if_fail(uid != NULL, GNOME_Evolution_Calendar_OtherError);
   /* rid can be NULL */
   g_return_val_if_fail(old_object != NULL, GNOME_Evolution_Calendar_OtherError);
