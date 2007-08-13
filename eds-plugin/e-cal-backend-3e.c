@@ -197,8 +197,8 @@ e_cal_backend_initialize(ECalBackend3e * cb, const gchar * username)
        e_cal_backend_notify_error (E_CAL_BACKEND (cb),
        "Invalid calendar source list setup.");
     */
-    return GNOME_Evolution_Calendar_OtherError;
 
+    return GNOME_Evolution_Calendar_OtherError;
   }
 
   if (priv->conn == NULL)
@@ -1859,7 +1859,8 @@ e_cal_backend_3e_finalize (GObject * object)
   priv = cb->priv;
 
   server_sync_signal (cb);
-  g_thread_join (priv->sync_thread);
+  if (priv->sync_thread)
+    g_thread_join (priv->sync_thread);
   g_cond_free (priv->sync_cond);
   g_mutex_free (priv->sync_mutex);
 
