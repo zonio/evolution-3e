@@ -133,8 +133,9 @@ source_changed_perm(ESource *source, ECalBackend3e *cb)
   g_debug("SOURCE CHANGED");
 }
 
+/* initilizes priv structure of the cb */
 static ECalBackendSyncStatus
-e_cal_backend_initialize(ECalBackend3e * cb, const gchar * username)
+e_cal_backend_initialize_privates(ECalBackend3e * cb, const char* username, const char* password)
 {
   GError                                           *err = NULL;
   ECalBackend3ePrivate                             *priv;
@@ -145,15 +146,35 @@ e_cal_backend_initialize(ECalBackend3e * cb, const gchar * username)
   g_return_val_if_fail (cb != NULL, GNOME_Evolution_Calendar_OtherError);
   T("");
   priv = cb->priv;
-  priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri (E_CAL_BACKEND (cb)),
+  source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
+
+  g_free(priv->username);
+  g_free(priv->password);
+  /* find out username and password before any attempts to initialize cache */
+  if (!username || *username == 0)
+  {
+    priv->username = g_strdup(e_source_get_property (source, "username"));
+    priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT,
+                                              e_source_get_property(source, "auth-key"));
+  }
+  else
+  {
+    priv->username = g_strdup(username);
+    priv->password = g_strdup(password);
+  }
+
+  /* username has to be initialized already, because we look up hostname
+   * in dns txt records by username */
+  if (!priv->username || *priv->username == 0)
+    return GNOME_Evolution_Calendar_OtherError;
+
+  priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(cb)),
                                         E_CAL_SOURCE_TYPE_EVENT);
   if (!priv->cache)
   {
     e_cal_backend_notify_error (E_CAL_BACKEND (cb), "Could not create cache file");
     return GNOME_Evolution_Calendar_OtherError;
   }
-
-  source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
 
   /*
    * server_hostname = e_source_get_property(source, "eee-server");
@@ -167,15 +188,14 @@ e_cal_backend_initialize(ECalBackend3e * cb, const gchar * username)
   g_free (priv->calname);
   g_free (priv->owner);
   cal_name = e_source_get_property (source, "eee-calname");
-  g_debug("CAL NAME %s", cal_name);
-  server_hostname = get_eee_server_hostname (username);
+  server_hostname = get_eee_server_hostname(priv->username);
   priv->server_uri = g_strdup_printf ("https://%s/ESClient", server_hostname);
   g_free (server_hostname);
   priv->calname = g_strdup (cal_name);
-  priv->settings = e_cal_sync_find_settings (cb);
+  priv->settings = e_cal_sync_find_settings(cb);
   priv->owner = g_strdup (e_source_get_property (source, "eee-owner"));
   g_return_val_if_fail (priv->owner != NULL, GNOME_Evolution_Calendar_OtherError);
-  priv->is_owned = strcmp(username, priv->owner) == 0;
+  priv->is_owned = strcmp(priv->username, priv->owner) == 0;
   if (priv->is_owned)
     priv->has_write_permission = TRUE;
   else
@@ -212,6 +232,11 @@ e_cal_backend_initialize(ECalBackend3e * cb, const gchar * username)
     }
   }
 
+  g_free (priv->calspec);
+  g_free (priv->sync_stamp);
+  priv->calspec = g_strdup_printf ("%s:%s", priv->owner, priv->calname);
+  priv->is_open = TRUE;
+  e_cal_sync_load_stamp(cb, &priv->sync_stamp);
   priv->is_loaded = TRUE;
 
   return GNOME_Evolution_Calendar_Success;
@@ -250,34 +275,12 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   g_mutex_lock (priv->sync_mutex);
 
   status = (priv->is_loaded == TRUE)
-    ? GNOME_Evolution_Calendar_Success : e_cal_backend_initialize(cb, username);
+    ? GNOME_Evolution_Calendar_Success : e_cal_backend_initialize_privates(cb, username, password);
 
   if (status != GNOME_Evolution_Calendar_Success)
     goto out;
 
   if (!priv->calname)
-  {
-    status = GNOME_Evolution_Calendar_OtherError;
-    goto out;
-  }
-
-  g_free(priv->username);
-  g_free(priv->password);
-  source = e_cal_backend_get_source(E_CAL_BACKEND (cb));
-
-  if (!username || *username == 0)
-  {
-    priv->username = g_strdup(e_source_get_property (source, "username"));
-    priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT,
-                                              e_source_get_property(source, "auth-key"));
-  }
-  else
-  {
-    priv->username = g_strdup(username);
-    priv->password = g_strdup(password);
-  }
-
-  if (!priv->username || *priv->username == 0)
   {
     status = GNOME_Evolution_Calendar_OtherError;
     goto out;
@@ -292,11 +295,6 @@ e_cal_backend_3e_open (ECalBackendSync * backend,
   if (status != GNOME_Evolution_Calendar_Success)
     goto out;
 
-  g_free (priv->calspec);
-  g_free (priv->sync_stamp);
-  priv->calspec = g_strdup_printf ("%s:%s", priv->owner, priv->calname);
-  priv->is_open = TRUE;
-  e_cal_sync_load_stamp(cb, &priv->sync_stamp);
   e_cal_sync_rebuild_clients_changes_list(cb);
 
   if (!priv->sync_thread)
