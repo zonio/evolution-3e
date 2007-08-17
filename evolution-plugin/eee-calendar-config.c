@@ -111,7 +111,7 @@ GtkWidget *eee_calendar_properties_factory(EPlugin* epl, EConfigHookItemFactoryD
   if (is_new_calendar_dialog(target->source))
   {
     target->disable_source_update = TRUE;
-    if (account == NULL)
+    if (account == NULL || account->state != EEE_ACCOUNT_STATE_ONLINE)
     {
       row++;
       msg = g_markup_printf_escaped("<span weight=\"bold\" foreground=\"#ff0000\">%s</span>", 
@@ -142,13 +142,13 @@ gboolean eee_calendar_properties_check(EPlugin* epl, EConfigHookPageCheckData* d
   if (is_new_calendar_dialog(target->source))
   {
     EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr(), group);
-    if (account == NULL)
+    if (account == NULL || account->state != EEE_ACCOUNT_STATE_ONLINE)
       return FALSE;
   }
   else
   {
     EeeAccount* account = eee_accounts_manager_find_account_by_source(mgr(), target->source);
-    if (account == NULL)
+    if (account == NULL || account->state != EEE_ACCOUNT_STATE_ONLINE)
       return FALSE;
   }
 
@@ -174,7 +174,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
   {
     char* calname = NULL;
     EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr(), group);
-    if (account == NULL)
+    if (account == NULL || account->state != EEE_ACCOUNT_STATE_ONLINE)
       return;
 
     if (eee_account_create_new_calendar(account, &calname))
@@ -187,7 +187,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
   else
   {
     EeeAccount* account = eee_accounts_manager_find_account_by_source(mgr(), source);
-    if (account == NULL)
+    if (account == NULL || account->state != EEE_ACCOUNT_STATE_ONLINE)
       return;
 
     const char* calname = e_source_get_property(source, "eee-calname");
@@ -196,7 +196,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
     eee_account_disconnect(account);
   }
 
-  eee_accounts_manager_abort_current_sync(mgr());
+  eee_accounts_manager_restart_sync(mgr());
 }
 
 /* calendar source list popup menu items */
@@ -233,7 +233,7 @@ static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
   if (eee_account_unsubscribe_calendar(account, owner, calname))
     e_source_group_remove_source(group, source);
   eee_account_disconnect(account);
-  eee_accounts_manager_abort_current_sync(mgr());
+  eee_accounts_manager_restart_sync(mgr());
 }
 
 static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
@@ -265,7 +265,7 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
     g_object_unref(ecal);
   }
   eee_account_disconnect(account);
-  eee_accounts_manager_abort_current_sync(mgr());
+  eee_accounts_manager_restart_sync(mgr());
 }
 
 static EPopupItem popup_items_shared_cal[] = {
@@ -313,7 +313,7 @@ void eee_calendar_popup_source_factory(EPlugin* ep, ECalPopupTargetSource* targe
   if (eee_plugin_online)
   {
     account = eee_accounts_manager_find_account_by_source(mgr(), source);
-    if (account == NULL)
+    if (account == NULL || account->state != EEE_ACCOUNT_STATE_ONLINE)
       goto offline_mode;
 
     if (e_source_is_3e_owned_calendar(source))
@@ -346,19 +346,19 @@ gboolean eee_plugin_online = FALSE;
 
 void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 {
-  int online = target->state;
+  int online = !!target->state;
 
-  //g_debug("** EEE ** State changed to: %s", online ? "online" : "offline");
+  g_debug("** EEE ** State changed to: %s", online ? "online" : "offline");
 
-  eee_plugin_online = !!online;
+  eee_plugin_online = online;
   if (online)
   {
-    eee_accounts_manager_sync_enable(mgr(), TRUE);
+    eee_accounts_manager_restart_sync(mgr());
     hide_offline_labels();
   }
   else
   {
-    eee_accounts_manager_sync_enable(mgr(), FALSE);
+    eee_accounts_manager_pause_sync(mgr());
     show_offline_labels();
     acl_gui_destroy();
     subscribe_gui_destroy();
@@ -415,7 +415,7 @@ void status_changed(GtkToggleButton* button, const char* name)
     eee_accounts_manager_enable_account(mgr(), name);
   else
     eee_accounts_manager_disable_account(mgr(), name);
-  eee_accounts_manager_force_sync(mgr());
+  eee_accounts_manager_restart_sync(mgr());
 }
 
 GtkWidget* eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData *data)

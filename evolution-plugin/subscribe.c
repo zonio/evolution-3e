@@ -215,7 +215,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   source = e_source_new_3e(name, owner, ctx->account, perm, name, 0);
   e_source_group_add_source(group, source, -1);
   e_source_list_sync(eee_accounts_manager_peek_source_list(ctx->mgr), NULL);
-  eee_accounts_manager_abort_current_sync(ctx->mgr);
+  eee_accounts_manager_restart_sync(ctx->mgr);
 
  err1:
   eee_account_disconnect(ctx->account);
@@ -282,7 +282,7 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   {
     GtkTreeIter titer;
     EeeAccount* account = iter->data;
-    if (account->disabled)
+    if (account->state != EEE_ACCOUNT_STATE_ONLINE)
       continue;
     gtk_list_store_append(accounts_store, &titer);
     gtk_list_store_set(accounts_store, &titer, 0, account->name, 1, account, -1);

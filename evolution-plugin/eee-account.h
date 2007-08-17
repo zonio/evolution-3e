@@ -24,9 +24,10 @@ struct _EeeAccount
 {
   GObject parent;
 
-  char* name;           /**< Account name (usually e-mail address). Used to login to the 3E server. */
+  char* name;           /**< Account name (usually e-mail address). Used to login
+                             to the 3E server. */
   char* server;         /**< 3E server hostname:port. */
-  int disabled;         /**< Account is disabled. */
+  int state;            /**< Account state. */
 
   EeeAccountPriv* priv;
 };
@@ -34,6 +35,16 @@ struct _EeeAccount
 struct _EeeAccountClass
 {
   GObjectClass parent_class;
+};
+
+enum _EeeAccountState
+{
+  EEE_ACCOUNT_STATE_ONLINE,    /* everything ok */
+  EEE_ACCOUNT_STATE_NOTAVAIL,  /* account temporarily not available, will try 
+                                  contact later, still show cals in the list
+                                  in auto-offline mode */
+  EEE_ACCOUNT_STATE_DISABLED   /* account disabled (either by user or automatically
+                                  after unsuccessfull login) */
 };
 
 G_BEGIN_DECLS
@@ -45,7 +56,9 @@ EeeAccount*       eee_account_new                 (const char* name);
 EeeAccount*       eee_account_new_copy            (EeeAccount* ref);
 void              eee_account_copy                (EeeAccount* self, 
                                                    EeeAccount* ref);
-void              eee_account_disable             (EeeAccount* self);
+void              eee_account_set_state           (EeeAccount* self,
+                                                   int state);
+void              eee_account_dump                (EeeAccount* self);
 
 /* communication functions */
 

@@ -41,13 +41,12 @@ EeeAccount*            eee_accounts_manager_find_account_by_name         (EeeAcc
 EeeAccount*            eee_accounts_manager_find_account_by_group        (EeeAccountsManager* self, ESourceGroup* group);
 EeeAccount*            eee_accounts_manager_find_account_by_source       (EeeAccountsManager* self, ESource* source);
 void                   eee_accounts_manager_load_access_accounts_list    (EeeAccountsManager* self);
-void                   eee_accounts_manager_activate_accounts            (EeeAccountsManager* self);
 gboolean               eee_accounts_manager_account_is_disabled          (EeeAccountsManager* self, const char* name);
 void                   eee_accounts_manager_disable_account              (EeeAccountsManager* self, const char* name);
 void                   eee_accounts_manager_enable_account               (EeeAccountsManager* self, const char* name);
-void                   eee_accounts_manager_sync_enable                  (EeeAccountsManager* self, gboolean value);
-void                   eee_accounts_manager_force_sync                   (EeeAccountsManager* self);
-void                   eee_accounts_manager_abort_current_sync           (EeeAccountsManager* self);
+void                   eee_accounts_manager_activate_accounts            (EeeAccountsManager* self);
+void                   eee_accounts_manager_restart_sync                 (EeeAccountsManager* self);
+void                   eee_accounts_manager_pause_sync                   (EeeAccountsManager* self);
 
 G_END_DECLS
 

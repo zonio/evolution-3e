@@ -36,14 +36,32 @@ void eee_account_copy(EeeAccount* self, EeeAccount* ref)
   self->name = g_strdup(ref->name);
   g_free(self->server);
   self->server = g_strdup(ref->server);
-  self->disabled = ref->disabled;
+  self->state = ref->state;
 }
 
-void eee_account_disable(EeeAccount* self)
+void eee_account_set_state(EeeAccount* self, int state)
 {
   g_return_if_fail(IS_EEE_ACCOUNT(self));
 
-  self->disabled = TRUE;
+  self->state = state;
+}
+
+static const char* state_to_str(int state)
+{
+  if (state == EEE_ACCOUNT_STATE_ONLINE)
+    return "ONLINE";
+  if (state == EEE_ACCOUNT_STATE_NOTAVAIL)
+    return "NOTAVAIL";
+  if (state == EEE_ACCOUNT_STATE_DISABLED)
+    return "DISABLED";
+  return "???";
+}
+
+void eee_account_dump(EeeAccount* self)
+{
+  g_return_if_fail(IS_EEE_ACCOUNT(self));
+
+  g_debug("EeeAccount(name=%s, server=%s, state=%s)", self->name, self->server, state_to_str(self->state));
 }
 
 gboolean eee_account_find_server(EeeAccount* self)
