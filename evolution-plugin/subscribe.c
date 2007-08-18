@@ -182,6 +182,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   char* name = NULL;
   char* owner = NULL;
   char* perm = NULL;
+  char* title = NULL;
   gboolean is_calendar = FALSE;
   ESource* source;
   ESourceGroup* group;
@@ -193,6 +194,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
 
   gtk_tree_model_get(model, &iter, 
     SUB_NAME_COLUMN, &name,
+    SUB_TITLE_COLUMN, &title,
     SUB_PERM_COLUMN, &perm,
     SUB_OWNER_COLUMN, &owner,
     SUB_IS_CALENDAR_COLUMN, &is_calendar, -1);
@@ -202,6 +204,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
 
   if (!eee_account_subscribe_calendar(ctx->account, owner, name))
     goto err1;
+  eee_account_set_calendar_attribute(ctx->account, owner, name, "title", title, FALSE);
 
   group_name = g_strdup_printf("3E: %s", owner);
   group = e_source_list_peek_group_by_name(eee_accounts_manager_peek_source_list(ctx->mgr), group_name);
@@ -212,7 +215,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   }
   g_free(group_name);
 
-  source = e_source_new_3e(name, owner, ctx->account, perm, name, 0);
+  source = e_source_new_3e(name, owner, ctx->account, perm, title, 0);
   e_source_group_add_source(group, source, -1);
   e_source_list_sync(eee_accounts_manager_peek_source_list(ctx->mgr), NULL);
   eee_accounts_manager_restart_sync(ctx->mgr);
@@ -220,6 +223,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
  err1:
   eee_account_disconnect(ctx->account);
   g_free(name);
+  g_free(title);
   g_free(owner);
   g_free(perm);
  err0:
