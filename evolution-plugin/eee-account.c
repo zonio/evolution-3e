@@ -415,7 +415,8 @@ gboolean eee_account_delete_calendar(EeeAccount* self, const char* calname)
  * @param exclude_users List of emails of users to exclude.
  * @param model GtkListStore with at least two columns: 
  *   - 0 = G_TYPE_STRING (username)
- *   - 1 = EEE_TYPE_ACCOUNT (self object passed as @b self parameter)
+ *   - 1 = G_TYPE_STRING (realname)
+ *   - 2 = EEE_TYPE_ACCOUNT (self object passed as @b self parameter)
  */
 gboolean eee_account_load_users(EeeAccount* self, char* prefix, GSList* exclude_users, GtkListStore* model)
 {
@@ -448,13 +449,19 @@ gboolean eee_account_load_users(EeeAccount* self, char* prefix, GSList* exclude_
   for (iter = users; iter; iter = iter->next)
   {
     ESUser* user = iter->data;
+    const char* realname = eee_find_attribute_value(user->attrs, "realname");
+
     if (!strcmp(self->name, user->username))
       continue;
     if (exclude_users && g_slist_find_custom(exclude_users, user->username, (GCompareFunc)strcmp))
       continue;
+
     gtk_list_store_append(model, &titer_user);
-    //XXX: get realname
-    gtk_list_store_set(model, &titer_user, 0, user->username, 1, self, -1);
+    gtk_list_store_set(model, &titer_user, 
+      0, user->username, 
+      1, realname ? realname : "???",
+      2, self, 
+      -1);
   }
 
   g_slist_foreach(users, (GFunc)ESUser_free, NULL);

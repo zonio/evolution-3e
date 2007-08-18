@@ -12,6 +12,7 @@ static GSList* acl_contexts = NULL;
 enum
 {
   ACL_USERNAME_COLUMN,
+  ACL_REALNAME_COLUMN,
   ACL_PERM_COLUMN,
   ACL_NUM_COLUMNS
 };
@@ -19,8 +20,15 @@ enum
 enum
 {
   USERS_USERNAME_COLUMN,
+  USERS_REALNAME_COLUMN,
   USERS_ACCOUNT_COLUMN,
   USERS_NUM_COLUMNS
+};
+
+struct acl_perm
+{
+  ESPermission perm;
+  char* realname;
 };
 
 struct acl_context
@@ -129,7 +137,8 @@ static gboolean store_acl(struct acl_context* ctx)
         ESPermission* p = ESPermission_new();
         gtk_tree_model_get(GTK_TREE_MODEL(ctx->acl_model), &iter, 
           ACL_USERNAME_COLUMN, &p->user, 
-          ACL_PERM_COLUMN, &p->perm, -1);
+          ACL_PERM_COLUMN, &p->perm, 
+          -1);
         perms = g_slist_append(perms, p);
       }
       while (gtk_tree_model_iter_next(GTK_TREE_MODEL(ctx->acl_model), &iter));
@@ -168,13 +177,19 @@ static void on_acl_button_ok_clicked(GtkButton* button, struct acl_context* ctx)
 
 /* window destructor */
 
+void acl_perm_free(struct acl_perm* p)
+{
+  g_free(p->realname);
+  ESPermission_free((ESPermission*)p);
+}
+
 static void on_acl_window_destroy(GtkObject* object, struct acl_context* ctx)
 {
   gtk_object_unref(GTK_OBJECT(ctx->win));
   g_object_unref(ctx->source);
   g_object_unref(ctx->account);
   g_object_unref(ctx->xml);
-  g_slist_foreach(ctx->initial_perms, (GFunc)ESPermission_free, NULL);
+  g_slist_foreach(ctx->initial_perms, (GFunc)acl_perm_free, NULL);
   g_slist_free(ctx->initial_perms);
   acl_contexts = g_slist_remove(acl_contexts, ctx);
   g_free(ctx);
@@ -183,22 +198,33 @@ static void on_acl_window_destroy(GtkObject* object, struct acl_context* ctx)
 static gboolean load_state(struct acl_context* ctx)
 {
   GError* err = NULL;
+  GSList* iter;
+  GSList* perms;
 
   char* calname = (char*)e_source_get_property(ctx->source, "eee-calname");
   xr_client_conn* conn = eee_account_connect(ctx->account);
   if (!eee_account_auth(ctx->account))
     return FALSE;
 
-  GSList* perms = ESClient_getPermissions(conn, calname, &err);
-
-  eee_account_disconnect(ctx->account);
-
+  perms = ESClient_getPermissions(conn, calname, &err);
   if (err)
   {
     g_warning("** EEE ** Can't get permissions. (%d:%s)", err->code, err->message);
     g_clear_error(&err);
+    eee_account_disconnect(ctx->account);
     return FALSE;
   }
+
+  for (iter = perms; iter; iter = iter->next)
+  {
+    GSList* attrs = NULL;
+    struct acl_perm* perm = g_renew(struct acl_perm, iter->data, 1);
+    eee_account_get_user_attributes(ctx->account, perm->perm.user, &attrs);
+    perm->realname = g_strdup(eee_find_attribute_value(attrs, "realname"));
+    eee_account_free_attributes_list(attrs);
+  }
+
+  eee_account_disconnect(ctx->account);
 
   // parse permissions
   // - no permissions (empty list) => private
@@ -212,7 +238,6 @@ static gboolean load_state(struct acl_context* ctx)
     return TRUE;
   }
 
-  GSList* iter;
   for (iter = perms; iter; iter = iter->next)
   {
     ESPermission* perm = iter->data;
@@ -240,13 +265,15 @@ void update_gui_state(struct acl_context* ctx)
   GtkTreeIter titer;
   for (iter = ctx->initial_perms; iter; iter = iter->next)
   {
-    ESPermission* perm = iter->data;
-    if (!strcmp(perm->user, "*"))
+    struct acl_perm* perm = iter->data;
+    if (!strcmp(perm->perm.user, "*"))
       continue;
     gtk_list_store_append(ctx->acl_model, &titer);
     gtk_list_store_set(ctx->acl_model, &titer, 
-      ACL_USERNAME_COLUMN, perm->user, 
-      ACL_PERM_COLUMN, perm->perm, -1);
+      ACL_USERNAME_COLUMN, perm->perm.user, 
+      ACL_REALNAME_COLUMN, perm->realname,
+      ACL_PERM_COLUMN, perm->perm.perm,
+      -1);
   }
 }
 
@@ -303,19 +330,26 @@ static void add_user(const char* user, struct acl_context* ctx)
   do
   {
     char* user_name;
-    gtk_tree_model_get(GTK_TREE_MODEL(ctx->users_model), &iter, USERS_USERNAME_COLUMN, &user_name, -1);
+    char* realname;
+    gtk_tree_model_get(GTK_TREE_MODEL(ctx->users_model), &iter, 
+      USERS_USERNAME_COLUMN, &user_name, 
+      USERS_REALNAME_COLUMN, &realname,
+      -1);
     if (user_name && !strcmp(user, user_name))
     {
       GtkTreeIter iter2;
       gtk_list_store_append(ctx->acl_model, &iter2);
       gtk_list_store_set(ctx->acl_model, &iter2, 
-        ACL_USERNAME_COLUMN, user, 
-        ACL_PERM_COLUMN, "read", -1);
+        ACL_USERNAME_COLUMN, user,
+        ACL_REALNAME_COLUMN, realname,
+        ACL_PERM_COLUMN, "read",
+        -1);
 
       gtk_list_store_remove(ctx->users_model, &iter);
 
       g_idle_add((GSourceFunc)clean_entry, ctx);
       g_free(user_name);
+      g_free(realname);
       return;
     }
     g_free(user_name);
@@ -327,13 +361,22 @@ static void add_user(const char* user, struct acl_context* ctx)
 static void on_remove_clicked(GtkMenuItem *menuitem, struct acl_list_click_data* cd)
 {
   char* username;
+  char* realname;
   GtkTreeIter iter_user;
 
   // put user back to users_model
-  gtk_tree_model_get(GTK_TREE_MODEL(cd->ctx->acl_model), &cd->iter, ACL_USERNAME_COLUMN, &username, -1);
+  gtk_tree_model_get(GTK_TREE_MODEL(cd->ctx->acl_model), &cd->iter, 
+    ACL_USERNAME_COLUMN, &username, 
+    ACL_REALNAME_COLUMN, &realname, 
+    -1);
   gtk_list_store_append(cd->ctx->users_model, &iter_user);
-  gtk_list_store_set(cd->ctx->users_model, &iter_user, USERS_USERNAME_COLUMN, username, -1);
+  gtk_list_store_set(cd->ctx->users_model, &iter_user, 
+    USERS_USERNAME_COLUMN, username, 
+    USERS_REALNAME_COLUMN, realname, 
+    -1);
+
   g_free(username);
+  g_free(realname);
 
   // remove him
   gtk_list_store_remove(cd->ctx->acl_model, &cd->iter);
@@ -465,7 +508,8 @@ void acl_gui_create(EeeAccountsManager* mgr, EeeAccount* account, ESource* sourc
   // add columns to the tree view
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "xalign", 0.0, NULL);
-  col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "User", renderer, "text", ACL_USERNAME_COLUMN, NULL);
+  col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Username", renderer, "text", ACL_USERNAME_COLUMN, NULL);
+  col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Real Name", renderer, "text", ACL_REALNAME_COLUMN, NULL);
   //column = gtk_tree_view_get_column(c->tview, col_id);
   renderer = gtk_cell_renderer_combo_new();
   g_signal_connect(renderer, "editing-started", G_CALLBACK(editing_started), c);
