@@ -341,10 +341,20 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
     // synced
     if (account->state == EEE_ACCOUNT_STATE_NOTAVAIL)
     {
-      for (iter2 = e_source_group_peek_sources(group); iter2; iter2 = iter2->next)
+      GSList *iter_grp, *iter_src;
+      for (iter_grp = e_source_list_peek_groups(self->priv->eslist); iter_grp; iter_grp = iter_grp->next)
       {
-        ESource* source = iter2->data;
-        g_object_set_data(G_OBJECT(source), "synced", (gpointer)TRUE);
+        ESourceGroup* group = iter_grp->data;
+        for (iter_src = e_source_group_peek_sources(group); iter_src; iter_src = iter_src->next)
+        {
+          ESource* source = iter_src->data;
+          const char* account_name = e_source_get_property(source, "eee-account");
+          if (account_name && !strcmp(account_name, account->name))
+          {
+            g_object_set_data(G_OBJECT(source), "synced", (gpointer)TRUE);
+            g_object_set_data(G_OBJECT(group), "synced", (gpointer)TRUE);
+          }
+        }
       }
     }
     else
