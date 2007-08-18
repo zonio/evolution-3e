@@ -210,9 +210,9 @@ gboolean eee_account_search_shared_calendars(EeeAccount* self, const char* query
     char* escaped_query = qp_escape_string(query_string);
     query = g_strdup_printf(
       "match_username_substr(%1$s)"
-      " OR match_user_attribute_substr('realname', %1$s)"
-      " OR match_calendar_name_substr(%1$s)"
-      " OR match_calendar_attribute_substr('title', %1$s)",
+      " OR match_user_attribute('realname', %1$s)"
+      " OR match_calendar_name(%1$s)"
+      " OR match_calendar_attribute('title', %1$s)",
       escaped_query);
     g_free(escaped_query);
   }
@@ -433,7 +433,7 @@ gboolean eee_account_load_users(EeeAccount* self, char* prefix, GSList* exclude_
   else
   {
     char* escaped_prefix = qp_escape_string(prefix);
-    char* query = g_strdup_printf("match_username_prefix(%s)", escaped_prefix);
+    char* query = g_strdup_printf("match_username_substr(%s)", escaped_prefix);
     g_free(escaped_prefix);
     users = ESClient_getUsers(self->priv->conn, query, &err);
     g_free(query);
