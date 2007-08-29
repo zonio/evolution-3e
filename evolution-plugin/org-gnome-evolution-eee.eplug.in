@@ -133,8 +133,8 @@
       <ui file="@plugindir@/org-gnome-eee-cal-subscription.xml"/>
       <item
         type="item"
-        verb="FolderSubscription"
-        path="/commands/FolderSubscription"
+        verb="EeeCalSubscription"
+        path="/commands/EeeCalSubscription"
         enable="all"
         activate="eee_calendar_subscription"/>
       </menu>
