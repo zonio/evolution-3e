@@ -1466,8 +1466,7 @@ e_cal_backend_3e_receive_object(ECalBackend3e *cb, EDataCal *cal, icalcomponent 
     method = toplevel_method;
 
   cache_comp = e_cal_backend_cache_get_component(priv->cache, uid, rid);
-  if (!cache_comp)
-    goto out;
+  /* cache_comp can be NULL - component is not in cache yet */
 
   /* update the cache */
   switch (method)
@@ -1504,7 +1503,6 @@ e_cal_backend_3e_receive_object(ECalBackend3e *cb, EDataCal *cal, icalcomponent 
     g_propagate_error(err, local_err);
   }
 
-out:
   g_object_unref(comp);
   return status;
 }
@@ -1601,6 +1599,7 @@ e_cal_backend_3e_receive_objects (ECalBackendSync * backend,
   while (subcomp)
   {
     icalcomponent_kind child_kind = icalcomponent_isa (subcomp);
+    /* g_debug("CONSIDERING %s", icalcomponent_as_ical_string(subcomp)); */
 
     if (child_kind != kind)
     {
@@ -1762,26 +1761,41 @@ e_cal_backend_3e_send_objects (ECalBackendSync * backend,
     goto out;
   }
   
+/*
+ * Do not use server sending facility yet (server does not support it yet)
+  g_mutex_lock(priv->sync_mutex);
+
+  g_debug("Opening server");
+
   if (!e_cal_sync_server_open(cb, &local_err))
   {
     g_warning("Cannot open connection to server: %s", local_err->message);
     status = GNOME_Evolution_Calendar_MODE_LOCAL;
-    goto out;
+    goto out1;
   }
+
+  g_debug("Sending message");
 
   if (!ESClient_sendMessage(priv->conn, priv->calspec, attendees_slist, g_strdup(calobj),
                             &local_err))
   {
-    g_warning("Cannot send messages to the server: %s", local_err->message);
-    goto out1;
+    g_warning("Cannot send messages to the server: %s",
+              local_err ? local_err->message : "No error message");
+    goto out2;
   }
+*/
 
   for (iter = attendees_slist; iter; iter = g_slist_next(iter))
     *users = g_list_append(*users, iter->data);
   *modified_calobj = g_strdup(calobj);
 
-out1:
+/*
+  g_debug("Closing connection");
+out2:
   xr_client_close(priv->conn);
+out1:
+  g_mutex_unlock(priv->sync_mutex);
+*/
 out:
 	icalcomponent_free (icalcomp);
 
