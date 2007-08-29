@@ -115,6 +115,7 @@ enum
   SYNC_REQ_PAUSE,
   SYNC_REQ_RUN,
   SYNC_REQ_RESTART,
+  SYNC_REQ_START,
   SYNC_REQ_STOP
 };
 
@@ -173,8 +174,13 @@ static gpointer sync_thread_func(gpointer data)
         g_thread_yield();
         break;
 
+      case SYNC_REQ_START:
+        g_usleep(5000000);
+        mgr->priv->sync_request = SYNC_REQ_RESTART;
+        break;
+
       case SYNC_REQ_RUN:
-        for (i = 0; i < 10; i++)
+        for (i = 0; i < 30; i++)
         {
           g_usleep(1000000);
           if (mgr->priv->sync_request != SYNC_REQ_RUN)
@@ -728,7 +734,7 @@ static void eee_accounts_manager_init(EeeAccountsManager *self)
   if (!eee_plugin_online)
     self->priv->sync_request = SYNC_REQ_PAUSE;
   else
-    self->priv->sync_request = SYNC_REQ_RESTART;
+    self->priv->sync_request = SYNC_REQ_START;
 
   self->priv->sync_thread = g_thread_create(sync_thread_func, self, FALSE, NULL);
 }
