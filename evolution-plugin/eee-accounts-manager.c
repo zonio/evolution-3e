@@ -171,6 +171,7 @@ static gpointer sync_thread_func(gpointer data)
     switch (mgr->priv->sync_request)
     {
       case SYNC_REQ_PAUSE:
+        g_usleep(1000000);
         g_thread_yield();
         break;
 
