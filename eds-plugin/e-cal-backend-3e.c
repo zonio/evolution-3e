@@ -369,13 +369,15 @@ e_cal_backend_3e_is_read_only (ECalBackendSync * backend,
   The problem with this method is that it is not called as often as we would like to
   (not by every object manipulation). Therefore, when evolution is running and permission
   is changed on the server, we cannot reflect this situation by this method.
+  */
 
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
+  g_mutex_lock (priv->sync_mutex);
   *read_only = priv->is_open == FALSE || priv->has_write_permission == FALSE;
-  */
+  g_mutex_unlock (priv->sync_mutex);
 
-  *read_only = FALSE;
+  /* *read_only = FALSE; */
 
   T ("backend=%p, cal=%p, read_only=%s", backend, cal,
      *read_only ? "true" : "false");
