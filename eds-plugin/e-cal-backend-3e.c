@@ -1238,8 +1238,21 @@ e_cal_backend_3e_remove_object (ECalBackendSync * backend,
     goto out;
   }
 
-  status = e_cal_backend_3e_server_object_remove(cb, cal, cache_comp, uid, rid, old_object,
-                                                 &local_err);
+	if (e_cal_component_is_local(cache_comp))
+	{
+		g_debug("DELETING LOCAL COMPONENT1!");
+		if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
+		{
+			g_warning("Cannot remove component from the cache!");
+			status = GNOME_Evolution_Calendar_OtherError;
+		}
+
+		*old_object = e_cal_component_get_as_string(cache_comp);
+		/* FIXME: e_cal_backend_notify_object_removed(E_CAL_BACKEND(cb), uid, *old_object, NULL); */
+	}
+	else
+    status = e_cal_backend_3e_server_object_remove(cb, cal, cache_comp, uid, rid, old_object,
+                                                   &local_err);
 
   g_object_unref(cache_comp);
 
