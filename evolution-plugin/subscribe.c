@@ -183,11 +183,13 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   char* owner = NULL;
   char* perm = NULL;
   char* title = NULL;
+  char* color_string = NULL;
   gboolean is_calendar = FALSE;
   ESource* source;
   ESourceGroup* group;
   char* settings_string;
   char* group_name;
+  guint32 color;
 
   if (!gtk_tree_selection_get_selected(ctx->selection, &model, &iter))
     goto err0;
@@ -204,7 +206,12 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
 
   if (!eee_account_subscribe_calendar(ctx->account, owner, name))
     goto err1;
+
+  color = g_random_int_range(0x100000, 0x1000000);
+  color_string = g_strdup_printf("%06x", color);
+
   eee_account_set_calendar_attribute(ctx->account, owner, name, "title", title, FALSE);
+  eee_account_set_calendar_attribute(ctx->account, owner, name, "color", color_string, FALSE);
 
   group_name = g_strdup_printf("3E: %s", owner);
   group = e_source_list_peek_group_by_name(eee_accounts_manager_peek_source_list(ctx->mgr), group_name);
@@ -215,13 +222,14 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   }
   g_free(group_name);
 
-  source = e_source_new_3e(name, owner, ctx->account, perm, title, 0);
+  source = e_source_new_3e(name, owner, ctx->account, perm, title, color);
   e_source_group_add_source(group, source, -1);
   e_source_list_sync(eee_accounts_manager_peek_source_list(ctx->mgr), NULL);
   eee_accounts_manager_restart_sync(ctx->mgr);
 
  err1:
   eee_account_disconnect(ctx->account);
+  g_free(color_string);
   g_free(name);
   g_free(title);
   g_free(owner);
