@@ -960,17 +960,21 @@ e_cal_sync_main_thread(gpointer data)
       if (err)
       {
         g_warning("Synchronization failed with message %s", err->message);
+        /*
         char* message = g_strdup_printf("Synchronization failed: %s!", err->message);
         e_cal_backend_notify_error(E_CAL_BACKEND(cb), message);
         g_free(message);
+        */
         g_clear_error(&err);
       }
       else
       {
         g_warning("Synchronization failed with no error message");
+        /*
         char* message = g_strdup_printf("Synchronization failed: no error message!");
         e_cal_backend_notify_error(E_CAL_BACKEND(cb), message);
         g_free(message);
+        */
       }
     }
 
@@ -1211,6 +1215,7 @@ e_cal_sync_collect_cache_hash(ECalBackend3e* cb, gboolean remove_unchanged)
     {
       uid_copy = g_strdup_printf("UID:%s", uid);
       g_hash_table_insert(cache_hash, (gpointer)uid_copy, ccomp);
+      g_object_ref(ccomp);
     }
   }
 
