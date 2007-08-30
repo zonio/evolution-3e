@@ -1,6 +1,7 @@
 Evolution Plugin
 ~~~~~~~~~~~~~~~~
 
+- fix update acl eee_account_calendar_acl_set_shared()
 - check for cross-subscription in evolution (two EAccounts both with 3e support,
   one is subscribing from other)
 - subscribe: too many users handling
