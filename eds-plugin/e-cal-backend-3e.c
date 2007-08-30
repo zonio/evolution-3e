@@ -366,11 +366,15 @@ e_cal_backend_3e_is_read_only (ECalBackendSync * backend,
                         GNOME_Evolution_Calendar_OtherError);
 
   /*
+  The problem with this method is that it is not called as often as we would like to
+  (not by every object manipulation). Therefore, when evolution is running and permission
+  is changed on the server, we cannot reflect this situation by this method.
+
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
   *read_only = priv->is_open == FALSE || priv->has_write_permission == FALSE;
-  D("READONLY %d", *read_only);
   */
+
   *read_only = FALSE;
 
   T ("backend=%p, cal=%p, read_only=%s", backend, cal,
