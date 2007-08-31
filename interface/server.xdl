@@ -29,7 +29,6 @@ struct Calendar
 {
   string owner;
   string name;
-  string settings;
   array<Attribute> attrs;
   string perm;
 }
@@ -59,7 +58,6 @@ servlet Client
   boolean auth(string username, string password);
   boolean changePassword(string new_password);
   array<Calendar> getCalendars();
-  boolean updateCalendarSettings(string calspec, string settings);
   boolean setCalendarAttribute(string calspec, string name, string value, boolean is_public);
   boolean subscribeCalendar(string calspec);
   boolean unsubscribeCalendar(string calspec);
