@@ -1,0 +1,36 @@
+From 04f6350b4e91cf65aa94c7e85b0ac80a9f8ffff8 Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Wed, 29 Aug 2007 19:15:42 +0200
+Subject: [PATCH] fix ESource race in calendar authentization code
+
+---
+ calendar/common/authentication.c |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/calendar/common/authentication.c b/calendar/common/authentication.c
+index 69d0e95..338ec25 100644
+--- a/calendar/common/authentication.c
++++ b/calendar/common/authentication.c
+@@ -41,16 +41,17 @@ auth_func_cb (ECal *ecal, const char *prompt, const char *key, gpointer user_dat
+ 	const gchar *auth_domain, *component_name;
+ 
+ 	source = e_cal_get_source (ecal);
+-	auth_domain = e_source_get_property (source, "auth-domain");
++	auth_domain = g_strdup(e_source_get_property (source, "auth-domain"));
+ 	component_name = auth_domain ? auth_domain : "Calendar";
+ 	password = e_passwords_get_password (component_name, key);
+-	
++
+ 	if (!password)
+ 		password = e_passwords_ask_password (_("Enter password"), component_name, key, prompt,
+ 						     E_PASSWORDS_REMEMBER_FOREVER|E_PASSWORDS_SECRET|E_PASSWORDS_ONLINE,
+ 						     &remember,
+ 						     NULL);
+ 
++  g_free(auth_domain);
+ 	return password;
+ }
+ 
+-- 
+1.5.3.rc6.55-dirty
+
