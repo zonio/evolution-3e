@@ -11,10 +11,7 @@
 #include "e-cal-backend-3e-priv.h"
 #include "e-cal-backend-3e-utils.h"
 
-void
-e_cal_backend_notify_gerror_error(ECalBackend * backend,
-                                  char *message,
-                                  GError* err)
+void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GError* err)
 {
   ECalBackend3e *cb;
   ECalBackend3ePrivate *priv;
@@ -34,10 +31,7 @@ e_cal_backend_notify_gerror_error(ECalBackend * backend,
 }
 
 // set property in ical component
-void
-icomp_x_prop_set(icalcomponent *comp,
-                 const char *key,
-                 const char *value)
+void icomp_x_prop_set(icalcomponent *comp, const char *key, const char *value)
 {
   icalproperty *iter;
 
@@ -65,9 +59,7 @@ icomp_x_prop_set(icalcomponent *comp,
 }
 
 // get value of ical property
-const char *
-icomp_x_prop_get (icalcomponent *comp,
-                  const char *key)
+const char * icomp_x_prop_get (icalcomponent *comp, const char *key)
 {
 	icalproperty *xprop;
 
@@ -94,8 +86,7 @@ icomp_x_prop_get (icalcomponent *comp,
 }
 
 // extract X-3e-STATUS property
-gboolean
-icomp_get_deleted_status(icalcomponent* comp)
+gboolean icomp_get_deleted_status(icalcomponent* comp)
 {
   /* extract deleted flag */
   const gchar* x_deleted_string = "X-3E-STATUS";
@@ -111,8 +102,7 @@ icomp_get_deleted_status(icalcomponent* comp)
   return FALSE;
 }
 
-const char*
-icomp_get_uid(icalcomponent* comp)
+const char* icomp_get_uid(icalcomponent* comp)
 {
   icalproperty* iproperty;
 
@@ -126,8 +116,7 @@ icomp_get_uid(icalcomponent* comp)
   return NULL;
 }
 
-gboolean
-e_cal_component_has_deleted_status(ECalComponent* comp)
+gboolean e_cal_component_has_deleted_status(ECalComponent* comp)
 {
   /* extract deleted flag */
   icalcomponent *icomp;
@@ -139,8 +128,7 @@ e_cal_component_has_deleted_status(ECalComponent* comp)
   return icomp_get_deleted_status(icomp);
 }
 
-void
-icomp_set_sync_state(icalcomponent* icomp, ECalComponentSyncState state)
+void icomp_set_sync_state(icalcomponent* icomp, ECalComponentSyncState state)
 {
   char *state_string;
 
@@ -150,9 +138,7 @@ icomp_set_sync_state(icalcomponent* icomp, ECalComponentSyncState state)
 }
 
 // set internal synchro state
-void
-e_cal_component_set_sync_state(ECalComponent *comp,
-                               ECalComponentSyncState state)
+void e_cal_component_set_sync_state(ECalComponent *comp, ECalComponentSyncState state)
 {
   icalcomponent *icomp;
 
@@ -163,8 +149,7 @@ e_cal_component_set_sync_state(ECalComponent *comp,
   icomp_set_sync_state(icomp, state);
 }
 
-void
-e_cal_component_set_local_state(ECalBackend * backend, ECalComponent* comp)
+void e_cal_component_set_local_state(ECalBackend * backend, ECalComponent* comp)
 {
   icalcomponent              *icomp;
   ECalComponentText          comp_summary;
@@ -200,8 +185,7 @@ e_cal_component_set_local_state(ECalBackend * backend, ECalComponent* comp)
     g_debug("LOCAL already set!");
 }
 
-void
-e_cal_component_unset_local_state(ECalBackend* backend, ECalComponent* comp)
+void e_cal_component_unset_local_state(ECalBackend* backend, ECalComponent* comp)
 {
   icalcomponent *icomp;
   ECalComponentText          comp_summary;
@@ -233,8 +217,7 @@ e_cal_component_unset_local_state(ECalBackend* backend, ECalComponent* comp)
   e_cal_backend_cache_put_component(priv->cache, comp);
 }
 
-time_t
-e_cal_component_get_dtstamp_as_timet(ECalComponent* comp)
+time_t e_cal_component_get_dtstamp_as_timet(ECalComponent* comp)
 {
   struct icaltimetype     itt;
 
@@ -245,8 +228,7 @@ e_cal_component_get_dtstamp_as_timet(ECalComponent* comp)
   return icaltime_as_timet_with_zone(itt, icaltimezone_get_utc_timezone());
 }
 
-time_t
-icomp_get_dtstamp_as_timet(icalcomponent* comp)
+time_t icomp_get_dtstamp_as_timet(icalcomponent* comp)
 {
   struct icaltimetype     itt;
 
@@ -256,9 +238,7 @@ icomp_get_dtstamp_as_timet(icalcomponent* comp)
   return icaltime_as_timet_with_zone(itt, icaltimezone_get_utc_timezone());
 }
 
-void
-e_cal_component_set_stamp(ECalComponent *comp,
-                          const gchar* stamp)
+void e_cal_component_set_stamp(ECalComponent *comp, const gchar* stamp)
 {
   GSList                  *comments;
   ECalComponentText       *summary;
@@ -286,8 +266,7 @@ e_cal_component_set_stamp(ECalComponent *comp,
   e_cal_component_set_comment_list(comp, comments);
 }
 
-const gchar*
-e_cal_component_get_stamp(ECalComponent* comp)
+const gchar* e_cal_component_get_stamp(ECalComponent* comp)
 {
   GSList                  *comments;
   ECalComponentText       *summary;
@@ -305,8 +284,7 @@ e_cal_component_get_stamp(ECalComponent* comp)
   return summary->value;
 }
 
-ECalComponentSyncState
-icomp_get_sync_state(icalcomponent* icomp)
+ECalComponentSyncState icomp_get_sync_state(icalcomponent* icomp)
 {
   const char          *state_string;
   char                *endptr;
@@ -325,8 +303,7 @@ icomp_get_sync_state(icalcomponent* icomp)
 }
 
 // get internal synchro state
-ECalComponentSyncState
-e_cal_component_get_sync_state(ECalComponent* comp)
+ECalComponentSyncState e_cal_component_get_sync_state(ECalComponent* comp)
 {
   icalcomponent       *icomp;
 
@@ -337,8 +314,7 @@ e_cal_component_get_sync_state(ECalComponent* comp)
   return icomp_get_sync_state(icomp);
 }
 
-gboolean
-e_cal_component_is_local(ECalComponent* comp)
+gboolean e_cal_component_is_local(ECalComponent* comp)
 {
   icalcomponent       *icomp;
   const char          *state_string;
@@ -363,10 +339,7 @@ e_cal_component_is_local(ECalComponent* comp)
   return int_state == 1;
 }
 
-void
-e_cal_component_get_ids(ECalComponent* comp,
-                        const gchar** uid,
-                        const gchar** rid)
+void e_cal_component_get_ids(ECalComponent* comp, const gchar** uid, const gchar** rid)
 {
   g_return_if_fail(E_IS_CAL_COMPONENT(comp));
   g_return_if_fail(uid != NULL);
@@ -376,9 +349,7 @@ e_cal_component_get_ids(ECalComponent* comp,
   *rid = e_cal_component_get_recurid_as_string(comp);
 }
 
-gint
-e_cal_component_compare(gconstpointer ptr1,
-                        gconstpointer ptr2)
+gint e_cal_component_compare(gconstpointer ptr1, gconstpointer ptr2)
 {
   ECalComponent         *comp1, *comp2;
   const gchar           *uid1, *uid2;

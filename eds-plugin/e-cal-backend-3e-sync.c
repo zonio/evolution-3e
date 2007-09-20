@@ -44,8 +44,7 @@ typedef enum
  * @param cb Calendar backend
  * @param err Error code (if any)
  */
-gboolean
-e_cal_sync_server_open(ECalBackend3e* cb, GError** err)
+gboolean e_cal_sync_server_open(ECalBackend3e* cb, GError** err)
 {
   ECalBackend3ePrivate*        priv;
   GError*                      local_err = NULL;
@@ -87,8 +86,7 @@ err0:
  * @param comp Troubleshooting component
  * @param err  Error with filled code and error message.
  */
-void
-e_cal_sync_error_message(ECalBackend* backend, ECalComponent* comp, GError* err)
+void e_cal_sync_error_message(ECalBackend* backend, ECalComponent* comp, GError* err)
 {
   ECalComponentText               summary;
   char                            *message;
@@ -109,8 +107,7 @@ e_cal_sync_error_message(ECalBackend* backend, ECalComponent* comp, GError* err)
   g_free(message);
 }
 
-void
-e_cal_sync_error_resolve(ECalBackend3e* cb, GError* err)
+void e_cal_sync_error_resolve(ECalBackend3e* cb, GError* err)
 {
   ECalBackend3ePrivate         *priv;
 
@@ -143,11 +140,7 @@ e_cal_sync_error_resolve(ECalBackend3e* cb, GError* err)
  * deleteObject method, connection is closed.
  * @param err Error 
  */
-gint
-e_cal_sync_rpc_deleteObject(ECalBackend3e* cb,
-                            ECalComponent* comp,
-                            gboolean conn_opened,
-                            GError** err)
+gint e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, gboolean conn_opened, GError** err)
 {
   ECalBackend3ePrivate*        priv;
   const char*                  uid;
@@ -210,8 +203,7 @@ typedef struct
   GError** error;
 } ECalBackend3eTzidUserData;
 
-static void
-collect_tzids(icalparameter* param, void *data)
+static void collect_tzids(icalparameter* param, void *data)
 {
   const char* tzid = icalparameter_get_tzid(param);
   ECalBackend3eTzidList* tlist = data;
@@ -223,8 +215,7 @@ collect_tzids(icalparameter* param, void *data)
 /*
  * Adds timezone to the server - calls XML RPC addoObject on the timezone.
  */
-void
-e_cal_sync_add_timezone(gpointer key, gpointer value, gpointer user_data)
+void e_cal_sync_add_timezone(gpointer key, gpointer value, gpointer user_data)
 {
   char*                                     tzid;
   ECalBackend3eTzidUserData*                data;
@@ -312,10 +303,7 @@ e_cal_sync_add_timezone(gpointer key, gpointer value, gpointer user_data)
  * Extracts all timezones related to the compoment ccomp. Each component
  * is checked, if it is already on the server. If not, it is added.
  */
-gboolean
-e_cal_sync_add_timezones(ECalBackend3e* cb,
-                         ECalComponent* ccomp,
-                         GError** err)
+gboolean e_cal_sync_add_timezones(ECalBackend3e* cb, ECalComponent* ccomp, GError** err)
 {
   ECalBackend3eTzidList* tzlist;
   icalcomponent* icomp;
@@ -358,11 +346,7 @@ e_cal_sync_add_timezones(ECalBackend3e* cb,
  * @return 
  */
 
-gboolean
-e_cal_sync_rpc_updateObject(ECalBackend3e* cb,
-                            ECalComponent* ccomp,
-                            gboolean conn_opened, /* connection already opened */
-                            GError** err)
+gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened, GError** err)
 {
   gchar*                       object;
   ECalBackend3ePrivate*        priv;
@@ -451,11 +435,7 @@ err:
  * 
  * @return 
  */
-gboolean
-e_cal_sync_rpc_addObject(ECalBackend3e* cb,
-                         ECalComponent* ccomp,
-                         gboolean conn_opened, /* connection already opened */
-                         GError** err)
+gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened, /* connection already opened */ GError** err)
 {
   gchar*                       object;
   ECalBackend3ePrivate*        priv;
@@ -548,11 +528,7 @@ err:
  * 
  * @return 
  */
-static icalcomponent*
-e_cal_sync_query_server_objects(ECalBackend3e* cb,
-                                const char* sync_start,
-                                const char* sync_stop,
-                                GError** err)
+static icalcomponent* e_cal_sync_query_server_objects(ECalBackend3e* cb, const char* sync_start, const char* sync_stop, GError** err)
 {
   ECalBackend3ePrivate*       priv;
   GError*                     local_err = NULL;
@@ -610,8 +586,7 @@ out:
  * 
  * @return TRUE, if error is fatal.
  */
-static gboolean
-e_cal_sync_error_is_fatal(GError* err)
+static gboolean e_cal_sync_error_is_fatal(GError* err)
 {
   /* XML RPC client error */
   if (err->domain == xr_client_error_quark())
@@ -739,8 +714,7 @@ gboolean e_cal_sync_client_to_server_sync(ECalBackend3e* cb, GError** err)
  * 
  * @param cb 3e calendar backend.
  */
-void
-server_sync_signal(ECalBackend3e* cb)
+void server_sync_signal(ECalBackend3e* cb)
 {
   ECalBackend3ePrivate* priv;
 
@@ -762,8 +736,7 @@ server_sync_signal(ECalBackend3e* cb)
  * 
  * @return 
  */
-ECalComponent*
-e_cal_sync_find_settings(ECalBackend3e* cb)
+ECalComponent* e_cal_sync_find_settings(ECalBackend3e* cb)
 {
   GList                           *components, *l;
   ECalBackend3ePrivate            *priv;
@@ -803,9 +776,7 @@ e_cal_sync_find_settings(ECalBackend3e* cb)
  * @param cb 
  * @param stamp 
  */
-void
-e_cal_sync_load_stamp(ECalBackend3e* cb,
-                      gchar** stamp)
+void e_cal_sync_load_stamp(ECalBackend3e* cb, gchar** stamp)
 {
 	ESource                 *source;
   gchar                   *path;
@@ -832,9 +803,7 @@ e_cal_sync_load_stamp(ECalBackend3e* cb,
  * @param cb 
  * @param stamp 
  */
-void
-e_cal_sync_save_stamp(ECalBackend3e* cb,
-                      const char* stamp)
+void e_cal_sync_save_stamp(ECalBackend3e* cb, const char* stamp)
 {
   gchar                           *path;
   ECalBackend3ePrivate            *priv;
@@ -874,8 +843,7 @@ e_cal_sync_save_stamp(ECalBackend3e* cb,
     g_warning("Could not set cache-stamp");
 }
 
-gboolean
-e_cal_sync_refresh_permission(ECalBackend3e* cb, GError** err)
+gboolean e_cal_sync_refresh_permission(ECalBackend3e* cb, GError** err)
 {
   GError*                   local_err = NULL;
   ECalBackend3ePrivate*     priv;
@@ -926,8 +894,7 @@ e_cal_sync_refresh_permission(ECalBackend3e* cb, GError** err)
  * 
  * @return 
  */
-gpointer
-e_cal_sync_main_thread(gpointer data)
+gpointer e_cal_sync_main_thread(gpointer data)
 {
   ECalBackend3e               *cb;
   ECalBackend3ePrivate        *priv;
@@ -1000,8 +967,7 @@ e_cal_sync_main_thread(gpointer data)
  * @param cb 3E calendar backend.
  * @param comp ical component.
  */
-void
-e_cal_sync_client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
+void e_cal_sync_client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
 {
   ECalBackend3ePrivate        *priv;
 
@@ -1024,8 +990,7 @@ e_cal_sync_client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
  * @param cb 3e calendar backend.
  * @param comp ical component.
  */
-void
-e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
+void e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
 {
   ECalBackend3ePrivate        *priv;
   GList                       *node;
@@ -1054,8 +1019,7 @@ e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
  * 
  * @param cb 3e calendar backend
  */
-void
-e_cal_sync_rebuild_clients_changes_list(ECalBackend3e* cb)
+void e_cal_sync_rebuild_clients_changes_list(ECalBackend3e* cb)
 {
   ECalBackend3ePrivate        *priv;
   ECalComponentSyncState      state;
@@ -1099,8 +1063,7 @@ e_cal_sync_rebuild_clients_changes_list(ECalBackend3e* cb)
  * 
  * @return Returns TRUE, if everything is ok.
  */
-gboolean
-e_cal_sync_mirror_server_change(ECalBackend3e* cb, icalcomponent* scomp)
+gboolean e_cal_sync_mirror_server_change(ECalBackend3e* cb, icalcomponent* scomp)
 {
   char*                       compstr;
   // GError*                     local_err = NULL;
@@ -1162,8 +1125,7 @@ out:
  * 
  * @return Hash table, with locally changed components.
  */
-GHashTable*
-e_cal_sync_collect_cache_hash(ECalBackend3e* cb, gboolean remove_unchanged)
+GHashTable* e_cal_sync_collect_cache_hash(ECalBackend3e* cb, gboolean remove_unchanged)
 {
   GList                    *cobjs;
   GList                    *citer;
@@ -1235,9 +1197,7 @@ e_cal_sync_collect_cache_hash(ECalBackend3e* cb, gboolean remove_unchanged)
  * 
  * @return TRUE, if no error occured.
  */
-gboolean
-e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalComponent* ccomp,
-                            GError** err)
+gboolean e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, ECalComponent* ccomp, GError** err)
 {
   ECalBackend3ePrivate*     priv;
   time_t                    ctime;
@@ -1389,8 +1349,7 @@ error:
  * 
  * @return TRUE, if ok.
  */
-gboolean
-e_cal_sync_get_now(char* now)
+gboolean e_cal_sync_get_now(char* now)
 {
   time_t                   now_time = time(NULL);
   struct tm                tm_now;
@@ -1419,8 +1378,7 @@ void print_func(gpointer key, gpointer value, gpointer user_data)
  * 
  * @return 
  */
-gboolean
-e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError** err)
+gboolean e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError** err)
 {
   ECalBackend3ePrivate*     priv;
   char                     *last_sync_stamp = NULL;
@@ -1581,8 +1539,7 @@ err0:
  * 
  * @return FALSE, if synchronization process failed, TRUE otherwise.
  */
-gboolean
-e_cal_sync_total_synchronization(ECalBackend3e* cb, GError** err)
+gboolean e_cal_sync_total_synchronization(ECalBackend3e* cb, GError** err)
 {
   GError* local_err = NULL;
   ECalBackend3ePrivate* priv;
@@ -1610,8 +1567,7 @@ e_cal_sync_total_synchronization(ECalBackend3e* cb, GError** err)
  * 
  * @return FALSE, if synchronization process failed, TRUE otherwise.
  */
-gboolean
-e_cal_sync_incremental_synchronization(ECalBackend3e* cb, GError** err)
+gboolean e_cal_sync_incremental_synchronization(ECalBackend3e* cb, GError** err)
 {
   GError* local_err = NULL;
   gboolean go_on = TRUE;

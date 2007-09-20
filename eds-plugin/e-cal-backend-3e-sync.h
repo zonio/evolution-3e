@@ -16,22 +16,17 @@ ECalComponent* e_cal_sync_find_this_in_cache(ECalBackend3e* cb, ECalComponent* n
 
 gboolean e_cal_sync_server_open(ECalBackend3e* cb, GError** err);
 
-gboolean e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp,
-                                     gboolean conn_opened, GError** err);
+gboolean e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, gboolean conn_opened, GError** err);
 
-gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp,
-                                     gboolean conn_opened, GError** err);
+gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened, GError** err);
 
-gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened,
-                                  GError** err);
+gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened, GError** err);
 
-gboolean e_cal_sync_server_to_client_sync(ECalBackend* backend, const char* sync_start,
-                                          const char* sync_stop);
+gboolean e_cal_sync_server_to_client_sync(ECalBackend* backend, const char* sync_start, const char* sync_stop);
 
 void server_sync_signal(ECalBackend3e* cb);
 
 void e_cal_sync_load_stamp(ECalBackend3e* cb, gchar** sync_stop);
-
 
 void e_cal_sync_save_stamp(ECalBackend3e* cb, const char* sync_stop);
 
@@ -40,7 +35,6 @@ void e_cal_sync_synchronize(ECalBackend* backend);
 ECalComponent* e_cal_sync_find_settings(ECalBackend3e* cb);
 
 gpointer e_cal_sync_main_thread(gpointer data);
-
 
 gboolean e_cal_sync_total_synchronization(ECalBackend3e* cb, GError** err);
 

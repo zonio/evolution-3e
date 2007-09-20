@@ -34,9 +34,7 @@ extern char *e_passwords_get_password (const char *component, const char *key);
    Returns the capabilities provided by the backend,
    like whether it supports recurrences or not, for instance
    */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_static_capabilities (ECalBackendSync * backend,
-                                          EDataCal * cal, char **capabilities)
+static ECalBackendSyncStatus e_cal_backend_3e_get_static_capabilities (ECalBackendSync * backend, EDataCal * cal, char **capabilities)
 {
   T ("backend=%p, cal=%p, capabilities=%p", backend, cal, capabilities);
 
@@ -51,8 +49,7 @@ e_cal_backend_3e_get_static_capabilities (ECalBackendSync * backend,
 /*
  * Returns TRUE if the the passed-in backend is already in a loaded state, otherwise FALSE
  */
-static gboolean
-e_cal_backend_3e_is_loaded (ECalBackend * backend)
+static gboolean e_cal_backend_3e_is_loaded (ECalBackend * backend)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -69,8 +66,7 @@ e_cal_backend_3e_is_loaded (ECalBackend * backend)
 /*
  * Sets the current online/offline mode.
  */
-static void
-e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
+static void e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -123,8 +119,7 @@ e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
   g_mutex_unlock (priv->sync_mutex);
 }
 
-static void
-source_changed_perm(ESource *source, ECalBackend3e *cb)
+static void source_changed_perm(ESource *source, ECalBackend3e *cb)
 {
   /* FIXME
    * We should force a reload of the data when this gets called. Unfortunately,
@@ -134,8 +129,7 @@ source_changed_perm(ESource *source, ECalBackend3e *cb)
 }
 
 /* initilizes priv structure of the cb */
-static ECalBackendSyncStatus
-e_cal_backend_initialize_privates(ECalBackend3e * cb, const char* username, const char* password)
+static ECalBackendSyncStatus e_cal_backend_initialize_privates(ECalBackend3e * cb, const char* username, const char* password)
 {
   GError                                           *err = NULL;
   ECalBackend3ePrivate                             *priv;
@@ -245,11 +239,7 @@ e_cal_backend_initialize_privates(ECalBackend3e * cb, const char* username, cons
 /*
  * opens the calendar
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_open (ECalBackendSync * backend,
-                       EDataCal * cal,
-                       gboolean only_if_exists,
-                       const char *username, const char *password)
+static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, EDataCal * cal, gboolean only_if_exists, const char *username, const char *password)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -353,9 +343,7 @@ out:
 /*
  *  returns whether the calendar is read only or not
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_is_read_only (ECalBackendSync * backend,
-                               EDataCal * cal, gboolean * read_only)
+static ECalBackendSyncStatus e_cal_backend_3e_is_read_only (ECalBackendSync * backend, EDataCal * cal, gboolean * read_only)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -388,8 +376,7 @@ e_cal_backend_3e_is_read_only (ECalBackendSync * backend,
 /*
  *  returns the current online/offline mode for the backend
  */
-static CalMode
-e_cal_backend_3e_get_mode (ECalBackend * backend)
+static CalMode e_cal_backend_3e_get_mode (ECalBackend * backend)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -406,8 +393,7 @@ e_cal_backend_3e_get_mode (ECalBackend * backend)
 /*
  *  removes the calendar
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_remove (ECalBackendSync * backend, EDataCal * cal)
+static ECalBackendSyncStatus e_cal_backend_3e_remove (ECalBackendSync * backend, EDataCal * cal)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -441,9 +427,7 @@ e_cal_backend_3e_remove (ECalBackendSync * backend, EDataCal * cal)
 /*
  *  returns the email address of the owner of the calendar
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_cal_address (ECalBackendSync * backend,
-                                  EDataCal * cal, char **address)
+static ECalBackendSyncStatus e_cal_backend_3e_get_cal_address (ECalBackendSync * backend, EDataCal * cal, char **address)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -463,9 +447,7 @@ e_cal_backend_3e_get_cal_address (ECalBackendSync * backend,
 /*
  *  returns the email address to be used for alarms
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_alarm_email_address (ECalBackendSync * backend,
-                                          EDataCal * cal, char **address)
+static ECalBackendSyncStatus e_cal_backend_3e_get_alarm_email_address (ECalBackendSync * backend, EDataCal * cal, char **address)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -487,9 +469,7 @@ e_cal_backend_3e_get_alarm_email_address (ECalBackendSync * backend,
  * returns an empty object with the default values used for the backend
  * called when creating new object, for example
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_default_object (ECalBackendSync * backend,
-                                     EDataCal * cal, char **object)
+static ECalBackendSyncStatus e_cal_backend_3e_get_default_object (ECalBackendSync * backend, EDataCal * cal, char **object)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -515,10 +495,7 @@ e_cal_backend_3e_get_default_object (ECalBackendSync * backend,
 /*
  *  returns a list of events/tasks given a set of conditions
  */
-  static ECalBackendSyncStatus
-e_cal_backend_3e_get_object (ECalBackendSync * backend,
-                             EDataCal * cal,
-                             const char *uid, const char *rid, char **object)
+static ECalBackendSyncStatus e_cal_backend_3e_get_object (ECalBackendSync * backend, EDataCal * cal, const char *uid, const char *rid, char **object)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -552,10 +529,7 @@ e_cal_backend_3e_get_object (ECalBackendSync * backend,
 /*
  *  returns timezone objects for a given TZID
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_timezone (ECalBackendSync * backend,
-                               EDataCal * cal,
-                               const char *tzid, char **object)
+static ECalBackendSyncStatus e_cal_backend_3e_get_timezone (ECalBackendSync * backend, EDataCal * cal, const char *tzid, char **object)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -601,9 +575,7 @@ e_cal_backend_3e_get_timezone (ECalBackendSync * backend,
 /*
  *  returns specific LDAP attributes
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_ldap_attribute (ECalBackendSync * backend,
-                                     EDataCal * cal, char **attribute)
+static ECalBackendSyncStatus e_cal_backend_3e_get_ldap_attribute (ECalBackendSync * backend, EDataCal * cal, char **attribute)
 {
   T ("backend=%p, cal=%p", backend, cal);
 
@@ -615,9 +587,7 @@ e_cal_backend_3e_get_ldap_attribute (ECalBackendSync * backend,
 /*
  *  adds a timezone to the backend
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_add_timezone (ECalBackendSync * backend,
-                               EDataCal * cal, const char *tzobj)
+static ECalBackendSyncStatus e_cal_backend_3e_add_timezone (ECalBackendSync * backend, EDataCal * cal, const char *tzobj)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -664,10 +634,7 @@ e_cal_backend_3e_add_timezone (ECalBackendSync * backend,
 /*
  *  returns a list of events/tasks given a set of conditions
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_object_list (ECalBackendSync * backend,
-                                  EDataCal * cal,
-                                  const char *sexp, GList ** objects)
+static ECalBackendSyncStatus e_cal_backend_3e_get_object_list (ECalBackendSync * backend, EDataCal * cal, const char *sexp, GList ** objects)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -714,8 +681,7 @@ e_cal_backend_3e_get_object_list (ECalBackendSync * backend,
 /*
  *  starts a live query on the backend
  */
-static void
-e_cal_backend_3e_start_query (ECalBackend * backend, EDataCalView * query)
+static void e_cal_backend_3e_start_query (ECalBackend * backend, EDataCalView * query)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -778,9 +744,7 @@ e_cal_backend_3e_start_query (ECalBackend * backend, EDataCalView * query)
 /*
  * adds object to the server
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_server_object_add(ECalBackend3e* cb, ECalComponent* comp, char** new_object,
-                                   GError** err)
+static ECalBackendSyncStatus e_cal_backend_3e_server_object_add(ECalBackend3e* cb, ECalComponent* comp, char** new_object, GError** err)
 {
   ECalBackend3ePrivate                             *priv;
   ECalBackendSyncStatus                             status = GNOME_Evolution_Calendar_Success;
@@ -840,9 +804,7 @@ e_cal_backend_3e_server_object_add(ECalBackend3e* cb, ECalComponent* comp, char*
  *  sets the timezone to be used as the default
  *  called before opening connection, before creating cache...
  */
-  static ECalBackendSyncStatus
-e_cal_backend_3e_set_default_zone (ECalBackendSync * backend,
-                                   EDataCal * cal, const char *tzobj)
+static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone (ECalBackendSync * backend, EDataCal * cal, const char *tzobj)
 {
   icalcomponent                                    *tz_comp;
   ECalBackend3e                                    *cb;
@@ -887,9 +849,7 @@ e_cal_backend_3e_set_default_zone (ECalBackendSync * backend,
 /*
  *  creates a new event/task in the calendar
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_create_object (ECalBackendSync * backend,
-                                EDataCal * cal, char **calobj, char **uid)
+static ECalBackendSyncStatus e_cal_backend_3e_create_object (ECalBackendSync * backend, EDataCal * cal, char **calobj, char **uid)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -940,12 +900,7 @@ out:
  * If in remote and xml-rpc operation failes, component  is marked as changed
  * similary as in local mode.
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_server_object_update(ECalBackend3e* cb, ECalComponent* cache_comp,
-                                      ECalComponent* updated_comp,
-                                      char** old_object,
-                                      char** new_object,
-                                      GError** err)
+static ECalBackendSyncStatus e_cal_backend_3e_server_object_update(ECalBackend3e* cb, ECalComponent* cache_comp, ECalComponent* updated_comp, char** old_object, char** new_object, GError** err)
 {
   ECalBackend3ePrivate                *priv;
   GError                              *local_err = NULL;
@@ -1034,12 +989,7 @@ e_cal_backend_3e_server_object_update(ECalBackend3e* cb, ECalComponent* cache_co
 /*
  *  modifies an existing event/task
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_modify_object (ECalBackendSync * backend,
-                                EDataCal * cal,
-                                const char *calobj,
-                                CalObjModType mod,
-                                char **old_object, char **new_object)
+static ECalBackendSyncStatus e_cal_backend_3e_modify_object (ECalBackendSync * backend, EDataCal * cal, const char *calobj, CalObjModType mod, char **old_object, char **new_object)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -1103,14 +1053,7 @@ out:
   return status;
 }
 
-static ECalBackendSyncStatus
-e_cal_backend_3e_server_object_remove(ECalBackend3e* cb,
-                                      EDataCal* cal,
-                                      ECalComponent* cache_comp,
-                                      const gchar* uid,
-                                      const gchar* rid,
-                                      char** old_object,
-                                      GError** err)
+static ECalBackendSyncStatus e_cal_backend_3e_server_object_remove(ECalBackend3e* cb, EDataCal* cal, ECalComponent* cache_comp, const gchar* uid, const gchar* rid, char** old_object, GError** err)
 {
   ECalBackend3ePrivate                             *priv;
   ECalBackendSyncStatus                             status = GNOME_Evolution_Calendar_Success;
@@ -1198,13 +1141,7 @@ e_cal_backend_3e_server_object_remove(ECalBackend3e* cb,
 /*
  *  removes an object from the calendar
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_remove_object (ECalBackendSync * backend,
-                                EDataCal * cal,
-                                const char *uid,
-                                const char *rid,
-                                CalObjModType mod,
-                                char **old_object, char **object)
+static ECalBackendSyncStatus e_cal_backend_3e_remove_object (ECalBackendSync * backend, EDataCal * cal, const char *uid, const char *rid, CalObjModType mod, char **old_object, char **object)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -1268,9 +1205,7 @@ out:
   return status;
 }
 
-static char *
-create_user_free_busy (ECalBackend3e * cb, const char *address,
-                       time_t start, time_t end)
+static char * create_user_free_busy (ECalBackend3e * cb, const char *address, time_t start, time_t end)
 {
   ECalBackend3ePrivate                             *priv;
   char                                             *retval;
@@ -1324,10 +1259,7 @@ error:
 /*
  *  returns F/B information for a list of users
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_free_busy (ECalBackendSync * backend,
-                                EDataCal * cal, GList * users,
-                                time_t start, time_t end, GList ** freebusy)
+static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy (ECalBackendSync * backend, EDataCal * cal, GList * users, time_t start, time_t end, GList ** freebusy)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -1402,12 +1334,7 @@ e_cal_backend_3e_get_free_busy (ECalBackendSync * backend,
 /*
  *  returns a list of changes made since last check
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_get_changes (ECalBackendSync * backend,
-                              EDataCal * cal,
-                              const char *change_id,
-                              GList ** adds,
-                              GList ** modifies, GList ** deletes)
+static ECalBackendSyncStatus e_cal_backend_3e_get_changes (ECalBackendSync * backend, EDataCal * cal, const char *change_id, GList ** adds, GList ** modifies, GList ** deletes)
 {
   /* FIXME: what to do here ? */
   ECalBackend3e                                    *cb;
@@ -1427,10 +1354,7 @@ e_cal_backend_3e_get_changes (ECalBackendSync * backend,
 /*
  *  discards an alarm (removes it or marks it as already displayed to the user)
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_discard_alarm (ECalBackendSync * backend,
-                                EDataCal * cal,
-                                const char *uid, const char *auid)
+static ECalBackendSyncStatus e_cal_backend_3e_discard_alarm (ECalBackendSync * backend, EDataCal * cal, const char *uid, const char *auid)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -1445,9 +1369,7 @@ e_cal_backend_3e_discard_alarm (ECalBackendSync * backend,
   return GNOME_Evolution_Calendar_Success;
 }
 
-static ECalBackendSyncStatus
-e_cal_backend_3e_receive_object(ECalBackend3e *cb, EDataCal *cal, icalcomponent *icalcomp,
-                                icalproperty_method toplevel_method, GError** err)
+static ECalBackendSyncStatus e_cal_backend_3e_receive_object(ECalBackend3e *cb, EDataCal *cal, icalcomponent *icalcomp, icalproperty_method toplevel_method, GError** err)
 {
   ECalBackend3ePrivate                             *priv;
   ECalComponent                                    *comp;
@@ -1532,8 +1454,7 @@ typedef struct {
 	gboolean found;
 } ECalBackend3eTzidData;
 
-static void
-check_tzids (icalparameter *param, void *data)
+static void check_tzids (icalparameter *param, void *data)
 {
 	ECalBackend3eTzidData *tzdata = data;
 	const char *tzid;
@@ -1546,9 +1467,7 @@ check_tzids (icalparameter *param, void *data)
 /*
  *  import a set of events/tasks in one go
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_receive_objects (ECalBackendSync * backend,
-                                  EDataCal * cal, const char *calobj)
+static ECalBackendSyncStatus e_cal_backend_3e_receive_objects (ECalBackendSync * backend, EDataCal * cal, const char *calobj)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -1692,8 +1611,7 @@ error:
   return status;
 }
 
-void
-e_cal_backend_3e_append_attendees(ECalBackend3e* cb, GSList** users, icalcomponent* icomp)
+void e_cal_backend_3e_append_attendees(ECalBackend3e* cb, GSList** users, icalcomponent* icomp)
 {
   ECalComponent                                     *comp;
   GSList                                            *attendee_list = NULL, *tmp;
@@ -1731,11 +1649,7 @@ e_cal_backend_3e_append_attendees(ECalBackend3e* cb, GSList** users, icalcompone
  * send a set of meetings in one go, which means, for backends that do support it,
  * sending information about the meeting to all attendees
  */
-static ECalBackendSyncStatus
-e_cal_backend_3e_send_objects (ECalBackendSync * backend,
-                               EDataCal * cal,
-                               const char *calobj,
-                               GList ** users, char **modified_calobj)
+static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * backend, EDataCal * cal, const char *calobj, GList ** users, char **modified_calobj)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -1824,8 +1738,7 @@ out:
 /*
  *  returns the default timezone.
  */
-static icaltimezone *
-e_cal_backend_3e_internal_get_default_timezone (ECalBackend * backend)
+static icaltimezone * e_cal_backend_3e_internal_get_default_timezone (ECalBackend * backend)
 {
   return icaltimezone_get_utc_timezone ();
 }
@@ -1833,9 +1746,7 @@ e_cal_backend_3e_internal_get_default_timezone (ECalBackend * backend)
 /*
  *  returns a given timezone
  */
-static icaltimezone *
-e_cal_backend_3e_internal_get_timezone (ECalBackend * backend,
-                                        const char *tzid)
+static icaltimezone * e_cal_backend_3e_internal_get_timezone (ECalBackend * backend, const char *tzid)
 {
   return strcmp (tzid, "UTC") ? icaltimezone_get_builtin_timezone_from_tzid (tzid) :
     icaltimezone_get_utc_timezone ();
@@ -1845,9 +1756,7 @@ e_cal_backend_3e_internal_get_timezone (ECalBackend * backend,
 
 static ECalBackendSyncClass *parent_class;
 
-
-static void
-e_cal_backend_3e_init (ECalBackend3e * cb, ECalBackend3eClass * klass)
+static void e_cal_backend_3e_init (ECalBackend3e * cb, ECalBackend3eClass * klass)
 {
   T ("cb=%p, klass=%p", cb, klass);
 
@@ -1866,8 +1775,7 @@ e_cal_backend_3e_init (ECalBackend3e * cb, ECalBackend3eClass * klass)
   e_cal_backend_sync_set_lock (E_CAL_BACKEND_SYNC (cb), TRUE);
 }
 
-static void
-e_cal_backend_3e_dispose (GObject * object)
+static void e_cal_backend_3e_dispose (GObject * object)
 {
   T ("object=%p", object);
 
@@ -1875,8 +1783,7 @@ e_cal_backend_3e_dispose (GObject * object)
     G_OBJECT_CLASS (parent_class)->dispose (object);
 }
 
-static void
-e_cal_backend_3e_finalize (GObject * object)
+static void e_cal_backend_3e_finalize (GObject * object)
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
@@ -1934,8 +1841,7 @@ e_cal_backend_3e_finalize (GObject * object)
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
-static void
-e_cal_backend_3e_class_init (ECalBackend3eClass * class)
+static void e_cal_backend_3e_class_init (ECalBackend3eClass * class)
 {
   GObjectClass                                     *object_class;
   ECalBackendClass                                 *backend_class;
@@ -1983,8 +1889,7 @@ e_cal_backend_3e_class_init (ECalBackend3eClass * class)
   backend_class->internal_get_timezone = e_cal_backend_3e_internal_get_timezone;
 }
 
-GType
-e_cal_backend_3e_get_type (void)
+GType e_cal_backend_3e_get_type (void)
 {
   static GType                                      e_cal_backend_3e_type = 0;
 
