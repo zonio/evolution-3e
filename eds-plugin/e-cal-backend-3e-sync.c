@@ -188,13 +188,15 @@ void e_cal_backend_3e_free_connection(ECalBackend3e* cb)
 
 /** @} */
 
-/** 
- * @brief Shows box with error message, used when synchronization on particular component failed.
- *        User is informed by showing summary of the component.
+/** @addtogroup eds_sync */
+/** @{ */
+
+/** Show box with error message, used when synchronization on particular component failed.
+ * User is informed by showing summary of the component.
  * 
  * @param backend Calendar backend
  * @param comp Troubleshooting component
- * @param err  Error with filled code and error message.
+ * @param err Error pointer.
  */
 void e_cal_sync_error_message(ECalBackend* backend, ECalComponent* comp, GError* err)
 {
@@ -239,13 +241,12 @@ void e_cal_sync_error_resolve(ECalBackend3e* cb, GError* err)
   }
 }
 
-/** 
- * @brief Calls XML-RPC deleteObject method on component comp. If failed, returns FALSE and fills
+/** Calls XML-RPC deleteObject method on component comp. If failed, returns FALSE and fills
  * err.
  * 
- * @param cb Calendar backend.
+ * @param cb 3E calendar backend.
  * @param comp Component, that is to be removed.
- * @param err Error 
+ * @param err Error pointer.
  */
 gint e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, GError** err)
 {
@@ -437,16 +438,14 @@ gboolean e_cal_sync_add_timezones(ECalBackend3e* cb, ECalComponent* ccomp, GErro
   return user_data.ok;
 }
 
-/** 
- * @brief Calls XML-RPC updateObject method on component ccomp.
+/** Calls XML-RPC updateObject method on component ccomp.
  * 
- * @param cb Calendar backend.
- * @param ccomp 
- * @param err 
+ * @param cb 3E calendar backend.
+ * @param ccomp Ical component.
+ * @param err Error pointer.
  * 
  * @return 
  */
-
 gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, GError** err)
 {
   gchar*                       object;
@@ -521,12 +520,11 @@ err:
   return FALSE;
 }
 
-/** 
- * @brief Calls XML-RPC addObject method on componnet ccomp.
+/** Calls XML-RPC addObject method on componnet ccomp.
  * 
- * @param cb  Calendar backend.
+ * @param cb 3E calendar backend.
  * @param ccomp Ical component.
- * @param err 
+ * @param err Error pointer.
  * 
  * @return 
  */
@@ -606,16 +604,16 @@ err:
   return FALSE;
 }
 
-/** 
- * @brief Queries objects from server (calls queryObjects method). Backend connection
- * is used, which must be properly opened already. Ical components from corresponding
- * time window are returned as one icalcomponent of type ICAL_VCALENDAR_COMPONENT.
-   Returned icalcomponent* should be freed by icalcomponent_free(queried_comps).
-
- * @param cb Calendar backend.
+/** Queries objects from server (calls queryObjects method). Backend connection
+ * is used, which must be properly opened already. Ical components from
+ * corresponding time window are returned as one icalcomponent of type
+ * ICAL_VCALENDAR_COMPONENT. Returned icalcomponent should be freed by
+ * icalcomponent_free(queried_comps).
+ *
+ * @param cb 3E calendar backend.
  * @param sync_start Start of the time window (can be NULL).
- * @param sync_stop  End of the time window (must be non-NULL).
- * @param err Error structure
+ * @param sync_stop End of the time window (must be non-NULL).
+ * @param err Error pointer.
  * 
  * @return 
  */
@@ -668,12 +666,11 @@ out:
   return NULL;
 }
 
-/** 
- * @brief Discriminates between fatal and non-fatal errors.
- * Fatal errors do not allow to continue synchronization (No write persmission on calendar),
+/** Discriminates between fatal and non-fatal errors. Fatal errors do not allow
+ * to continue synchronization (No write persmission on calendar),
  * non-fatal errors are errors related to individual ical component.
  * 
- * @param err Error.
+ * @param err Error pointer.
  * 
  * @return TRUE, if error is fatal.
  */
@@ -707,12 +704,11 @@ static gboolean e_cal_sync_error_is_fatal(GError* err)
   return TRUE;
 }
 
-/** 
- * @brief Goes through the clients-changes list (list of locally modified components,
+/** Goes through the clients-changes list (list of locally modified components,
  * not yet commited to the server) and apllies the changes one-by-one. Stops on fatal error.
  * 
- * @param cb 3e calendar backend.
- * @param err Error.
+ * @param cb 3E calendar backend.
+ * @param err Error pointer.
  * 
  * @return TRUE, if no error occured, otherwise FALSE.
  */
@@ -800,10 +796,9 @@ gboolean e_cal_sync_client_to_server_sync(ECalBackend3e* cb, GError** err)
   return ok;
 }
 
-/** 
- * @brief Wake the synchronization thread.
+/** Wake the synchronization thread.
  * 
- * @param cb 3e calendar backend.
+ * @param cb 3E calendar backend.
  */
 void server_sync_signal(ECalBackend3e* cb)
 {
@@ -820,13 +815,6 @@ void server_sync_signal(ECalBackend3e* cb)
   g_mutex_unlock(priv->sync_mutex);
 }
 
-/** 
- * @brief 
- * 
- * @param cb 
- * 
- * @return 
- */
 ECalComponent* e_cal_sync_find_settings(ECalBackend3e* cb)
 {
   GList                           *components, *l;
@@ -861,12 +849,6 @@ ECalComponent* e_cal_sync_find_settings(ECalBackend3e* cb)
   return found;
 }
 
-/** 
- * @brief 
- * 
- * @param cb 
- * @param stamp 
- */
 void e_cal_sync_load_stamp(ECalBackend3e* cb, gchar** stamp)
 {
 	ESource                 *source;
@@ -888,12 +870,6 @@ void e_cal_sync_load_stamp(ECalBackend3e* cb, gchar** stamp)
   D("loaded stamp %s", *stamp);
 }
 
-/** 
- * @brief 
- * 
- * @param cb 
- * @param stamp 
- */
 void e_cal_sync_save_stamp(ECalBackend3e* cb, const char* stamp)
 {
   gchar                           *path;
@@ -980,13 +956,6 @@ gboolean e_cal_sync_refresh_permission(ECalBackend3e* cb, GError** err)
   return TRUE;
 }
 
-/** 
- * @brief 
- * 
- * @param data 
- * 
- * @return 
- */
 gpointer e_cal_sync_main_thread(gpointer data)
 {
   ECalBackend3e               *cb;
@@ -1053,9 +1022,8 @@ gpointer e_cal_sync_main_thread(gpointer data)
   return NULL;
 }
 
-/** 
- * @brief Insert the component into client-changes list (list of locally changed,
- * not yet commited components).
+/** Insert the component into client-changes list (list of locally changed, not
+ * yet commited components).
  * 
  * @param cb 3E calendar backend.
  * @param comp ical component.
@@ -1076,11 +1044,10 @@ void e_cal_sync_client_changes_insert(ECalBackend3e* cb, ECalComponent* comp)
     g_list_length(priv->sync_clients_changes), e_cal_component_get_as_string(comp));	
 }
 
-/** 
- * @brief Removes the component from clients-changes list (list of locally changed,
+/** Removes the component from clients-changes list (list of locally changed,
  * not yet commited components).
  * 
- * @param cb 3e calendar backend.
+ * @param cb 3E calendar backend.
  * @param comp ical component.
  */
 void e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
@@ -1106,11 +1073,10 @@ void e_cal_sync_client_changes_remove(ECalBackend3e* cb, ECalComponent *comp)
   D("unmarking component as changed, now %d changes", g_list_length(priv->sync_clients_changes));
 }
 
-/** 
- * @brief Builds clients-changes list from scratch: goes through the components in cache
- * and locally modified, not yet commited components are put in the list.
+/** Builds clients-changes list from scratch: goes through the components in
+ * cache and locally modified, not yet commited components are put in the list.
  * 
- * @param cb 3e calendar backend
+ * @param cb  3E calendar backend.
  */
 void e_cal_sync_rebuild_clients_changes_list(ECalBackend3e* cb)
 {
@@ -1148,10 +1114,10 @@ void e_cal_sync_rebuild_clients_changes_list(ECalBackend3e* cb)
   T("DONE");
 }
 
-/** 
- * @brief Applies remote server change (represented by component scomp) to the client's cache.
+/** Applies remote server change (represented by component scomp) to the
+ * client's cache.
  * 
- * @param cb EEE calendar backend.
+ * @param cb 3E calendar backend.
  * @param scomp New component or new version of the component
  * 
  * @return Returns TRUE, if everything is ok.
@@ -1210,10 +1176,10 @@ out:
  return FALSE;
 }
 
-/** 
- * @brief Collects locally changed components from cache into the hash map (key is component's UID)
+/** Collects locally changed components from cache into the hash map (key is
+ * component's UID)
  * 
- * @param cb EEE calendar backend.
+ * @param cb 3E calendar backend.
  * @param remove_unchanged If TRUE, inserted component is removed from the cache.
  * 
  * @return Hash table, with locally changed components.
@@ -1280,13 +1246,13 @@ GHashTable* e_cal_sync_collect_cache_hash(ECalBackend3e* cb, gboolean remove_unc
   return cache_hash;
 }
 
-/** 
- * @brief Tries to resolve conflict. Conflict is the situation, when one component is changed both
- * on server and client. The newer change wins.
+/** Tries to resolve conflict. Conflict is the situation, when one component is
+ * changed both on server and client. The newer change wins.
  * 
- * @param cb EEE calendar backend.
+ * @param cb 3E calendar backend.
  * @param scomp Component with server's change.
  * @param ccomp Component with client's change.
+ * @param err Error pointer.
  * 
  * @return TRUE, if no error occured.
  */
@@ -1435,8 +1401,7 @@ error:
   return FALSE;
 }
 
-/** 
- * @brief Fills the now variable with actual time in string format.
+/** Fills the now variable with actual time in string format.
  * 
  * @param now String, 255 character long. 
  * 
@@ -1463,14 +1428,6 @@ void print_func(gpointer key, gpointer value, gpointer user_data)
   D("%s", k);
 }
 
-/** 
- * @brief 
- * 
- * @param cb 
- * @param incremental 
- * 
- * @return 
- */
 gboolean e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental, GError** err)
 {
   ECalBackend3ePrivate*     priv;
@@ -1624,10 +1581,10 @@ err0:
   return FALSE;
 }
 
-/** 
- * @brief Runs total synchronization.
+/** Runs total synchronization.
  * 
- * @param cb EEE calendar backend.
+ * @param cb 3E calendar backend.
+ * @param err Error pointer.
  * 
  * @return FALSE, if synchronization process failed, TRUE otherwise.
  */
@@ -1652,10 +1609,10 @@ gboolean e_cal_sync_total_synchronization(ECalBackend3e* cb, GError** err)
   return TRUE;
 }
 
-/** 
- * @brief Runs incremental synchronization.
+/** Run incremental synchronization.
  * 
- * @param cb EEE calendar backend.
+ * @param cb 3E calendar backend.
+ * @param err Error pointer.
  * 
  * @return FALSE, if synchronization process failed, TRUE otherwise.
  */
@@ -1712,3 +1669,5 @@ gboolean e_cal_sync_incremental_synchronization(ECalBackend3e* cb, GError** err)
 
   return TRUE;
 }
+
+/** @} */
