@@ -24,30 +24,30 @@ typedef enum {
 
 struct _ECalBackend3ePrivate
 {
-  /* Remote connection info */
-  char                                   *server_uri;
-  xr_client_conn                         *conn;
+  /** @addtogroup eds_conn */
+  /** @{ */
   gboolean                                is_open;
-  gboolean                                is_loaded;
-  gboolean                                is_owned;
+  xr_client_conn                         *conn;
+  char                                   *server_uri;
   char                                   *username;
   char                                   *password;
+  /** @} */
+
+  /* Calendar */
+  gboolean                                is_loaded;
+  gboolean                                is_owned;
   char                                   *calname;
   char                                   *owner;
   gboolean                                has_write_permission;
   char                                   *calspec;
   GConfClient                            *gconf;
   guint                                   source_changed_perm;
-
-  /* Local/remote mode */
   CalMode                                 mode;
-
-  /* The file cache */
   ECalBackendCache                       *cache;
-
   ECalComponent                          *settings;
+  icaltimezone                           *default_zone;
 
-  /* synch thread variables */
+  /* Synchronization */
   gboolean                               sync_terminated;
   GCond                                  *sync_cond;
   GMutex                                 *sync_mutex;
@@ -55,12 +55,6 @@ struct _ECalBackend3ePrivate
   SyncMode                                sync_mode;
   char                                   *sync_stamp;
   GList                                  *sync_clients_changes;
-
-  /*
-   * The calendar's default timezone, used for resolving DATE and
-   * floating DATE-TIME values. 
-   */
-  icaltimezone                           *default_zone;
 };
 
 #endif

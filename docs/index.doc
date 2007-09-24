@@ -3,4 +3,14 @@
 
 This is documentation for @b evolution-3e plugins.
 
+@defgroup eds_conn EDS Server Connection API
+
+In order to be able to open and close connections you must first call
+e_cal_backend_3e_setup_connection(). This function will setup connection
+variables like username, password, server_uri, etc. Never modify these variables
+from oustide of this API!
+
+@defgroup eds_sync EDS Synchronization API
+@defgroup eds_misc EDS Misc API
+
 */

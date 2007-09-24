@@ -12,15 +12,21 @@
 #include <glib.h>
 #include "e-cal-backend-3e.h"
 
+/* server connection */
+gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password, GError** err);
+gboolean e_cal_backend_3e_open_connection(ECalBackend3e* cb, GError** err);
+void e_cal_backend_3e_close_connection(ECalBackend3e* cb);
+gboolean e_cal_backend_3e_connection_is_open(ECalBackend3e* cb);
+void e_cal_backend_3e_free_connection(ECalBackend3e* cb);
+
+
 ECalComponent* e_cal_sync_find_this_in_cache(ECalBackend3e* cb, ECalComponent* needle);
 
-gboolean e_cal_sync_server_open(ECalBackend3e* cb, GError** err);
+gboolean e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, GError** err);
 
-gboolean e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, gboolean conn_opened, GError** err);
+gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, GError** err);
 
-gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened, GError** err);
-
-gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened, GError** err);
+gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, GError** err);
 
 gboolean e_cal_sync_server_to_client_sync(ECalBackend* backend, const char* sync_start, const char* sync_stop);
 

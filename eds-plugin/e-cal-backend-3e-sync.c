@@ -11,6 +11,7 @@
 #include "e-cal-backend-3e-priv.h"
 #include "e-cal-backend-3e-utils.h"
 #include "e-cal-backend-3e-sync.h"
+#include "dns-txt-search.h"
 
 #define EEE_SYNC_STAMP "EEE-SYNC-STAMP"
 
@@ -38,45 +39,154 @@ typedef enum
 
 #define E_CAL_EDS_ERROR e_cal_eds_error_quark()
 
-/** 
- * @brief Opens connection to the server and authorizes user (calls XML-RPC authorize method).
- * 
- * @param cb Calendar backend
- * @param err Error code (if any)
- */
-gboolean e_cal_sync_server_open(ECalBackend3e* cb, GError** err)
-{
-  ECalBackend3ePrivate*        priv;
-  GError*                      local_err = NULL;
+/** @addtogroup eds_conn */
+/** @{ */
 
-  T("Opening connection.");
+/** Setup 3E server connection data and check if connection works.
+ * 
+ * @param cb 3E calendar backend.
+ * @param username Username used for authentication.
+ * @param password Password.
+ * @param err Error pointer.
+ * 
+ * @return FALSE if data are not valid or connection does not work.
+ */
+gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password, GError** err)
+{
+  char* server_hostname;
+
+  g_return_val_if_fail(cb != NULL, FALSE);
+  g_return_val_if_fail(username != NULL, FALSE);
+  g_return_val_if_fail(password != NULL, FALSE);
+  g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
+
+  e_cal_backend_3e_close_connection(cb);
+
+  g_free(cb->priv->username);
+  g_free(cb->priv->password);
+  g_free(cb->priv->server_uri);
+  cb->priv->server_uri = NULL;
+
+  cb->priv->username = g_strdup(username);
+  cb->priv->password = g_strdup(password);
+
+  server_hostname = get_eee_server_hostname(username);
+  if (server_hostname == NULL)
+  {
+    g_set_error(err, 0, -1, "Can't resolve server URI for username '%s'", username);
+    return FALSE;
+  }
+  cb->priv->server_uri = g_strdup_printf("https://%s/RPC2", server_hostname);
+  g_free(server_hostname);
+
+  if (!e_cal_backend_3e_open_connection(cb, err))
+    return FALSE;
+
+  e_cal_backend_3e_close_connection(cb);
+  return TRUE;
+}
+
+/** Open connection to the 3E server and authenticate user.
+ *
+ * This function will do nothing and return TRUE if connection is already
+ * opened.
+ * 
+ * @param cb 3E calendar backend.
+ * @param err Error pointer.
+ *
+ * @return TRUE if connection was already open, FALSE on error.
+ */
+gboolean e_cal_backend_3e_open_connection(ECalBackend3e* cb, GError** err)
+{
+  GError* local_err = NULL;
 
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
-  priv = cb->priv;
-  g_return_val_if_fail(priv != NULL, FALSE);
-  g_return_val_if_fail(priv->conn != NULL, FALSE);
 
-  xr_client_open(priv->conn, priv->server_uri, &local_err);
+  if (cb->priv->username == NULL || cb->priv->password == NULL || cb->priv->server_uri == NULL)
+  {
+    g_set_error(err, 0, -1, "Connection was not setup correctly, can't open.");
+    return FALSE;
+  }
+
+  if (cb->priv->conn == NULL)
+  {
+    cb->priv->conn = xr_client_new(err);
+    if (cb->priv->conn == NULL)
+      return FALSE;
+    cb->priv->is_open = FALSE;
+  }
+
+  if (cb->priv->is_open)
+    return TRUE;
+
+  if (xr_client_open(cb->priv->conn, cb->priv->server_uri, err) < 0)
+    return FALSE;
+
+  ESClient_auth(cb->priv->conn, cb->priv->username, cb->priv->password, &local_err);
   if (local_err)
   {
     g_propagate_error(err, local_err);
-    goto err0;
+    xr_client_close(cb->priv->conn);
+    return FALSE;
   }
-  ESClient_auth(priv->conn, priv->username, priv->password, &local_err);
-  if (local_err)
-  {
-    g_propagate_error(err, local_err);
-    goto err1;
-  }
+
+  cb->priv->is_open = TRUE;
 
   return TRUE;
-
-err1:
-  xr_client_close(priv->conn);
-err0:
-  return FALSE;
 }
+
+/** Close connection to the server.
+ * 
+ * @param cb 3E calendar backend.
+ */
+void e_cal_backend_3e_close_connection(ECalBackend3e* cb)
+{
+  g_return_if_fail(cb != NULL);
+
+  if (cb->priv->is_open)
+  {
+    xr_client_close(cb->priv->conn);
+    cb->priv->is_open = FALSE;
+  }
+}
+
+/** Get connection state.
+ * 
+ * @param cb 3E calendar backend.
+ * 
+ * @return TRUE if open, FALSE if closed.
+ */
+gboolean e_cal_backend_3e_connection_is_open(ECalBackend3e* cb)
+{
+  g_return_val_if_fail(cb != NULL, FALSE);
+
+  return cb->priv->is_open;
+}
+
+/** Close conenction and free private data.
+ * 
+ * @param cb 3E calendar backend.
+ */
+void e_cal_backend_3e_free_connection(ECalBackend3e* cb)
+{
+  g_return_if_fail(cb != NULL);
+
+  e_cal_backend_3e_close_connection(cb);
+
+  g_free(cb->priv->username);
+  g_free(cb->priv->password);
+  g_free(cb->priv->server_uri);
+  if (cb->priv->conn)
+    xr_client_free(cb->priv->conn);
+
+  cb->priv->username = NULL;
+  cb->priv->password = NULL;
+  cb->priv->server_uri = NULL;
+  cb->priv->conn = NULL;
+}
+
+/** @} */
 
 /** 
  * @brief Shows box with error message, used when synchronization on particular component failed.
@@ -135,12 +245,9 @@ void e_cal_sync_error_resolve(ECalBackend3e* cb, GError* err)
  * 
  * @param cb Calendar backend.
  * @param comp Component, that is to be removed.
- * @param conn_opened If TRUE, no new connection is opened and authorize XML-RPC method is not
- * called. Otherwise, new connection is opened, authorize XML RPC is callend and after calling
- * deleteObject method, connection is closed.
  * @param err Error 
  */
-gint e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, gboolean conn_opened, GError** err)
+gint e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, GError** err)
 {
   ECalBackend3ePrivate*        priv;
   const char*                  uid;
@@ -161,7 +268,7 @@ gint e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, gboolea
   priv = cb->priv;
   backend = E_CAL_BACKEND(cb);
 
-  if (conn_opened || e_cal_sync_server_open(cb, &local_err))
+  if (e_cal_backend_3e_open_connection(cb, &local_err))
   {
     e_cal_component_get_uid(comp, &uid);
     rid = e_cal_component_get_recurid_as_string (comp);
@@ -175,9 +282,6 @@ gint e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, gboolea
       e_cal_component_set_local_state(E_CAL_BACKEND(cb), comp);
       ok = FALSE;
     }
-
-    if (!conn_opened)
-      xr_client_close(priv->conn);
 
     g_free(uid_copy);
   }
@@ -338,15 +442,12 @@ gboolean e_cal_sync_add_timezones(ECalBackend3e* cb, ECalComponent* ccomp, GErro
  * 
  * @param cb Calendar backend.
  * @param ccomp 
- * @param conn_opened If TRUE, no new connection is opened and authorize XML-RPC method is not
- * called. Otherwise, new connection is opened, authorize XML RPC is callend and after calling
- * updateObject method, connection is closed.
  * @param err 
  * 
  * @return 
  */
 
-gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened, GError** err)
+gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, GError** err)
 {
   gchar*                       object;
   ECalBackend3ePrivate*        priv;
@@ -362,7 +463,7 @@ gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, gb
 
   priv = cb->priv;
 
-  if (conn_opened || e_cal_sync_server_open(cb, &local_err))
+  if (e_cal_backend_3e_open_connection(cb, &local_err))
   {
 
     /* add related timezones */
@@ -400,8 +501,6 @@ gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, gb
       }
     }
 
-    if (!conn_opened)
-      xr_client_close(priv->conn);
     g_free(object);
   }
   else
@@ -417,8 +516,7 @@ gboolean e_cal_sync_rpc_updateObject(ECalBackend3e* cb, ECalComponent* ccomp, gb
 err1:
   g_free(object);
 err:
-  if (!conn_opened)
-    xr_client_close(priv->conn);
+  e_cal_backend_3e_close_connection(cb);
 
   return FALSE;
 }
@@ -428,14 +526,11 @@ err:
  * 
  * @param cb  Calendar backend.
  * @param ccomp Ical component.
- * @param conn_opened If TRUE, no new connection is opened and authorize XML-RPC method is not
- * called. Otherwise, new connection is opened, authorize XML RPC is callend and after calling
- * addObject method, connection is closed.
  * @param err 
  * 
  * @return 
  */
-gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gboolean conn_opened, /* connection already opened */ GError** err)
+gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, GError** err)
 {
   gchar*                       object;
   ECalBackend3ePrivate*        priv;
@@ -451,7 +546,7 @@ gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gbool
 
   priv = cb->priv;
 
-  if (conn_opened || e_cal_sync_server_open(cb, &local_err))
+  if (e_cal_backend_3e_open_connection(cb, &local_err))
   {
     /* add related timezones */
     if (!e_cal_sync_add_timezones(cb, ccomp, &local_err))
@@ -491,9 +586,6 @@ gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gbool
       }
     }
 
-    if (!conn_opened)
-      xr_client_close(priv->conn);
-
     g_free(object);
   }
   else
@@ -509,8 +601,7 @@ gboolean e_cal_sync_rpc_addObject(ECalBackend3e* cb, ECalComponent* ccomp, gbool
 err1:
   g_free(object);
 err:
-  if (!conn_opened)
-    xr_client_close(priv->conn);
+  e_cal_backend_3e_close_connection(cb);
 
   return FALSE;
 }
@@ -662,13 +753,13 @@ gboolean e_cal_sync_client_to_server_sync(ECalBackend3e* cb, GError** err)
     switch (e_cal_component_get_sync_state(ccomp))
     {
       case E_CAL_COMPONENT_LOCALLY_CREATED:
-        ok = e_cal_sync_rpc_addObject(cb, ccomp, TRUE, &local_err);
+        ok = e_cal_sync_rpc_addObject(cb, ccomp, &local_err);
         break;
       case E_CAL_COMPONENT_LOCALLY_MODIFIED:
-        ok = e_cal_sync_rpc_updateObject(cb, ccomp, TRUE, &local_err);
+        ok = e_cal_sync_rpc_updateObject(cb, ccomp, &local_err);
         break;
       case E_CAL_COMPONENT_LOCALLY_DELETED:
-        if ((ok = e_cal_sync_rpc_deleteObject(cb, ccomp, TRUE, &local_err)))
+        if ((ok = e_cal_sync_rpc_deleteObject(cb, ccomp, &local_err)))
         {
           e_cal_component_get_ids(ccomp, &uid, &rid);
           if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
@@ -854,9 +945,11 @@ gboolean e_cal_sync_refresh_permission(ECalBackend3e* cb, GError** err)
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
   g_return_val_if_fail(cb != NULL, FALSE);
   priv = cb->priv;
-  g_return_val_if_fail(priv->conn != NULL, FALSE);
 
   T("cal name %s", priv->calname);
+
+  if (!e_cal_backend_3e_open_connection(cb, err))
+    return FALSE;
 
   if (priv->is_owned)
     return TRUE;
@@ -1256,7 +1349,7 @@ gboolean e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, EC
         goto error;
       }
 
-      if (!e_cal_sync_rpc_deleteObject(cb, new_escomp, FALSE, &local_err))
+      if (!e_cal_sync_rpc_deleteObject(cb, new_escomp, &local_err))
       {
         if (local_err)
           g_propagate_error(err, local_err);
@@ -1276,7 +1369,7 @@ gboolean e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, EC
     if (sync_state == E_CAL_COMPONENT_LOCALLY_CREATED)
     {
       /* add ccomp */
-      if (!e_cal_sync_rpc_addObject(cb, ccomp, FALSE, &local_err))
+      if (!e_cal_sync_rpc_addObject(cb, ccomp, &local_err))
       {
         if (local_err)
           g_propagate_error(err, local_err);
@@ -1287,7 +1380,7 @@ gboolean e_cal_sync_resolve_conflict(ECalBackend3e* cb, icalcomponent* scomp, EC
     else if (sync_state == E_CAL_COMPONENT_LOCALLY_MODIFIED)
     {
       /* update ccomp */
-      if (!e_cal_sync_rpc_updateObject(cb, ccomp, FALSE, &local_err))
+      if (!e_cal_sync_rpc_updateObject(cb, ccomp, &local_err))
       {
         if (local_err)
           g_propagate_error(err, local_err);
@@ -1395,11 +1488,10 @@ gboolean e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental,
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
   g_return_val_if_fail(cb != NULL, FALSE);
   priv = cb->priv;
-  g_return_val_if_fail(priv->conn != NULL, FALSE);
 
   T("cal name %s, incremental %d, sync stamp %s", priv->calname, incremental, priv->sync_stamp);
 
-  if (!e_cal_sync_server_open(cb, &local_err))
+  if (!e_cal_backend_3e_open_connection(cb, &local_err))
   {
     g_warning("Unable to open connection to the server(%d): %s",
               local_err->code, local_err->message);
@@ -1512,10 +1604,10 @@ gboolean e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental,
   icalcomponent_free(server_components);
   g_hash_table_destroy(cache_hash);
   g_free(last_sync_stamp);
-  xr_client_close(priv->conn);
   e_cal_sync_save_stamp(cb, now);
   g_free(priv->sync_stamp);
   priv->sync_stamp = g_strdup(now);
+  e_cal_backend_3e_close_connection(cb);
 
   D("Synchronization of %s:%s OK.", priv->username, priv->calname);
   return TRUE;
@@ -1525,7 +1617,7 @@ err3:
 err2:
   g_hash_table_destroy(cache_hash);
 err1:
-  xr_client_close(priv->conn);
+  e_cal_backend_3e_close_connection(cb);
 err0:
   g_free(last_sync_stamp);
   g_warning("Synchronization of %s:%s failed.", priv->username, priv->calname);

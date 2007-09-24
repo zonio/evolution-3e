@@ -24,7 +24,6 @@
 #include "e-cal-backend-3e-utils.h"
 #include "e-cal-backend-3e-sync.h"
 #include "e-cal-backend-3e-priv.h"
-#include "dns-txt-search.h"
 
 extern char *e_passwords_get_password (const char *component, const char *key);
 
@@ -134,33 +133,38 @@ static ECalBackendSyncStatus e_cal_backend_initialize_privates(ECalBackend3e * c
   GError                                           *err = NULL;
   ECalBackend3ePrivate                             *priv;
   ESource                                          *source;
-  char                                             *server_hostname;
-  const char                                       *cal_name;
+  int rs;
 
   g_return_val_if_fail (cb != NULL, GNOME_Evolution_Calendar_OtherError);
   T("");
   priv = cb->priv;
   source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
 
-  g_free(priv->username);
-  g_free(priv->password);
   /* find out username and password before any attempts to initialize cache */
   if (!username || *username == 0)
   {
-    priv->username = g_strdup(e_source_get_property (source, "username"));
-    priv->password = e_passwords_get_password(EEE_PASSWORD_COMPONENT,
-                                              e_source_get_property(source, "auth-key"));
+    char* password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, e_source_get_property(source, "auth-key"));
+    username = e_source_get_property(source, "username");
+    
+    if (!e_cal_backend_3e_setup_connection(cb, username, password, &err))
+    {
+      g_free(password);
+      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't setup connection", err);
+      g_error_free(err);
+      return GNOME_Evolution_Calendar_OtherError;
+    }
+
+    g_free(password);
   }
   else
   {
-    priv->username = g_strdup(username);
-    priv->password = g_strdup(password);
+    if (!e_cal_backend_3e_setup_connection(cb, username, password, &err))
+    {
+      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't setup connection", err);
+      g_error_free(err);
+      return GNOME_Evolution_Calendar_OtherError;
+    }
   }
-
-  /* username has to be initialized already, because we look up hostname
-   * in dns txt records by username */
-  if (!priv->username || *priv->username == 0)
-    return GNOME_Evolution_Calendar_OtherError;
 
   priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(cb)),
                                         E_CAL_SOURCE_TYPE_EVENT);
@@ -178,17 +182,12 @@ static ECalBackendSyncStatus e_cal_backend_initialize_privates(ECalBackend3e * c
    * we will not ask evolution.
    */
 
-  g_free (priv->server_uri);
   g_free (priv->calname);
   g_free (priv->owner);
-  cal_name = e_source_get_property (source, "eee-calname");
-  server_hostname = get_eee_server_hostname(priv->username);
-  priv->server_uri = g_strdup_printf ("https://%s/ESClient", server_hostname);
-  g_free (server_hostname);
-  priv->calname = g_strdup (cal_name);
-  priv->settings = e_cal_sync_find_settings(cb);
+  priv->calname = g_strdup (e_source_get_property (source, "eee-calname"));
   priv->owner = g_strdup (e_source_get_property (source, "eee-owner"));
-  g_return_val_if_fail (priv->owner != NULL, GNOME_Evolution_Calendar_OtherError);
+  if (priv->owner == NULL)
+    return GNOME_Evolution_Calendar_OtherError;
   priv->is_owned = strcmp(priv->username, priv->owner) == 0;
   if (priv->is_owned)
     priv->has_write_permission = TRUE;
@@ -199,8 +198,7 @@ static ECalBackendSyncStatus e_cal_backend_initialize_privates(ECalBackend3e * c
     priv->source_changed_perm = g_signal_connect(G_OBJECT(source), "changed",
                                                  G_CALLBACK (source_changed_perm), cb);
 
-
-  if (server_hostname == NULL || cal_name == NULL)
+  if (priv->calname == NULL)
   {
     /*
      * This sometimes happens ... When starting evolution in offline mode,
@@ -215,21 +213,11 @@ static ECalBackendSyncStatus e_cal_backend_initialize_privates(ECalBackend3e * c
     return GNOME_Evolution_Calendar_OtherError;
   }
 
-  if (priv->conn == NULL)
-  {
-    priv->conn = xr_client_new (&err);
-    if (err != NULL)
-    {
-      e_cal_backend_notify_gerror_error (E_CAL_BACKEND (cb),
-                                         "Failed to initialize XML-RPC client library.", err);
-      return GNOME_Evolution_Calendar_OtherError;
-    }
-  }
+  priv->settings = e_cal_sync_find_settings(cb);
 
   g_free (priv->calspec);
   g_free (priv->sync_stamp);
   priv->calspec = g_strdup_printf ("%s:%s", priv->owner, priv->calname);
-  priv->is_open = TRUE;
   e_cal_sync_load_stamp(cb, &priv->sync_stamp);
   priv->is_loaded = TRUE;
 
@@ -362,7 +350,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_is_read_only (ECalBackendSync * ba
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
   g_mutex_lock (priv->sync_mutex);
-  *read_only = priv->is_open == FALSE || priv->has_write_permission == FALSE;
+  *read_only = priv->has_write_permission == FALSE;
   g_mutex_unlock (priv->sync_mutex);
 
   /* *read_only = FALSE; */
@@ -764,7 +752,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_add(ECalBackend3e* c
   if (priv->mode == CAL_MODE_REMOTE)
   {
     /* send to server */
-    if (!e_cal_sync_rpc_addObject(cb, comp, FALSE, &local_err))
+    if (!e_cal_sync_rpc_addObject(cb, comp, &local_err))
     {
       if (local_err)
         g_propagate_error(err, local_err);
@@ -796,6 +784,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_add(ECalBackend3e* c
     *new_object = e_cal_component_get_as_string (comp);
     e_cal_backend_notify_object_created(E_CAL_BACKEND(cb), *new_object);
   }
+
+  e_cal_backend_3e_close_connection(cb);
 
   return status;
 }
@@ -926,7 +916,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_update(ECalBackend3e
     switch (cache_comp_state)
     {
       case E_CAL_COMPONENT_LOCALLY_CREATED:
-        if (!e_cal_sync_rpc_addObject(cb, updated_comp, FALSE, &local_err))
+        if (!e_cal_sync_rpc_addObject(cb, updated_comp, &local_err))
         {
           if (local_err)
             g_propagate_error(err, local_err);
@@ -934,7 +924,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_update(ECalBackend3e
         }
         break;
       default:
-        if (!e_cal_sync_rpc_updateObject(cb, updated_comp, FALSE, &local_err))
+        if (!e_cal_sync_rpc_updateObject(cb, updated_comp, &local_err))
         {
           if (local_err)
             g_propagate_error(err, local_err);
@@ -982,6 +972,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_update(ECalBackend3e
     *new_object = e_cal_component_get_as_string(updated_comp);
     e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), *old_object, *new_object);
   }
+
+  e_cal_backend_3e_close_connection(cb);
 
   return status;
 }
@@ -1081,7 +1073,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_remove(ECalBackend3e
 
       if (priv->mode == CAL_MODE_REMOTE)
       {
-        if (!e_cal_sync_rpc_deleteObject(cb, cache_comp, FALSE, &local_err))
+        if (!e_cal_sync_rpc_deleteObject(cb, cache_comp, &local_err))
         {
           e_cal_sync_error_message(E_CAL_BACKEND(cb), cache_comp, local_err);
           if (local_err)
@@ -1134,6 +1126,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_remove(ECalBackend3e
   }
   else
     *old_object = NULL;
+
+  e_cal_backend_3e_close_connection(cb);
 
   return status;
 }
@@ -1221,7 +1215,6 @@ static char * create_user_free_busy (ECalBackend3e * cb, const char *address, ti
   T("");
 
   priv = cb->priv;
-  g_return_val_if_fail (priv->conn != NULL, NULL);
 
   gmtime_r (&start, &tm);
   if (!(strftime (from_date, sizeof (from_date), "%F %T", &tm)))
@@ -1231,7 +1224,7 @@ static char * create_user_free_busy (ECalBackend3e * cb, const char *address, ti
   if (!(strftime (to_date, sizeof (to_date), "%F %T", &tm)))
     return NULL;
 
-  if (!e_cal_sync_server_open (cb, &local_err))
+  if (!e_cal_backend_3e_open_connection (cb, &local_err))
     goto error;
 
   icalcomponent* comp = icaltimezone_get_component(priv->default_zone);
@@ -1242,7 +1235,7 @@ static char * create_user_free_busy (ECalBackend3e * cb, const char *address, ti
   if (local_err)
     goto error;
 
-  xr_client_close (priv->conn);
+  e_cal_backend_3e_close_connection(cb);
 
   return retval;
 
@@ -1700,7 +1693,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * ba
 
   g_debug("Opening server");
 
-  if (!e_cal_sync_server_open(cb, &local_err))
+  if (!e_cal_backend_3e_open_connection(cb, &local_err))
   {
     g_warning("Cannot open connection to server: %s", local_err->message);
     status = GNOME_Evolution_Calendar_MODE_LOCAL;
@@ -1725,7 +1718,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * ba
 /*
   g_debug("Closing connection");
 out2:
-  xr_client_close(priv->conn);
+  e_cal_backend_3e_close_connection(cb);
 out1:
   g_mutex_unlock(priv->sync_mutex);
 */
@@ -1802,22 +1795,16 @@ static void e_cal_backend_3e_finalize (GObject * object)
   g_cond_free (priv->sync_cond);
   g_mutex_free (priv->sync_mutex);
 
-  priv->conn = NULL;
+  e_cal_backend_3e_free_connection(cb);
 
   g_object_unref (priv->cache);
   priv->cache = NULL;
-  g_free (priv->server_uri);
-  priv->server_uri = NULL;
   g_free (priv->calname);
   priv->calname = NULL;
   g_free (priv->owner);
   priv->owner = NULL;
-  g_free (priv->username);
-  priv->username = NULL;
   g_free (priv->calspec);
   priv->calspec = NULL;
-  g_free (priv->password);
-  priv->password = NULL;
   g_free (priv->sync_stamp);
   priv->sync_stamp = NULL;
 
