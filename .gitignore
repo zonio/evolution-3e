@@ -27,21 +27,9 @@ Makefile.in
 /.vimrc
 /tags
 /.misc
+/docs/html
 
-/interface/ESAdmin.c
-/interface/ESAdmin.xrc.c
-/interface/ESClient.c
-/interface/ESClient.xrc.c
-/interface/ESCommon.c
-/interface/ESServer.c
-/interface/ESServer.xrc.c
-/interface/ESAdmin.h
-/interface/ESAdmin.xrc.h
-/interface/ESClient.h
-/interface/ESClient.xrc.h
-/interface/ESCommon.h
-/interface/ESServer.h
-/interface/ESServer.xrc.h
+/interface/ES*
 
 /evolution-plugin/org-gnome-evolution-eee.eplug
 /evolution-plugin/org-gnome-eee-cal-subscription.xml
