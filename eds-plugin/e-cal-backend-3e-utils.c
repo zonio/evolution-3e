@@ -288,18 +288,24 @@ ECalComponentSyncState icomp_get_sync_state(icalcomponent* icomp)
 {
   const char          *state_string;
   char                *endptr;
-  int                 int_state ;
+  int                 int_state = E_CAL_COMPONENT_LOCALLY_CREATED;
 
   g_return_val_if_fail(icomp != NULL, GNOME_Evolution_Calendar_OtherError);
 
   state_string = icomp_x_prop_get(icomp, "X-EEE-SYNC-STATE");
-  int_state = g_ascii_strtoull(state_string, &endptr, 0);
+  if (state_string)
+    int_state = atoi(state_string);
 
-  // unknown state: locally created 
-  if (endptr == state_string || (int_state < 0 || int_state > E_CAL_COMPONENT_LOCALLY_MODIFIED))
-    int_state = E_CAL_COMPONENT_LOCALLY_CREATED;
-
-  return (ECalComponentSyncState)int_state;
+  switch (int_state)
+  {
+    case E_CAL_COMPONENT_IN_SYNCH:
+    case E_CAL_COMPONENT_LOCALLY_CREATED:
+    case E_CAL_COMPONENT_LOCALLY_MODIFIED:
+    case E_CAL_COMPONENT_LOCALLY_DELETED:
+      return int_state;
+    default:
+      return E_CAL_COMPONENT_LOCALLY_CREATED;
+  }
 }
 
 // get internal synchro state
