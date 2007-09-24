@@ -66,6 +66,7 @@ CFLAGS="$CFLAGS -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable"
 # Output
 AC_OUTPUT([
   Makefile
+  docs/Makefile
   interface/Makefile
   eds-plugin/Makefile
   evolution-plugin/Makefile
