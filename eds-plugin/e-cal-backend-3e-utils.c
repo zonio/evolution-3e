@@ -11,6 +11,9 @@
 #include "e-cal-backend-3e-priv.h"
 #include "e-cal-backend-3e-utils.h"
 
+/** @addtogroup eds_misc */
+/** @{ */
+
 void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GError* err)
 {
   ECalBackend3e *cb;
@@ -397,3 +400,5 @@ gboolean e_cal_has_write_permission(const char* perm_string)
 {
   return strcmp(perm_string, "write") == 0;
 }
+
+/** @} */

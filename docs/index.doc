@@ -11,6 +11,9 @@ variables like username, password, server_uri, etc. Never modify these variables
 from oustide of this API!
 
 @defgroup eds_sync EDS Synchronization API
+
 @defgroup eds_misc EDS Misc API
+
+@defgroup eds_back EDS Backend
 
 */
