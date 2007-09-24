@@ -137,6 +137,8 @@ const char* eee_find_attribute_value(GSList* attrs, const char* name)
 {
   ESAttribute* attr = eee_find_attribute(attrs, name);
   if (attr)
+  {
     return attr->value;
+  }
   return NULL;
 }

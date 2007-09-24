@@ -30,6 +30,7 @@ PKG_CHECK_MODULES(EDS3E, [
   libecal-1.2
   libedata-cal-1.2
   libedataserver-1.2
+  libedataserverui-1.2
   evolution-data-server-1.2
 ])
 

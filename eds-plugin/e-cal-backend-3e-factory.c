@@ -1,3 +1,12 @@
+/**************************************************************************************************
+ *  3E plugin for Evolution Data Server                                                           * 
+ *                                                                                                *
+ *  Copyright (C) 2007 by Zonio                                                                   *
+ *  www.zonio.net                                                                                 *
+ *  stanislav.slusny@zonio.net                                                                    *
+ *                                                                                                *
+ **************************************************************************************************/
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif

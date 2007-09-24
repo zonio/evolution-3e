@@ -1,3 +1,12 @@
+/**************************************************************************************************
+ *  3E plugin for Evolution Data Server                                                           * 
+ *                                                                                                *
+ *  Copyright (C) 2007 by Zonio                                                                   *
+ *  www.zonio.net                                                                                 *
+ *  stanislav.slusny@zonio.net                                                                    *
+ *                                                                                                *
+ **************************************************************************************************/
+
 #ifndef E_CAL_BACKEND_3E_H
 #define E_CAL_BACKEND_3E_H
 
