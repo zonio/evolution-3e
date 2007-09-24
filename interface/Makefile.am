@@ -18,7 +18,6 @@ EXTRA_DIST = \
   server.xdl
 
 AM_CFLAGS= \
-  -std=gnu99 \
   $(LIBXR_CFLAGS) \
   -D_REENTRANT \
   -D_GNU_SOURCE
