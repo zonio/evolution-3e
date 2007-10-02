@@ -226,12 +226,13 @@ void e_cal_sync_error_resolve(ECalBackend3e* cb, GError* err)
   g_return_if_fail(cb != NULL);
   priv = cb->priv;
 
-  if (err->domain == es_server_error_quark())
+  // XML-RPC errors have domain == 0
+  if (err->domain == 0)
   {
     switch (err->code)
     {
       case ES_XMLRPC_ERROR_NO_PERMISSION:
-        D("Resolvingerror ES_XMLRPC_ERROR_NO_PERMISSION: Setting read-only calendar");
+        D("Resolving error ES_XMLRPC_ERROR_NO_PERMISSION: Setting read-only calendar");
         priv->has_write_permission = FALSE;
         break;
 
