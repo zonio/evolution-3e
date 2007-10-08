@@ -47,14 +47,13 @@ typedef enum
  * @param cb 3E calendar backend.
  * @param username Username used for authentication.
  * @param password Password.
+ * @param test_conn Test connection to verify that username/password/server_uri is valid.
  * @param err Error pointer.
  * 
  * @return FALSE if data are not valid or connection does not work.
  */
-gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password, GError** err)
+gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password, gboolean test_conn, GError** err)
 {
-  char* server_hostname;
-
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(username != NULL, FALSE);
   g_return_val_if_fail(password != NULL, FALSE);
@@ -70,19 +69,14 @@ gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* userna
   cb->priv->username = g_strdup(username);
   cb->priv->password = g_strdup(password);
 
-  server_hostname = get_eee_server_hostname(username);
-  if (server_hostname == NULL)
+  if (test_conn)
   {
-    g_set_error(err, 0, -1, "Can't resolve server URI for username '%s'", username);
-    return FALSE;
+    if (!e_cal_backend_3e_open_connection(cb, err))
+      return FALSE;
+
+    e_cal_backend_3e_close_connection(cb);
   }
-  cb->priv->server_uri = g_strdup_printf("https://%s/RPC2", server_hostname);
-  g_free(server_hostname);
 
-  if (!e_cal_backend_3e_open_connection(cb, err))
-    return FALSE;
-
-  e_cal_backend_3e_close_connection(cb);
   return TRUE;
 }
 
@@ -99,9 +93,22 @@ gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* userna
 gboolean e_cal_backend_3e_open_connection(ECalBackend3e* cb, GError** err)
 {
   GError* local_err = NULL;
+  char* server_hostname;
 
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
+
+  if (cb->priv->server_uri == NULL)
+  {
+    server_hostname = get_eee_server_hostname(cb->priv->username);
+    if (server_hostname == NULL)
+    {
+      g_set_error(err, 0, -1, "Can't resolve server URI for username '%s'", cb->priv->username);
+      return FALSE;
+    }
+    cb->priv->server_uri = g_strdup_printf("https://%s/RPC2", server_hostname);
+    g_free(server_hostname);
+  }
 
   if (cb->priv->username == NULL || cb->priv->password == NULL || cb->priv->server_uri == NULL)
   {
@@ -188,6 +195,130 @@ void e_cal_backend_3e_free_connection(ECalBackend3e* cb)
 
 /** @} */
 
+/** @addtogroup eds_cal */
+/** @{ */
+
+/** Load calendar name, owner and permission from the ESource.
+ * 
+ * @param cb 3E calendar backend.
+ * 
+ * @return TRUE on success, FALSE otherwise.
+ */
+gboolean e_cal_backend_3e_calendar_info_load(ECalBackend3e* cb)
+{
+  ESource *source;
+
+  source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
+
+  g_free(cb->priv->calname);
+  g_free(cb->priv->owner);
+  g_free(cb->priv->perm);
+  cb->priv->calname = g_strdup(e_source_get_property(source, "eee-calname"));
+  cb->priv->owner = g_strdup(e_source_get_property(source, "eee-owner"));
+  cb->priv->perm = g_strdup(e_source_get_property(source, "eee-perm"));
+
+  g_free (cb->priv->calspec);
+  cb->priv->calspec = g_strdup_printf ("%s:%s", cb->priv->owner, cb->priv->calname);
+
+  if (cb->priv->calname == NULL || cb->priv->owner == NULL)
+    return FALSE;
+
+  return TRUE;
+}
+
+/** Check if calendar is owned by the user who accesses it.
+ * 
+ * @param cb 3E calendar backend.
+ * 
+ * @return TRUE if owned, FALSE if shared.
+ */
+gboolean e_cal_backend_3e_calendar_is_owned(ECalBackend3e* cb)
+{
+  if (cb->priv->username == NULL || cb->priv->owner == NULL)
+    return FALSE;
+  return !g_ascii_strcasecmp(cb->priv->username, cb->priv->owner);
+}
+
+/** Check if calendar has given permission. 
+ * 
+ * @param cb 3E calendar backend.
+ * @param perm Permission string ("read", "write").
+ * 
+ * @return TRUE if @a perm is equal to or subset of calendar's permission.
+ */
+gboolean e_cal_backend_3e_calendar_has_perm(ECalBackend3e* cb, const char* perm)
+{
+  if (cb->priv->perm == NULL)
+    return FALSE;
+  if (!g_ascii_strcasecmp(perm, cb->priv->perm))
+    return TRUE;
+  if (!g_ascii_strcasecmp(cb->priv->perm, "write"))
+    return TRUE;
+  return FALSE;
+}
+
+/** Set permission in the priv structure of calendar backend.
+ * 
+ * @param cb 3E calendar backend.
+ * @param perm Permission string ("read", "write").
+ */
+void e_cal_backend_3e_calendar_set_perm(ECalBackend3e* cb, const char* perm)
+{
+  g_free(cb->priv->perm);
+  cb->priv->perm = g_strdup(perm);
+}
+
+/** Load permission from the calendar list.
+ * 
+ * @param cb 3E calendar backend.
+ * @param err Error pointer.
+ * 
+ * @return TRUE if user has read or write access, FALSE on error or no
+ * permission.
+ */
+gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e* cb, GError** err)
+{
+  GError* local_err = NULL;
+  GSList* cals;
+  GSList* iter;
+
+  if (e_cal_backend_3e_calendar_is_owned(cb))
+  {
+    e_cal_backend_3e_calendar_set_perm(cb, "write");
+    return TRUE;
+  }
+
+  if (!e_cal_backend_3e_open_connection(cb, &local_err))
+  {
+    g_propagate_error(err, local_err);
+    return FALSE;
+  }
+
+  cals = ESClient_getCalendars(cb->priv->conn, &local_err);
+  if (local_err)
+  {
+    g_propagate_error(err, local_err);
+    return FALSE;
+  }
+  for (iter = cals; iter; iter = iter->next)
+  {
+    ESCalendar* cal = iter->data;
+    if (!g_ascii_strcasecmp(cal->owner, cb->priv->owner) && 
+        !g_ascii_strcasecmp(cal->name, cb->priv->calname))
+    {
+      e_cal_backend_3e_calendar_set_perm(cb, cal->perm);
+      Array_ESCalendar_free(cals);
+      return TRUE;
+    }
+  }
+  Array_ESCalendar_free(cals);
+
+  e_cal_backend_3e_calendar_set_perm(cb, "none");
+  return FALSE;
+}
+
+/** @} */
+
 /** @addtogroup eds_sync */
 /** @{ */
 
@@ -221,25 +352,9 @@ void e_cal_sync_error_message(ECalBackend* backend, ECalComponent* comp, GError*
 
 void e_cal_sync_error_resolve(ECalBackend3e* cb, GError* err)
 {
-  ECalBackend3ePrivate         *priv;
-
-  g_return_if_fail(cb != NULL);
-  priv = cb->priv;
-
-  // XML-RPC errors have domain == 0
-  if (err->domain == 0)
-  {
-    switch (err->code)
-    {
-      case ES_XMLRPC_ERROR_NO_PERMISSION:
-        D("Resolving error ES_XMLRPC_ERROR_NO_PERMISSION: Setting read-only calendar");
-        priv->has_write_permission = FALSE;
-        break;
-
-      default:
-        break;
-    }
-  }
+  /* XML-RPC errors have domain == 0 */
+  if (err->domain == 0 && err->code == ES_XMLRPC_ERROR_NO_PERMISSION)
+      e_cal_backend_3e_calendar_set_perm(cb, "read");
 }
 
 /** Calls XML-RPC deleteObject method on component comp. If failed, returns FALSE and fills
@@ -911,52 +1026,6 @@ void e_cal_sync_save_stamp(ECalBackend3e* cb, const char* stamp)
     g_warning("Could not set cache-stamp");
 }
 
-gboolean e_cal_sync_refresh_permission(ECalBackend3e* cb, GError** err)
-{
-  GError*                   local_err = NULL;
-  ECalBackend3ePrivate*     priv;
-  GSList*                   perms;
-  GSList*                   iter;
-  ESPermission*             perm;
-
-  g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
-  g_return_val_if_fail(cb != NULL, FALSE);
-  priv = cb->priv;
-
-  T("cal name %s", priv->calname);
-
-  if (!e_cal_backend_3e_open_connection(cb, err))
-    return FALSE;
-
-  if (priv->is_owned)
-    return TRUE;
-
-  /* if getPermissions fails, calendar will be set as read-only */
-  priv->has_write_permission = FALSE;
-
-  perms = ESClient_getPermissions(priv->conn, priv->calspec, &local_err);
-  if (local_err)
-  {
-    g_propagate_error(err, local_err);
-    return FALSE;
-  }
-
-  D("PERMISSIONS FOR CALENDAR %s", priv->calspec);
-  for (iter = perms; iter; iter = iter->next)
-  {
-    perm = iter->data;
-    g_debug("User %s permission %s", perm->user, perm->perm);
-
-    if (((strcmp(perm->user, "*") == 0) || (strcmp(perm->user, priv->username) == 0))
-        && (strcmp(perm->perm, "write") == 0))
-        priv->has_write_permission = TRUE;
-  }
-
-  D("WRITE PERMISSION %d", priv->has_write_permission);
-
-  return TRUE;
-}
-
 gpointer e_cal_sync_main_thread(gpointer data)
 {
   ECalBackend3e               *cb;
@@ -1457,7 +1526,7 @@ gboolean e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental,
     goto err0;
   }
 
-  if (!e_cal_sync_refresh_permission(cb, &local_err))
+  if (!e_cal_backend_3e_calendar_load_perm(cb, &local_err))
   {
     if (local_err)
       g_propagate_error(err, local_err);
@@ -1549,7 +1618,7 @@ gboolean e_cal_sync_run_synchronization(ECalBackend3e* cb, gboolean incremental,
   }
 
   /* send changes from client->server only when we have write persmissions */
-  if (priv->has_write_permission)
+  if (e_cal_backend_3e_calendar_has_perm(cb, "write"))
   {
     if (!e_cal_sync_client_to_server_sync(cb, &local_err))
     {

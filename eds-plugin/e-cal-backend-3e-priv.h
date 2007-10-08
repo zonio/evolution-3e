@@ -41,19 +41,23 @@ struct _ECalBackend3ePrivate
   char *password;                /**< Password for the 3E account. */
   /** @} */
 
-  /* Calendar */
-  gboolean is_loaded;
-  gboolean is_owned;
-  char *calname;
-  char *owner;
-  gboolean has_write_permission;
-  char *calspec;
-  GConfClient *gconf;
-  guint source_changed_perm;
-  CalMode mode;
-  ECalBackendCache *cache;
-  ECalComponent *settings;
+  /** @addtogroup eds_cal */
+  /** @{ */
+  char *calname;                 /**< Calendar name. */
+  char *owner;                   /**< Calendar owner. */
+  char *perm;                    /**< Calendar permission. */
+  char *calspec;                 /**< Calspec ('owner:name'), just for convenience. */
+  /** @} */
+
+  /** @addtogroup eds_back */
+  /** @{ */
+  CalMode mode;                  /**< Calendar mode (CAL_MODE_REMOTE, CAL_MODE_LOCAL). */
+  gboolean is_loaded;            /**< Calendar is in loaded state. (connection set up, calinfo loaded) */
+  ECalBackendCache *cache;       /**< Calendar cache object. */
   icaltimezone *default_zone;
+  GConfClient *gconf;
+  ECalComponent *settings;
+  /** @} */
 
   /** @addtogroup eds_sync */
   /** @{ */

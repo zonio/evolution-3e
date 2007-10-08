@@ -13,12 +13,18 @@
 #include "e-cal-backend-3e.h"
 
 /* server connection */
-gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password, GError** err);
+gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password, gboolean test_conn, GError** err);
 gboolean e_cal_backend_3e_open_connection(ECalBackend3e* cb, GError** err);
 void e_cal_backend_3e_close_connection(ECalBackend3e* cb);
 gboolean e_cal_backend_3e_connection_is_open(ECalBackend3e* cb);
 void e_cal_backend_3e_free_connection(ECalBackend3e* cb);
 
+/* calendar info */
+gboolean e_cal_backend_3e_calendar_info_load(ECalBackend3e* cb);
+gboolean e_cal_backend_3e_calendar_is_owned(ECalBackend3e* cb);
+gboolean e_cal_backend_3e_calendar_has_perm(ECalBackend3e* cb, const char* perm);
+void e_cal_backend_3e_calendar_set_perm(ECalBackend3e* cb, const char* perm);
+gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e* cb, GError** err);
 
 ECalComponent* e_cal_sync_find_this_in_cache(ECalBackend3e* cb, ECalComponent* needle);
 

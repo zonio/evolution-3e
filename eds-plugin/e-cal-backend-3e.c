@@ -119,119 +119,11 @@ static void e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
   g_mutex_unlock (priv->sync_mutex);
 }
 
-static void source_changed_perm(ESource *source, ECalBackend3e *cb)
-{
-  /* FIXME
-   * We should force a reload of the data when this gets called. Unfortunately,
-   * this signal isn't getting through from evolution to the backend
-   */
-  g_debug("SOURCE CHANGED");
-}
-
-/** Initilizes priv structure of the cb.
- */
-static ECalBackendSyncStatus e_cal_backend_initialize_privates(ECalBackend3e * cb, const char* username, const char* password)
-{
-  GError                                           *err = NULL;
-  ECalBackend3ePrivate                             *priv;
-  ESource                                          *source;
-  int rs;
-
-  g_return_val_if_fail (cb != NULL, GNOME_Evolution_Calendar_OtherError);
-  T("");
-  priv = cb->priv;
-  source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
-
-  /* find out username and password before any attempts to initialize cache */
-  if (!username || *username == 0)
-  {
-    char* password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, e_source_get_property(source, "auth-key"));
-    username = e_source_get_property(source, "username");
-    
-    if (!e_cal_backend_3e_setup_connection(cb, username, password, &err))
-    {
-      g_free(password);
-      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't setup connection", err);
-      g_error_free(err);
-      return GNOME_Evolution_Calendar_OtherError;
-    }
-
-    g_free(password);
-  }
-  else
-  {
-    if (!e_cal_backend_3e_setup_connection(cb, username, password, &err))
-    {
-      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't setup connection", err);
-      g_error_free(err);
-      return GNOME_Evolution_Calendar_OtherError;
-    }
-  }
-
-  priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(cb)),
-                                        E_CAL_SOURCE_TYPE_EVENT);
-  if (!priv->cache)
-  {
-    e_cal_backend_notify_error (E_CAL_BACKEND (cb), "Could not create cache file");
-    return GNOME_Evolution_Calendar_OtherError;
-  }
-
-  /*
-   * server_hostname = e_source_get_property(source, "eee-server");
-   *
-   * This method sometimes does not work (race condition...).
-   * So we find out server hostname from dns record by ourselves,
-   * we will not ask evolution.
-   */
-
-  g_free (priv->calname);
-  g_free (priv->owner);
-  priv->calname = g_strdup (e_source_get_property (source, "eee-calname"));
-  priv->owner = g_strdup (e_source_get_property (source, "eee-owner"));
-  if (priv->owner == NULL)
-    return GNOME_Evolution_Calendar_OtherError;
-  priv->is_owned = strcmp(priv->username, priv->owner) == 0;
-  if (priv->is_owned)
-    priv->has_write_permission = TRUE;
-  else
-    priv->has_write_permission = strcmp(e_source_get_property(source, "eee-perm"), "write") == 0;
-
-  if (priv->source_changed_perm == 0)
-    priv->source_changed_perm = g_signal_connect(G_OBJECT(source), "changed",
-                                                 G_CALLBACK (source_changed_perm), cb);
-
-  if (priv->calname == NULL)
-  {
-    /*
-     * This sometimes happens ... When starting evolution in offline mode,
-     * we do not know this... do not throw error message.
-     *
-     * */
-    /*
-       e_cal_backend_notify_error (E_CAL_BACKEND (cb),
-       "Invalid calendar source list setup.");
-    */
-
-    return GNOME_Evolution_Calendar_OtherError;
-  }
-
-  priv->settings = e_cal_sync_find_settings(cb);
-
-  g_free (priv->calspec);
-  g_free (priv->sync_stamp);
-  priv->calspec = g_strdup_printf ("%s:%s", priv->owner, priv->calname);
-  e_cal_sync_load_stamp(cb, &priv->sync_stamp);
-  priv->is_loaded = TRUE;
-
-  return GNOME_Evolution_Calendar_Success;
-}
-
 /** Open the calendar.
  */
 static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, EDataCal * cal, gboolean only_if_exists, const char *username, const char *password)
 {
   ECalBackend3e                                    *cb;
-  ECalBackend3ePrivate                             *priv;
   ECalBackendSyncStatus                             status;
   ESourceList                                      *eslist;
   GSList                                           *groups_list;
@@ -249,37 +141,90 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
   g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
 
   cb = E_CAL_BACKEND_3E (backend);
-  priv = cb->priv;
+  source = e_cal_backend_get_source(E_CAL_BACKEND(backend));
 
-  g_mutex_lock (priv->sync_mutex);
+  g_mutex_lock (cb->priv->sync_mutex);
 
-  status = (priv->is_loaded == TRUE)
-    ? GNOME_Evolution_Calendar_Success : e_cal_backend_initialize_privates(cb, username, password);
-
-  if (status != GNOME_Evolution_Calendar_Success)
-    goto out;
-
-  if (!priv->calname)
+  if (!cb->priv->is_loaded)
   {
-    status = GNOME_Evolution_Calendar_OtherError;
-    goto out;
+    /* find out username and password before any attempts to initialize cache */
+    if (!username || *username == 0)
+    {
+      char* password = e_passwords_get_password(EEE_PASSWORD_COMPONENT, e_source_get_property(source, "auth-key"));
+      username = e_source_get_property(source, "username");
+      
+      if (!e_cal_backend_3e_setup_connection(cb, username, password, cb->priv->mode == CAL_MODE_REMOTE, &local_err))
+      {
+        g_free(password);
+        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't setup connection", local_err);
+        g_error_free(local_err);
+        g_mutex_unlock (cb->priv->sync_mutex);
+        return GNOME_Evolution_Calendar_OtherError;
+      }
+
+      g_free(password);
+    }
+    else
+    {
+      if (!e_cal_backend_3e_setup_connection(cb, username, password, cb->priv->mode == CAL_MODE_REMOTE, &local_err))
+      {
+        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't setup connection", local_err);
+        g_error_free(local_err);
+        g_mutex_unlock (cb->priv->sync_mutex);
+        return GNOME_Evolution_Calendar_OtherError;
+      }
+    }
+
+    cb->priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(cb)), E_CAL_SOURCE_TYPE_EVENT);
+    if (cb->priv->cache == NULL)
+    {
+      e_cal_backend_notify_error (E_CAL_BACKEND (cb), "Could not create cache file");
+      g_mutex_unlock (cb->priv->sync_mutex);
+      return GNOME_Evolution_Calendar_OtherError;
+    }
+
+    /* resolve the default zone: find out, if the default zone is in the cache or not.
+       if it is not, put it there with E_CAL_COMPONENT_LOCALLY_CREATED status. */
+    if (cb->priv->default_zone)
+    {
+      char* default_tzid = icaltimezone_get_tzid(cb->priv->default_zone);
+
+      const icaltimezone* cache_zone = e_cal_backend_cache_get_timezone(cb->priv->cache, default_tzid);
+      if (!cache_zone)
+      {
+        /* default zone is not in cache yet. add it there */
+        icalcomponent* default_tzcomp = icaltimezone_get_component(cb->priv->default_zone);
+        icomp_set_sync_state(default_tzcomp, E_CAL_COMPONENT_LOCALLY_CREATED);
+        e_cal_backend_cache_put_default_timezone(cb->priv->cache, cb->priv->default_zone);
+        e_cal_backend_cache_put_timezone(cb->priv->cache, cb->priv->default_zone);
+      }
+    }
+
+    if (!e_cal_backend_3e_calendar_info_load(cb))
+    {
+      g_mutex_unlock (cb->priv->sync_mutex);
+      return GNOME_Evolution_Calendar_OtherError;
+    }
+
+    //XXX: use better storage (gconf?)
+    cb->priv->settings = e_cal_sync_find_settings(cb);
+    g_free (cb->priv->sync_stamp);
+    e_cal_sync_load_stamp(cb, &cb->priv->sync_stamp);
+    cb->priv->is_loaded = TRUE;
   }
 
-  D ("username  %s", priv->username);
-  D ("calname %s", priv->calname);
-  D ("password %s", priv->password);
-  D ("owner %s", priv->owner);
-  D ("server uri %s", priv->server_uri);
-
-  if (status != GNOME_Evolution_Calendar_Success)
-    goto out;
+  D ("username %s", cb->priv->username);
+  D ("calname %s", cb->priv->calname);
+  D ("password %s", cb->priv->password);
+  D ("owner %s", cb->priv->owner);
+  D ("server uri %s", cb->priv->server_uri);
 
   e_cal_sync_rebuild_clients_changes_list(cb);
 
-  if (!priv->sync_thread)
+  if (!cb->priv->sync_thread)
     cb->priv->sync_thread = g_thread_create (e_cal_sync_main_thread, cb, TRUE, NULL);
 
-  if (priv->mode == CAL_MODE_REMOTE)
+  if (cb->priv->mode == CAL_MODE_REMOTE)
   {
     /* do the synchronization and wait until it ends */
     if (!e_cal_sync_incremental_synchronization(cb, &local_err))
@@ -292,71 +237,41 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
       else
         g_warning("Synchronization failed with no error message");
 
-      status = GNOME_Evolution_Calendar_OtherError;
-      goto out;
+      g_mutex_unlock (cb->priv->sync_mutex);
+      return GNOME_Evolution_Calendar_OtherError;
     }
 
     /* run synchronization thread */
-    priv->sync_mode = SYNC_WORK;
-    g_cond_signal(priv->sync_cond);
+    cb->priv->sync_mode = SYNC_WORK;
+    g_cond_signal(cb->priv->sync_cond);
   }
   else
-    priv->sync_mode = SYNC_SLEEP;
+    cb->priv->sync_mode = SYNC_SLEEP;
 
-  /*
-   * solve the default zone: find out, if the default zone is in the cache or not.
-   * if it is not, put it there with E_CAL_COMPONENT_LOCALLY_CREATED status.
-   */
-  if (priv->default_zone)
-  {
-    char* default_tzid = icaltimezone_get_tzid(priv->default_zone);
-
-    const icaltimezone* cache_zone = e_cal_backend_cache_get_timezone(priv->cache, default_tzid);
-    if (!cache_zone)
-    {
-      /* default zone is not in cache yet. add it there */
-      icalcomponent* default_tzcomp = icaltimezone_get_component(priv->default_zone);
-      icomp_set_sync_state(default_tzcomp, E_CAL_COMPONENT_LOCALLY_CREATED);
-      e_cal_backend_cache_put_default_timezone(priv->cache, priv->default_zone);
-      e_cal_backend_cache_put_timezone(priv->cache, priv->default_zone);
-    }
-  }
-
-out:
-  g_mutex_unlock (priv->sync_mutex);
-  T("FINISHED");
-
-  return status;
+  g_mutex_unlock (cb->priv->sync_mutex);
+  return GNOME_Evolution_Calendar_Success;
 }
 
 /** Returns whether the calendar is read only or not.
+ *
+ * The problem with this method is that it is not called as often as we would like to
+ * (not by every object manipulation). Therefore, when evolution is running and permission
+ * is changed on the server, we cannot reflect this situation by this method.
  */
 static ECalBackendSyncStatus e_cal_backend_3e_is_read_only (ECalBackendSync * backend, EDataCal * cal, gboolean * read_only)
 {
-  ECalBackend3e                                    *cb;
-  ECalBackend3ePrivate                             *priv;
-  ESource                                          *source;
+  ECalBackend3e *cb;
 
   g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
-  g_return_val_if_fail (read_only != NULL,
-                        GNOME_Evolution_Calendar_OtherError);
-
-  /*
-  The problem with this method is that it is not called as often as we would like to
-  (not by every object manipulation). Therefore, when evolution is running and permission
-  is changed on the server, we cannot reflect this situation by this method.
-  */
+  g_return_val_if_fail (read_only != NULL, GNOME_Evolution_Calendar_OtherError);
 
   cb = E_CAL_BACKEND_3E (backend);
-  priv = cb->priv;
-  g_mutex_lock (priv->sync_mutex);
-  *read_only = priv->has_write_permission == FALSE;
-  g_mutex_unlock (priv->sync_mutex);
 
-  /* *read_only = FALSE; */
+  g_mutex_lock (cb->priv->sync_mutex);
+  *read_only = !e_cal_backend_3e_calendar_has_perm(cb, "write");
+  g_mutex_unlock (cb->priv->sync_mutex);
 
-  T ("backend=%p, cal=%p, read_only=%s", backend, cal,
-     *read_only ? "true" : "false");
+  T ("backend=%p, cal=%p, read_only=%s", backend, cal, *read_only ? "true" : "false");
 
   return GNOME_Evolution_Calendar_Success;
 }
@@ -365,16 +280,14 @@ static ECalBackendSyncStatus e_cal_backend_3e_is_read_only (ECalBackendSync * ba
  */
 static CalMode e_cal_backend_3e_get_mode (ECalBackend * backend)
 {
-  ECalBackend3e                                    *cb;
-  ECalBackend3ePrivate                             *priv;
+  ECalBackend3e *cb;
 
   T ("backend=%p", backend);
   g_return_val_if_fail (backend != NULL, GNOME_Evolution_Calendar_OtherError);
 
   cb = E_CAL_BACKEND_3E (backend);
-  priv = cb->priv;
 
-  return priv->mode;
+  return cb->priv->mode;
 }
 
 /** Removes the calendar.
@@ -827,7 +740,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone (ECalBackendSync 
 static ECalBackendSyncStatus e_cal_backend_3e_create_object (ECalBackendSync * backend, EDataCal * cal, char **calobj, char **uid)
 {
   ECalBackend3e                                    *cb;
-  ECalBackend3ePrivate                             *priv;
   ECalComponent                                    *comp;
   ECalBackendSyncStatus                             status = GNOME_Evolution_Calendar_Success;
   GError                                           *local_err = NULL;
@@ -838,11 +750,10 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object (ECalBackendSync * b
   g_return_val_if_fail (calobj != NULL, GNOME_Evolution_Calendar_OtherError);
 
   cb = E_CAL_BACKEND_3E (backend);
-  priv = cb->priv;
 
-  g_mutex_lock (priv->sync_mutex);
+  g_mutex_lock (cb->priv->sync_mutex);
 
-  if (!priv->has_write_permission)
+  if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
   {
     status = GNOME_Evolution_Calendar_PermissionDenied;
     goto out;
@@ -864,7 +775,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object (ECalBackendSync * b
   g_object_unref(comp);
 
 out:
-  g_mutex_unlock (priv->sync_mutex);
+  g_mutex_unlock (cb->priv->sync_mutex);
 
   return status;
 }
@@ -986,10 +897,10 @@ static ECalBackendSyncStatus e_cal_backend_3e_modify_object (ECalBackendSync * b
 
   g_mutex_lock (priv->sync_mutex);
 
-  if (!priv->has_write_permission)
+  if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
   {
     // status = GNOME_Evolution_Calendar_PermissionDenied;
-     status = GNOME_Evolution_Calendar_OtherError;
+    status = GNOME_Evolution_Calendar_OtherError;
     goto out;
   }
 
@@ -1137,7 +1048,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object (ECalBackendSync * b
 
   g_mutex_lock (priv->sync_mutex);
 
-  if (!priv->has_write_permission)
+  if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
   {
     status = GNOME_Evolution_Calendar_PermissionDenied;
     goto out;
@@ -1721,7 +1632,6 @@ static void e_cal_backend_3e_init (ECalBackend3e* cb)
   cb->priv->sync_mutex = g_mutex_new ();
   cb->priv->sync_thread = NULL;
   cb->priv->gconf = gconf_client_get_default ();
-  cb->priv->source_changed_perm = 0;
 
   e_cal_backend_sync_set_lock (E_CAL_BACKEND_SYNC (cb), TRUE);
 }
