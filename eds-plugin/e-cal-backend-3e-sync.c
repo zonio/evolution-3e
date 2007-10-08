@@ -382,9 +382,8 @@ gint e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, GError*
   {
     e_cal_component_get_uid(comp, &uid);
     rid = e_cal_component_get_recurid_as_string (comp);
-    uid_copy = g_strdup_printf("UID:%s", uid);
 
-    if (!ESClient_deleteObject(priv->conn, priv->calspec, uid_copy, &local_err))
+    if (!ESClient_deleteObject(priv->conn, priv->calspec, uid, &local_err))
     {
       e_cal_sync_error_resolve(cb, local_err);
       if (local_err)
@@ -392,8 +391,6 @@ gint e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, GError*
       e_cal_component_set_local_state(E_CAL_BACKEND(cb), comp);
       ok = FALSE;
     }
-
-    g_free(uid_copy);
   }
   else
   {
