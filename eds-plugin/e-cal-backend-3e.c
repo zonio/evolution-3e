@@ -1182,20 +1182,14 @@ out:
 
 static char * create_user_free_busy (ECalBackend3e * cb, const char *address, time_t start, time_t end)
 {
-  ECalBackend3ePrivate                             *priv;
   char                                             *retval;
   char                                              from_date[256];
   char                                              to_date[256];
   struct tm                                         tm;
-  GError                                            *local_err = NULL;
-  char                                              *message;
+  GError                                           *local_err = NULL;
 
   g_return_val_if_fail(cb != NULL, NULL);
   g_return_val_if_fail(address != NULL, NULL);
-
-  T("");
-
-  priv = cb->priv;
 
   gmtime_r (&start, &tm);
   if (!(strftime (from_date, sizeof (from_date), "%F %T", &tm)))
@@ -1208,24 +1202,17 @@ static char * create_user_free_busy (ECalBackend3e * cb, const char *address, ti
   if (!e_cal_backend_3e_open_connection (cb, &local_err))
     goto error;
 
-  icalcomponent* comp = icaltimezone_get_component(priv->default_zone);
-  char * default_zone = icalcomponent_as_ical_string(comp);
-  retval = ESClient_freeBusy (priv->conn, g_strdup (address), from_date, to_date, default_zone,
-                              &local_err);
-
+  icalcomponent* comp = icaltimezone_get_component(cb->priv->default_zone);
+  char* default_zone = icalcomponent_as_ical_string(comp);
+  retval = ESClient_freeBusy (cb->priv->conn, address, from_date, to_date, default_zone, &local_err);
   if (local_err)
     goto error;
-
-  e_cal_backend_3e_close_connection(cb);
 
   return retval;
 
 error:
-  message = g_strdup_printf("Error: %s", local_err->message);
-  g_warning(message);
-  e_cal_backend_notify_error(E_CAL_BACKEND(cb), message);
+  e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't get freebusy", local_err);
   g_clear_error(&local_err);
-  g_free(message);
 
   return NULL;
 }
@@ -1298,6 +1285,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy (ECalBackendSync * b
       }
     }
   }
+
+  e_cal_backend_3e_close_connection(cb);
 
   g_mutex_unlock (priv->sync_mutex);
 
