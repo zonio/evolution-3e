@@ -15,13 +15,6 @@
 
 #define EEE_SYNC_STAMP "EEE-SYNC-STAMP"
 
-// FIXME
-GQuark es_server_error_quark()
-{
-  static GQuark quark;
-  return quark ? quark : (quark = g_quark_from_static_string("es_server_error"));
-}
-
 GQuark e_cal_eds_error_quark()
 {
   static GQuark quark;
@@ -796,8 +789,8 @@ static gboolean e_cal_sync_error_is_fatal(GError* err)
   if (err->domain == xr_client_error_quark())
     return TRUE;
 
-  /* 3E server error */
-  if (err->domain == es_server_error_quark())
+  /* XML-RPC server error */
+  if (err->domain == 0)
   {
     switch (err->code)
     {
