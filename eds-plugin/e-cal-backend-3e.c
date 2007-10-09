@@ -718,21 +718,16 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object (ECalBackendSync * b
 
   cb = E_CAL_BACKEND_3E (backend);
 
-  g_mutex_lock (cb->priv->sync_mutex);
-
   if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
-  {
-    status = GNOME_Evolution_Calendar_PermissionDenied;
-    goto out;
-  }
+    return GNOME_Evolution_Calendar_PermissionDenied;
 
   if (!(comp = e_cal_component_new_from_string (*calobj)))
-  {
-    status = GNOME_Evolution_Calendar_InvalidObject;
-    goto out;
-  }
+    return GNOME_Evolution_Calendar_InvalidObject;
 
+  g_mutex_lock (cb->priv->sync_mutex);
   status = e_cal_backend_3e_server_object_add(cb, comp, calobj, &local_err);
+  g_mutex_unlock (cb->priv->sync_mutex);
+  
   if (local_err)
   {
     e_cal_sync_error_message(E_CAL_BACKEND(cb), comp, local_err);
@@ -740,10 +735,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object (ECalBackendSync * b
   }
   
   g_object_unref(comp);
-
-out:
-  g_mutex_unlock (cb->priv->sync_mutex);
-
   return status;
 }
 
