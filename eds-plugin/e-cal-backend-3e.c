@@ -853,45 +853,36 @@ static ECalBackendSyncStatus e_cal_backend_3e_modify_object (ECalBackendSync * b
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
 
-  g_mutex_lock (priv->sync_mutex);
-
   if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
-  {
-    // status = GNOME_Evolution_Calendar_PermissionDenied;
-    status = GNOME_Evolution_Calendar_OtherError;
-    goto out;
-  }
+    return GNOME_Evolution_Calendar_OtherError;
 
-  if (!(updated_comp = e_cal_component_new_from_string(calobj)))
-  {
-    status = GNOME_Evolution_Calendar_InvalidObject;
-    goto out;
-  }
+  updated_comp = e_cal_component_new_from_string(calobj);
+  if (updated_comp == NULL)
+    return GNOME_Evolution_Calendar_InvalidObject;
 
   e_cal_component_get_uid(updated_comp, &uid);
   e_cal_component_unset_local_state(E_CAL_BACKEND(backend), updated_comp);
   
-  if (!(cache_comp = e_cal_backend_cache_get_component(priv->cache, uid, NULL)))
+  g_mutex_lock (priv->sync_mutex);
+  cache_comp = e_cal_backend_cache_get_component(priv->cache, uid, NULL);
+  if (cache_comp == NULL)
   {
-    status = GNOME_Evolution_Calendar_ObjectNotFound;
-    goto out1;
+    g_mutex_unlock (priv->sync_mutex);
+    g_object_unref(updated_comp);
+    return GNOME_Evolution_Calendar_ObjectNotFound;
   }
 
-  status = e_cal_backend_3e_server_object_update(cb, cache_comp, updated_comp, old_object,
-                                                 new_object, &local_err);
+  status = e_cal_backend_3e_server_object_update(cb, cache_comp, updated_comp, old_object, new_object, &local_err);
+  g_mutex_unlock (priv->sync_mutex);
 
-  if (status != GNOME_Evolution_Calendar_Success && local_err)
+  if (status != GNOME_Evolution_Calendar_Success && local_err) //XXX: ???
   {
     e_cal_sync_error_message(E_CAL_BACKEND(cb), cache_comp, local_err);
     g_error_free(local_err);
   }
 
   g_object_unref(cache_comp);
-
-out1:
   g_object_unref(updated_comp);
-out:
-  g_mutex_unlock (priv->sync_mutex);
 
   return status;
 }

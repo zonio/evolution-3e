@@ -218,7 +218,6 @@ void e_cal_component_unset_local_state(ECalBackend* backend, ECalComponent* comp
   icomp_x_prop_set(icomp, "X-EEE-LOCAL", "0");
 
   e_cal_component_set_summary(comp, &comp_summary);
-  e_cal_backend_cache_put_component(priv->cache, comp);
 }
 
 time_t e_cal_component_get_dtstamp_as_timet(ECalComponent* comp)
