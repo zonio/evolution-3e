@@ -253,8 +253,6 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
   account = eee_accounts_manager_find_account_by_source(mgr(), source);
   if (eee_account_delete_calendar(account, calname))
   {
-    e_source_group_remove_source(group, source);
-
     // get ECal and remove calendar from the server
     ECal* ecal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
     if (!e_cal_remove(ecal, &err))
@@ -263,6 +261,8 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
       g_clear_error(&err);
     }
     g_object_unref(ecal);
+
+    e_source_group_remove_source(group, source);
   }
   eee_account_disconnect(account);
   eee_accounts_manager_restart_sync(mgr());
