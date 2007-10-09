@@ -510,8 +510,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object_list (ECalBackendSync *
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
-  GList                                            *comps_in_cache, *l;
+  GList                                            *components, *l;
   ECalBackendSExp                                  *cbsexp;
+  ECalComponent                                    *comp;
 
   T ("backend=%p, cal=%p, sexp=%s", backend, cal, sexp);
 
@@ -520,32 +521,29 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object_list (ECalBackendSync *
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
 
-  if (!priv->cache)
+  if (!priv->is_loaded)
     return GNOME_Evolution_Calendar_NoSuchCal;
-
-  g_mutex_lock (priv->sync_mutex);
 
   /* process all components in the cache */
   cbsexp = e_cal_backend_sexp_new (sexp);
 
   *objects = NULL;
-  comps_in_cache = e_cal_backend_cache_get_components (priv->cache);
+  g_mutex_lock (priv->sync_mutex);
+  components = e_cal_backend_cache_get_components (priv->cache);
+  g_mutex_unlock (priv->sync_mutex);
 
-  for (l = comps_in_cache; l != NULL; l = l->next)
+  for (l = components; l != NULL; l = l->next)
   {
-    /*
-     *  FIXME: what about locally deleted objects ?
-     */
+    comp = E_CAL_COMPONENT (l->data);
 
-    if (e_cal_backend_sexp_match_comp(cbsexp, E_CAL_COMPONENT (l->data), E_CAL_BACKEND (backend)))
+    if (e_cal_backend_sexp_match_comp(cbsexp, comp, E_CAL_BACKEND (backend))
+        && !e_cal_component_has_deleted_status(comp))
       *objects = g_list_append (*objects, e_cal_component_get_as_string (l->data));
   }
 
-  g_list_foreach(comps_in_cache, (GFunc) g_object_unref, NULL);
-  g_list_free(comps_in_cache);
+  g_list_foreach(components, (GFunc) g_object_unref, NULL);
+  g_list_free(components);
   g_object_unref(cbsexp);
-
-  g_mutex_unlock (priv->sync_mutex);
 
   return GNOME_Evolution_Calendar_Success;
 }
