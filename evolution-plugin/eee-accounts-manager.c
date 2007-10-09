@@ -53,7 +53,7 @@ struct _EeeAccountsManagerPriv
   
   // calendar list synchronization thread
   GThread* sync_thread;       /**< Synchronization thread. */
-  gboolean sync_request;      /**< Synchronization request. */
+  volatile gint sync_request; /**< Synchronization request. */
   GSList* sync_accounts;      /**< List of account objects loaded by sync thrad. */
 };
 
@@ -168,7 +168,7 @@ static gpointer sync_thread_func(gpointer data)
   while (TRUE)
   {
   loop:
-    switch (mgr->priv->sync_request)
+    switch (g_atomic_int_get(&mgr->priv->sync_request))
     {
       case SYNC_REQ_PAUSE:
         g_usleep(1000000);
@@ -177,24 +177,24 @@ static gpointer sync_thread_func(gpointer data)
 
       case SYNC_REQ_START:
         g_usleep(5000000);
-        mgr->priv->sync_request = SYNC_REQ_RESTART;
+        g_atomic_int_set(&mgr->priv->sync_request, SYNC_REQ_RESTART);
         break;
 
       case SYNC_REQ_RUN:
         for (i = 0; i < 30; i++)
         {
           g_usleep(1000000);
-          if (mgr->priv->sync_request != SYNC_REQ_RUN)
+          if (g_atomic_int_get(&mgr->priv->sync_request) != SYNC_REQ_RUN)
             goto loop;
         }
 
       case SYNC_REQ_RESTART:
-        mgr->priv->sync_request = SYNC_REQ_RUN;
+        g_atomic_int_set(&mgr->priv->sync_request, SYNC_REQ_RUN);
         run_idle(sync_starter, mgr);
-        if (mgr->priv->sync_request != SYNC_REQ_RUN)
+        if (g_atomic_int_get(&mgr->priv->sync_request) != SYNC_REQ_RUN)
           break;
         eee_accounts_manager_sync_phase1(mgr);
-        if (mgr->priv->sync_request != SYNC_REQ_RUN)
+        if (g_atomic_int_get(&mgr->priv->sync_request) != SYNC_REQ_RUN)
           break;
         run_idle(sync_completer, mgr);
         break;
@@ -211,14 +211,14 @@ void eee_accounts_manager_restart_sync(EeeAccountsManager* self)
 {
   g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
 
-  self->priv->sync_request = SYNC_REQ_RESTART;
+  g_atomic_int_set(&self->priv->sync_request, SYNC_REQ_RESTART);
 }
 
 void eee_accounts_manager_pause_sync(EeeAccountsManager* self)
 {
   g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
 
-  self->priv->sync_request = SYNC_REQ_PAUSE;
+  g_atomic_int_set(&self->priv->sync_request, SYNC_REQ_PAUSE);
 }
 
 /* synchronization phase1 (load data from the server) */
@@ -237,7 +237,7 @@ static void eee_accounts_manager_sync_phase1(EeeAccountsManager* self)
      * - evolution has gone offline
      * - run is no longer requested
      */
-    if (self->priv->sync_request != SYNC_REQ_RUN)
+    if (g_atomic_int_get(&self->priv->sync_request) != SYNC_REQ_RUN)
       return;
 
     /* account is already disabled for this session */
@@ -258,7 +258,7 @@ static void eee_accounts_manager_sync_phase1(EeeAccountsManager* self)
       continue;
     }
 
-    if (self->priv->sync_request != SYNC_REQ_RUN)
+    if (g_atomic_int_get(&self->priv->sync_request) != SYNC_REQ_RUN)
       return;
 
     /* connect to server, if not account will still be still checked for next time */
@@ -756,7 +756,7 @@ static void eee_accounts_manager_finalize(GObject *object)
   g_object_unref(self->priv->gconf);
   g_object_unref(self->priv->eslist);
   g_object_unref(self->priv->ealist);
-  self->priv->sync_request = SYNC_REQ_STOP;
+  g_atomic_int_set(&self->priv->sync_request, SYNC_REQ_STOP);
   g_thread_join(self->priv->sync_thread);
 
   G_OBJECT_CLASS(eee_accounts_manager_parent_class)->finalize(object);
