@@ -290,19 +290,15 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove (ECalBackendSync * backend,
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
 
-  g_mutex_lock (priv->sync_mutex);
-
-  if (priv->is_loaded != TRUE)
-  {
-    g_mutex_unlock (priv->sync_mutex);
+  if (!priv->is_loaded)
     return GNOME_Evolution_Calendar_Success;
-  }
 
+  // wait for current sync to end
+  g_mutex_lock (priv->sync_mutex);
   e_file_cache_remove (E_FILE_CACHE (priv->cache));
   priv->cache = NULL;
   priv->is_loaded = FALSE;
   priv->sync_terminated = TRUE;
-
   g_mutex_unlock (priv->sync_mutex);
 
   return GNOME_Evolution_Calendar_Success;
