@@ -995,24 +995,21 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object (ECalBackendSync * b
 
   *old_object = *object = NULL;
 
-  g_mutex_lock (priv->sync_mutex);
-
   if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
   {
-    status = GNOME_Evolution_Calendar_PermissionDenied;
-    goto out;
+    return GNOME_Evolution_Calendar_PermissionDenied;
   }
 
+  g_mutex_lock (priv->sync_mutex);
   cache_comp = e_cal_backend_cache_get_component (priv->cache, uid, rid);
   if (cache_comp == NULL)
   {
-    status = GNOME_Evolution_Calendar_ObjectNotFound;
-    goto out;
+    g_mutex_unlock (priv->sync_mutex);
+    return GNOME_Evolution_Calendar_ObjectNotFound;
   }
 
 	if (e_cal_component_is_local(cache_comp))
 	{
-		g_debug("DELETING LOCAL COMPONENT1!");
 		if (!e_cal_backend_cache_remove_component(priv->cache, uid, rid))
 		{
 			g_warning("Cannot remove component from the cache!");
@@ -1025,7 +1022,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object (ECalBackendSync * b
 	else
     status = e_cal_backend_3e_server_object_remove(cb, cal, cache_comp, uid, rid, old_object,
                                                    &local_err);
-
+  g_mutex_unlock (priv->sync_mutex);
   g_object_unref(cache_comp);
 
   if (local_err)
@@ -1033,9 +1030,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object (ECalBackendSync * b
     e_cal_sync_error_message(E_CAL_BACKEND(cb), cache_comp, local_err);
     g_error_free(local_err);
   }
-
-out:
-  g_mutex_unlock (priv->sync_mutex);
 
   return status;
 }
