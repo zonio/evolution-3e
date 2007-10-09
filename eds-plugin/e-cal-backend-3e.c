@@ -82,42 +82,36 @@ static void e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
 
   if (priv->mode == mode)
   {
-    D ("Not changing mode");
     e_cal_backend_notify_mode (backend,
                                GNOME_Evolution_Calendar_CalListener_MODE_SET,
                                cal_mode_to_corba (mode));
     return;
   }
 
-  g_mutex_lock (priv->sync_mutex);
-
   if (mode == CAL_MODE_REMOTE)
   {
-    D ("going ONLINE");
     priv->mode = CAL_MODE_REMOTE;
-    priv->sync_mode = SYNC_WORK;
-    g_cond_signal (priv->sync_cond);
+    if (priv->is_loaded)
+      e_cal_backend_3e_set_sync_mode(cb, SYNC_WORK);
     set_mode = cal_mode_to_corba (GNOME_Evolution_Calendar_MODE_REMOTE);
     status = GNOME_Evolution_Calendar_CalListener_MODE_SET;
   }
   else if (mode == CAL_MODE_LOCAL)
   {
-    D ("going OFFLINE");
-    priv->sync_mode = SYNC_SLEEP;
     priv->mode = CAL_MODE_LOCAL;
+    if (priv->is_loaded)
+      e_cal_backend_3e_set_sync_mode(cb, SYNC_SLEEP);
     set_mode = cal_mode_to_corba (GNOME_Evolution_Calendar_MODE_LOCAL);
     status = GNOME_Evolution_Calendar_CalListener_MODE_SET;
   }
   else
   {
-    D ("NOT SUPPORTED");
     status = GNOME_Evolution_Calendar_CalListener_MODE_NOT_SUPPORTED;
     set_mode = cal_mode_to_corba (mode);
   }
 
   e_cal_backend_notify_mode (backend, status, set_mode);
 
-  g_mutex_unlock (priv->sync_mutex);
 }
 
 /** Open the calendar.
@@ -144,8 +138,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
   cb = E_CAL_BACKEND_3E (backend);
   source = e_cal_backend_get_source(E_CAL_BACKEND(backend));
 
-  g_mutex_lock (cb->priv->sync_mutex);
-
   if (!cb->priv->is_loaded)
   {
     /* find out username and password before any attempts to initialize cache */
@@ -159,7 +151,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
         g_free(password);
         e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't setup connection", local_err);
         g_error_free(local_err);
-        g_mutex_unlock (cb->priv->sync_mutex);
         return GNOME_Evolution_Calendar_OtherError;
       }
 
@@ -171,16 +162,16 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
       {
         e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't setup connection", local_err);
         g_error_free(local_err);
-        g_mutex_unlock (cb->priv->sync_mutex);
         return GNOME_Evolution_Calendar_OtherError;
       }
     }
 
+    g_mutex_lock (cb->priv->sync_mutex);
     cb->priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(cb)), E_CAL_SOURCE_TYPE_EVENT);
+    g_mutex_unlock (cb->priv->sync_mutex);
     if (cb->priv->cache == NULL)
     {
       e_cal_backend_notify_error (E_CAL_BACKEND (cb), "Could not create cache file");
-      g_mutex_unlock (cb->priv->sync_mutex);
       return GNOME_Evolution_Calendar_OtherError;
     }
 
@@ -202,10 +193,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
     }
 
     if (!e_cal_backend_3e_calendar_info_load(cb))
-    {
-      g_mutex_unlock (cb->priv->sync_mutex);
       return GNOME_Evolution_Calendar_OtherError;
-    }
 
     //XXX: use better storage (gconf?)
     cb->priv->settings = e_cal_sync_find_settings(cb);
@@ -227,6 +215,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
 
   if (cb->priv->mode == CAL_MODE_REMOTE)
   {
+    //XXX: why not leave this work for a thread?
     /* do the synchronization and wait until it ends */
     if (!e_cal_sync_incremental_synchronization(cb, &local_err))
     {
@@ -238,18 +227,15 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
       else
         g_warning("Synchronization failed with no error message");
 
-      g_mutex_unlock (cb->priv->sync_mutex);
       return GNOME_Evolution_Calendar_OtherError;
     }
 
     /* run synchronization thread */
-    cb->priv->sync_mode = SYNC_WORK;
-    g_cond_signal(cb->priv->sync_cond);
+    e_cal_backend_3e_set_sync_mode(cb, SYNC_WORK);
   }
   else
-    cb->priv->sync_mode = SYNC_SLEEP;
+    e_cal_backend_3e_set_sync_mode(cb, SYNC_SLEEP);
 
-  g_mutex_unlock (cb->priv->sync_mutex);
   return GNOME_Evolution_Calendar_Success;
 }
 

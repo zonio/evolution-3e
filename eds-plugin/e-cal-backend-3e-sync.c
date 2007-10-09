@@ -316,6 +316,18 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e* cb, GError** err)
 /** @addtogroup eds_sync */
 /** @{ */
 
+void e_cal_backend_3e_set_sync_mode(ECalBackend3e* cb, int mode)
+{
+  g_atomic_int_set(&cb->priv->sync_mode, mode);
+  if (mode == SYNC_WORK)
+    g_cond_signal(cb->priv->sync_cond);
+}
+
+int e_cal_backend_3e_get_sync_mode(ECalBackend3e* cb)
+{
+  return g_atomic_int_get(&cb->priv->sync_mode);
+}
+
 /** Show box with error message, used when synchronization on particular component failed.
  * User is informed by showing summary of the component.
  * 
@@ -1035,7 +1047,7 @@ gpointer e_cal_sync_main_thread(gpointer data)
 
   while (!priv->sync_terminated)
   {
-    if (priv->sync_mode == SYNC_SLEEP)
+    if (e_cal_backend_3e_get_sync_mode(cb) == SYNC_SLEEP)
     {
       /* just sleep until we get woken up again */
       g_cond_wait(priv->sync_cond, priv->sync_mutex);

@@ -28,6 +28,10 @@ gboolean e_cal_backend_3e_calendar_has_perm(ECalBackend3e* cb, const char* perm)
 void e_cal_backend_3e_calendar_set_perm(ECalBackend3e* cb, const char* perm);
 gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e* cb, GError** err);
 
+/* sync API */
+void e_cal_backend_3e_set_sync_mode(ECalBackend3e* cb, int mode);
+int e_cal_backend_3e_get_sync_mode(ECalBackend3e* cb);
+
 ECalComponent* e_cal_sync_find_this_in_cache(ECalBackend3e* cb, ECalComponent* needle);
 
 gboolean e_cal_sync_rpc_deleteObject(ECalBackend3e* cb, ECalComponent* comp, GError** err);

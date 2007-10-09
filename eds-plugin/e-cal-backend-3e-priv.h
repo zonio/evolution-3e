@@ -62,11 +62,11 @@ struct _ECalBackend3ePrivate
 
   /** @addtogroup eds_sync */
   /** @{ */
+  volatile gint sync_mode;       /**< Sync mode (SYNC_SLEEP/SYNC_WORK). */
   gboolean sync_terminated;      /**< Flag used to stop sync thread. */
   GCond *sync_cond;              /**< Thread notification system. */
   GMutex *sync_mutex;            /**< Mutex guarding cache data. */
   GThread *sync_thread;          /**< Sync thread. */
-  SyncMode sync_mode;            /**< Sync mode (SYNC_SLEEP/SYNC_WORK). */
   char *sync_stamp;              /**< Last synchronization timestamp (XXX: format?). */
   GList *sync_clients_changes;   /**< XXX: Huh, what's this for?. Shouldn't it be tracked in cache? */
   /** @} */
