@@ -1,3 +1,12 @@
+/***************************************************************************
+ *  3E plugin for Evolution                                                *
+ *                                                                         *
+ *  Copyright (C) 2007 by Zonio                                            *
+ *  www.zonio.net                                                          *
+ *  Ondrej Jirman <ondrej.jirman@zonio.net>                                *
+ *                                                                         *
+ ***************************************************************************/
+
 #ifndef __3E_UTILS_H__
 #define __3E_UTILS_H__
 

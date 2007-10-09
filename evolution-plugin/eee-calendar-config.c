@@ -1,3 +1,12 @@
+/***************************************************************************
+ *  3E plugin for Evolution                                                *
+ *                                                                         *
+ *  Copyright (C) 2007 by Zonio                                            *
+ *  www.zonio.net                                                          *
+ *  Ondrej Jirman <ondrej.jirman@zonio.net>                                *
+ *                                                                         *
+ ***************************************************************************/
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
