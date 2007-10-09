@@ -554,19 +554,15 @@ static void e_cal_backend_3e_start_query (ECalBackend * backend, EDataCalView * 
 {
   ECalBackend3e                                    *cb;
   ECalBackend3ePrivate                             *priv;
-  GList                                            *components, *l, *objects =
-      NULL;
+  GList                                            *components, *l, 
+                                                   *objects = NULL;
   ECalBackendSExp                                  *cbsexp;
   ECalComponent                                    *comp;
-  ECalComponentSyncState                            state;
-
-  g_return_if_fail (backend != NULL);
-  g_return_if_fail (query != NULL);
 
   cb = E_CAL_BACKEND_3E (backend);
   priv = cb->priv;
 
-  if (!priv->cache)
+  if (!priv->is_loaded)
   {
     e_data_cal_view_notify_done (query, GNOME_Evolution_Calendar_NoSuchCal);
     return;
@@ -578,36 +574,28 @@ static void e_cal_backend_3e_start_query (ECalBackend * backend, EDataCalView * 
   objects = NULL;
 
   g_mutex_lock (priv->sync_mutex);
-
   components = e_cal_backend_cache_get_components (priv->cache);
+  g_mutex_unlock (priv->sync_mutex);
 
   for (l = components; l != NULL; l = l->next)
   {
     comp = E_CAL_COMPONENT (l->data);
-    state = e_cal_component_get_sync_state (comp);
 
-    /*
-    if (e_cal_backend_sexp_match_comp(cbsexp, comp, E_CAL_BACKEND (backend))
-        && state != E_CAL_COMPONENT_LOCALLY_DELETED)
-      objects = g_list_append (objects, e_cal_component_get_as_string (l->data));
-      */
-    if (e_cal_backend_sexp_match_comp(cbsexp, comp, E_CAL_BACKEND (backend))
-        && !e_cal_component_has_deleted_status(comp))
-      objects = g_list_append (objects, e_cal_component_get_as_string (l->data));
-
+    if (e_cal_backend_sexp_match_comp(cbsexp, comp, E_CAL_BACKEND (backend)) &&
+        !e_cal_component_has_deleted_status(comp))
+      objects = g_list_append (objects, e_cal_component_get_as_string (comp));
   }
 
   e_data_cal_view_notify_objects_added (query, (const GList *) objects);
+  e_data_cal_view_notify_done (query, GNOME_Evolution_Calendar_Success);
 
   g_list_foreach (components, (GFunc) g_object_unref, NULL);
   g_list_free (components);
 
   g_list_foreach (objects, (GFunc) g_free, NULL);
   g_list_free (objects);
-  g_object_unref (cbsexp);
 
-  e_data_cal_view_notify_done (query, GNOME_Evolution_Calendar_Success);
-  g_mutex_unlock (priv->sync_mutex);
+  g_object_unref (cbsexp);
 }
 
 /** Adds object to the server.
