@@ -1547,6 +1547,13 @@ out:
 	return status;
 }
 
+/** Gets the list of attachments.
+ */
+static ECalBackendSyncStatus e_cal_backend_3e_get_attachment_list (ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, GSList **list)
+{
+  return GNOME_Evolution_Calendar_Success;
+}
+
 /** Returns the default timezone.
  */
 static icaltimezone * e_cal_backend_3e_internal_get_default_timezone (ECalBackend * backend)
@@ -1661,6 +1668,7 @@ static void e_cal_backend_3e_class_init (ECalBackend3eClass * class)
   sync_class->set_default_zone_sync = e_cal_backend_3e_set_default_zone;
   sync_class->get_freebusy_sync = e_cal_backend_3e_get_free_busy;
   sync_class->get_changes_sync = e_cal_backend_3e_get_changes;
+  sync_class->get_attachment_list_sync = e_cal_backend_3e_get_attachment_list;
 
   backend_class->is_loaded = e_cal_backend_3e_is_loaded;
   backend_class->start_query = e_cal_backend_3e_start_query;
