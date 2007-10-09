@@ -630,6 +630,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_add(ECalBackend3e* c
     else
       /* clear changed flag */
       e_cal_component_set_sync_state (comp, E_CAL_COMPONENT_IN_SYNCH);
+    e_cal_backend_3e_close_connection(cb);
   }
   else
     /* in local mode just mark as changed */
@@ -641,6 +642,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_add(ECalBackend3e* c
     e_cal_sync_client_changes_insert(cb, comp);
   }
 
+  //XXX: lock
   if (!e_cal_backend_cache_put_component(priv->cache, comp))
   {
     g_warning("Could not put component to the cache, when creating object.");
@@ -652,8 +654,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_add(ECalBackend3e* c
     *new_object = e_cal_component_get_as_string (comp);
     e_cal_backend_notify_object_created(E_CAL_BACKEND(cb), *new_object);
   }
-
-  e_cal_backend_3e_close_connection(cb);
 
   return status;
 }
@@ -963,7 +963,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_server_object_remove(ECalBackend3e
   if (status == GNOME_Evolution_Calendar_Success)
   {
     id = e_cal_component_get_id(cache_comp);
-    e_cal_backend_notify_object_removed(E_CAL_BACKEND(cb), id, *old_object, NULL);
+    e_cal_backend_notify_object_removed(E_CAL_BACKEND(cb), id, *old_object, NULL); //XXX: ???? this is async method!
     e_cal_component_free_id(id);
   }
   else
@@ -996,9 +996,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object (ECalBackendSync * b
   *old_object = *object = NULL;
 
   if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
-  {
     return GNOME_Evolution_Calendar_PermissionDenied;
-  }
 
   g_mutex_lock (priv->sync_mutex);
   cache_comp = e_cal_backend_cache_get_component (priv->cache, uid, rid);
