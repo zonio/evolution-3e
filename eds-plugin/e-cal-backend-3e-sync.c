@@ -1038,11 +1038,11 @@ gpointer e_cal_sync_main_thread(gpointer data)
 
   T("");
 
-  cb = E_CAL_BACKEND_3E(data);
-  g_return_val_if_fail(cb != NULL, NULL);
-  D("sync thread started");
+  g_return_val_if_fail(data != NULL, NULL);
 
+  cb = E_CAL_BACKEND_3E(data);
   priv = cb->priv;
+
   g_mutex_lock(priv->sync_mutex);
 
   while (!priv->sync_terminated)
@@ -1090,7 +1090,6 @@ gpointer e_cal_sync_main_thread(gpointer data)
 
   /* killed */
   g_mutex_unlock(priv->sync_mutex);
-  D("sync thread stops");
 
   return NULL;
 }
