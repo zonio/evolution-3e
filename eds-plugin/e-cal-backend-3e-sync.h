@@ -1,11 +1,13 @@
-/**************************************************************************************************
- *  3E plugin for Evolution Data Server                                                           * 
- *                                                                                                *
- *  Copyright (C) 2007 by Zonio                                                                   *
- *  www.zonio.net                                                                                 *
- *  stanislav.slusny@zonio.net                                                                    *
- *                                                                                                *
- **************************************************************************************************/
+/***************************************************************************
+ *  3E plugin for Evolution Data Server                                    *
+ *                                                                         *
+ *  Copyright (C) 2007 by Zonio                                            *
+ *  www.zonio.net                                                          *
+ *  Stanislav Slusny <stanislav.slusny@zonio.net>                          *
+ *  Ondrej Jirman <ondrej.jirman@zonio.net>                                *
+ *                                                                         *
+ ***************************************************************************/
+
 #ifndef E_CAL_BACKEND_3E_SYNC
 #define E_CAL_BACKEND_3E_SYNC
 

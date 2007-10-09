@@ -1,11 +1,12 @@
-/**************************************************************************************************
- *  3E plugin for Evolution Data Server                                                           * 
- *                                                                                                *
- *  Copyright (C) 2007 by Zonio                                                                   *
- *  www.zonio.net                                                                                 *
- *  stanislav.slusny@zonio.net                                                                    *
- *                                                                                                *
- **************************************************************************************************/
+/***************************************************************************
+ *  3E plugin for Evolution Data Server                                    *
+ *                                                                         *
+ *  Copyright (C) 2007 by Zonio                                            *
+ *  www.zonio.net                                                          *
+ *  Stanislav Slusny <stanislav.slusny@zonio.net>                          *
+ *  Ondrej Jirman <ondrej.jirman@zonio.net>                                *
+ *                                                                         *
+ ***************************************************************************/
 
 #include <config.h>
 #include <string.h>
