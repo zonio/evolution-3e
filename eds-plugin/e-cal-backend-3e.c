@@ -254,9 +254,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_is_read_only (ECalBackendSync * ba
 
   cb = E_CAL_BACKEND_3E (backend);
 
-  g_mutex_lock (cb->priv->sync_mutex);
   *read_only = !e_cal_backend_3e_calendar_has_perm(cb, "write");
-  g_mutex_unlock (cb->priv->sync_mutex);
 
   T ("backend=%p, cal=%p, read_only=%s", backend, cal, *read_only ? "true" : "false");
 
