@@ -689,7 +689,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager* self)
     for (iter2 = e_source_group_peek_sources(group); iter2 != NULL; iter2 = iter2_next)
     {
       // we may be removing sources so ensure that we have valid next pointer
-      GSList* iter2_next = iter2->next;
+      iter2_next = iter2->next;
       ESource* source = iter2->data;
 
       // these ESources are probably for shared calendars, if we can't find
