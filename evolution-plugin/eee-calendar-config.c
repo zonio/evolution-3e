@@ -38,6 +38,8 @@ static EeeAccountsManager* mgr()
 int e_plugin_lib_enable(EPluginLib* ep, int enable)
 {
   xr_init();
+  g_type_class_ref(EEE_TYPE_ACCOUNT);
+  g_type_class_ref(EEE_TYPE_ACCOUNTS_MANAGER);
   if (getenv("EEE_EVO_DEBUG"))
     xr_debug_enabled = XR_DEBUG_CALL;
   g_debug("** EEE ** Starting 3E Evolution Plugin %s", PACKAGE_VERSION);
