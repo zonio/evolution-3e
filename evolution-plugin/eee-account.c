@@ -368,7 +368,7 @@ gboolean eee_account_unsubscribe_calendar(EeeAccount* self, const char* owner, c
 
   if (err)
   {
-    g_warning("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
+    g_warning("** EEE ** internal error, can't unsuibscribe calendar (%d:%s)", err->code, err->message);
     g_clear_error(&err);
     return FALSE;
   }
@@ -389,7 +389,7 @@ gboolean eee_account_subscribe_calendar(EeeAccount* self, const char* owner, con
 
   if (err)
   {
-    g_warning("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
+    g_warning("** EEE ** internal error, can't subscribe calendar (%d:%s)", err->code, err->message);
     g_clear_error(&err);
     return FALSE;
   }
@@ -408,7 +408,7 @@ gboolean eee_account_delete_calendar(EeeAccount* self, const char* calname)
 
   if (err)
   {
-    g_warning("** EEE ** internal error, can't create calendar (%d:%s)", err->code, err->message);
+    g_warning("** EEE ** internal error, can't delete calendar (%d:%s)", err->code, err->message);
     g_clear_error(&err);
     return FALSE;
   }
