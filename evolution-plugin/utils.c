@@ -48,7 +48,7 @@ gboolean e_source_group_is_3e(ESourceGroup* group)
 /* check if source is valid 3E source */
 gboolean e_source_is_3e(ESource* source)
 {
-  return e_source_group_is_3e(e_source_peek_group(source)) &&
+  return
     e_source_get_property(source, "auth") &&
     e_source_get_property(source, "auth-domain") &&
     e_source_get_property(source, "auth-key") &&

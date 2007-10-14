@@ -222,18 +222,9 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
   eee_account_set_calendar_attribute(ctx->account, owner, name, "title", title, FALSE);
   eee_account_set_calendar_attribute(ctx->account, owner, name, "color", color_string, FALSE);
 
-  group_name = g_strdup_printf("3E: %s", owner);
-  group = e_source_list_peek_group_by_name(eee_accounts_manager_peek_source_list(ctx->mgr), group_name);
-  if (group == NULL)
-  {
-    group = e_source_group_new(group_name, EEE_URI_PREFIX);
-    e_source_list_add_group(eee_accounts_manager_peek_source_list(ctx->mgr), group, -1);
-  }
-  g_free(group_name);
-
   source = e_source_new_3e(name, owner, ctx->account, perm, title, color);
-  e_source_group_add_source(group, source, -1);
-  e_source_list_sync(eee_accounts_manager_peek_source_list(ctx->mgr), NULL);
+
+  eee_accounts_manager_add_source(ctx->mgr, owner, source);
   eee_accounts_manager_restart_sync(ctx->mgr);
 
  err1:

@@ -455,6 +455,32 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
   return TRUE;
 }
 
+/* takes ownership of source */
+void eee_accounts_manager_add_source(EeeAccountsManager* self, const char* group_name, ESource* source)
+{
+  char* real_group_name;
+  ESourceGroup* group;
+
+  g_return_if_fail(IS_EEE_ACCOUNTS_MANAGER(self));
+  g_return_if_fail(group_name != NULL);
+  g_return_if_fail(source != NULL);
+  g_return_if_fail(e_source_is_3e(source));
+
+  real_group_name = g_strdup_printf("3E: %s", group_name);
+  group = e_source_list_peek_group_by_name(self->priv->eslist, real_group_name);
+  if (group == NULL)
+  {
+    group = e_source_group_new(real_group_name, EEE_URI_PREFIX);
+    e_source_list_add_group(self->priv->eslist, group, -1);
+  }
+  g_free(real_group_name);
+
+  e_source_group_add_source(group, source, -1);
+  g_object_unref(source);
+
+  e_source_list_sync(self->priv->eslist, NULL);
+}
+
 /* add account to the list, manager takes reference of account object */
 void eee_accounts_manager_add_account(EeeAccountsManager* self, EeeAccount* account)
 {

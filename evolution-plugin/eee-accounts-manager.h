@@ -42,6 +42,7 @@ G_BEGIN_DECLS
 GType eee_accounts_manager_get_type() G_GNUC_CONST;
 
 EeeAccountsManager*    eee_accounts_manager_new                          ();
+void                   eee_accounts_manager_add_source                   (EeeAccountsManager* self, const char* group_name, ESource* source);
 void                   eee_accounts_manager_add_account                  (EeeAccountsManager* self, EeeAccount* account);
 void                   eee_accounts_manager_remove_account               (EeeAccountsManager* self, EeeAccount* account);
 GSList*                eee_accounts_manager_peek_accounts_list           (EeeAccountsManager* self);
