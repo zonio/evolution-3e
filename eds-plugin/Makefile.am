@@ -16,9 +16,7 @@ libecalbackend3e_la_SOURCES = \
   dns-txt-search.c \
   dns-txt-search.h \
   e-cal-backend-3e-utils.c \
-  e-cal-backend-3e-utils.h \
-  e-cal-backend-3e-sync.c \
-  e-cal-backend-3e-sync.h
+  e-cal-backend-3e-sync.c
 
 libecalbackend3e_la_LIBADD = \
   $(top_builddir)/interface/libinterface.la \

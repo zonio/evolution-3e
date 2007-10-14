@@ -3,6 +3,18 @@
 
 This is documentation for @b evolution-3e plugins.
 
+@defgroup eds_cal EDS Calendar Information API
+
+These functions are used to get infromation about calendar. Following
+information are supplied: 
+@li online/offline status (turns off all network access by disabling e_cal_backend_3e_open_connection())
+@li whether immediate sync after cache modification is required (people with slow network will appreciate this feature)
+@li calspec, calname, owner, perm (accessible from _ECalBackend3ePrivate)
+@li etc.
+
+All you need to do is to call e_cal_backend_3e_calendar_info_load() in
+e_cal_backend_3e_open().
+
 @defgroup eds_conn EDS Server Connection API
 
 In order to be able to open and close connections you must first call
@@ -10,10 +22,31 @@ e_cal_backend_3e_setup_connection(). This function will setup connection
 variables like username, password, server_uri, etc. Never modify these variables
 from oustide of this API!
 
-@defgroup eds_sync EDS Synchronization API
+Lock is held from e_cal_backend_3e_open_connection() to
+e_cal_backend_3e_close_connection(), so that 'connect -> work -> disconnect'
+sequences that run in multiple threads are serialized.
+
+@defgroup eds_sync EDS Cache Synchronization API
+
+EDS backend methods manipulate the cache using wrapped e_cal_backend_cache_*()
+methods. These methods update X-EEE-CACHE-STATE property to keep track the
+changes that have been done.
+
+EDS backend methods may then call e_cal_backend_3e_sync_cache_to_server() to
+write changes to the server whenever necessary.
+
+EDS backend methods may also call e_cal_backend_3e_sync_server_to_cache() to
+update the cache from the server and notify listeners (GUI) of any new, modified
+or removed obejcts.
+
+The cache is protected by RW lock.
 
 @defgroup eds_misc EDS Misc API
 
+Various functions to support iCal component manipulation.
+
 @defgroup eds_back EDS Backend
+
+EDS backend methods.
 
 */

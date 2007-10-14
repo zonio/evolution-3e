@@ -1,11 +1,12 @@
-/**************************************************************************************************
- *  3E plugin for Evolution Data Server                                                           * 
- *                                                                                                *
- *  Copyright (C) 2007 by Zonio                                                                   *
- *  www.zonio.net                                                                                 *
- *  stanislav.slusny@zonio.net                                                                    *
- *                                                                                                *
- **************************************************************************************************/
+/***************************************************************************
+ *  3E plugin for Evolution Data Server                                    *
+ *                                                                         *
+ *  Copyright (C) 2007 by Zonio                                            *
+ *  www.zonio.net                                                          *
+ *  Stanislav Slusny <stanislav.slusny@zonio.net>                          *
+ *  Ondrej Jirman <ondrej.jirman@zonio.net>                                *
+ *                                                                         *
+ ***************************************************************************/
 
 #ifndef E_CAL_BACKEND_3E_H
 #define E_CAL_BACKEND_3E_H
@@ -15,12 +16,10 @@
 G_BEGIN_DECLS
 
 #define E_TYPE_CAL_BACKEND_3E            (e_cal_backend_3e_get_type ())
-#define E_CAL_BACKEND_3E(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), E_TYPE_CAL_BACKEND_3E, \
-                                         ECalBackend3e))
-#define E_CAL_BACKEND_3E_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), E_TYPE_CAL_BACKEND_3E,  \
-                                         ECalBackend3eClass))
+#define E_CAL_BACKEND_3E(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), E_TYPE_CAL_BACKEND_3E, ECalBackend3e))
+#define E_CAL_BACKEND_3E_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass),  E_TYPE_CAL_BACKEND_3E, ECalBackend3eClass))
 #define E_IS_CAL_BACKEND_3E(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), E_TYPE_CAL_BACKEND_3E))
-#define E_IS_CAL_BACKEND_3E_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), E_TYPE_CAL_BACKEND_3E))
+#define E_IS_CAL_BACKEND_3E_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass),  E_TYPE_CAL_BACKEND_3E))
 
 typedef struct _ECalBackend3e ECalBackend3e;
 typedef struct _ECalBackend3eClass ECalBackend3eClass;

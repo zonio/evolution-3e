@@ -8,20 +8,16 @@ Evolution Plugin
 
 EDS Plugin
 ~~~~~~~~~~
-- adding already existsing timezones produces error (update or not add)
-- sometimes objects are added without adding tz first (if something changed on
-  the server - tz was removed because of DB data reload)
-- incremental sync does not work well (redesign using sequence ids?)
-- automatic offline mode detection
-- mark calendar offline feature: "offline" = "0" / "1" (e_source_set_property())
-  by special plugin, make backend/gui use this
-- recurrent events
+- corba problem on dualcore
+- sync to server error handling (can't write, can't remove, can't update)
+
+- send/receive iTip messages through backend
+- somehow listen for backend e-source changes and update calendar info
+- figure out how to store recurring events on the server
 - attachments
-- send/receive messages through backend
-- document what's missing and what needs to be done
+- alarms
 
 Evolution/EDS
 ~~~~~~~~~~~~~
-- new meeting dialog sometimes freezes the whole evolution (see bugzilla/2.12.0?)
 - don't add groups that does not represent owned accounts to the list in
   calendar/gui/dialogs/calendar-setup.c:432
