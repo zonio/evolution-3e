@@ -1,0 +1,30 @@
+From ceafe36ac0273d6285d2a493f976d8ac5bf02757 Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Sat, 2 Jun 2007 18:22:08 +0200
+Subject: [PATCH] Update ESource property value only if it differs.
+
+This prevents some races between uses of ESource in multiple threads.
+---
+ libedataserver/e-source.c |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/libedataserver/e-source.c b/libedataserver/e-source.c
+index cb53a31..cd11a04 100644
+--- a/libedataserver/e-source.c
++++ b/libedataserver/e-source.c
+@@ -874,7 +874,12 @@ e_source_set_property (ESource *source,
+ 	priv = source->priv;
+ 
+ 	if (value)
++  {
++    const char* current_value = e_source_get_property(source, property);
++    if (current_value && !strcmp(current_value, value))
++      return;
+ 		g_hash_table_replace (priv->properties, g_strdup (property), g_strdup (value));
++  }
+ 	else
+ 		g_hash_table_remove (priv->properties, property);
+ 
+-- 
+1.5.3.2.99-dirty
+
