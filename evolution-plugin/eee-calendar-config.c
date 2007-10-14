@@ -236,6 +236,7 @@ static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
   const char* owner = e_source_get_property(source, "eee-owner");
   const char* calname = e_source_get_property(source, "eee-calname");
   EeeAccount* account;
+  GError* err = NULL;
 
   if (!eee_plugin_online)
     return;
@@ -244,7 +245,18 @@ static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
 
   account = eee_accounts_manager_find_account_by_source(mgr(), source);
   if (eee_account_unsubscribe_calendar(account, owner, calname))
+  {
+    // get ECal and remove calendar from the server
+    ECal* ecal = e_cal_new(source, E_CAL_SOURCE_TYPE_EVENT);
+    if (!e_cal_remove(ecal, &err))
+    {
+      g_warning("** EEE ** ECal remove failed (%d:%s)", err->code, err->message);
+      g_clear_error(&err);
+    }
+    g_object_unref(ecal);
+
     e_source_group_remove_source(group, source);
+  }
   eee_account_disconnect(account);
   eee_accounts_manager_restart_sync(mgr());
 }
