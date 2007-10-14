@@ -738,6 +738,8 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager* self)
     if (!contains_source)
       e_source_list_remove_group(self->priv->eslist, group);
   }
+
+  e_source_list_sync(self->priv->eslist, NULL);
 }
 
 /* create new EeeAccountsManager */
