@@ -17,15 +17,20 @@ PKG_PROG_PKG_CONFIG
 # Checks for header files.
 AC_HEADER_STDC
 
+#
 # libxr is required
-PKG_CHECK_MODULES(LIBXR, [
-  libxr >= 0.9.10
-])
+#
 
+PKG_CHECK_MODULES(LIBXR, [libxr >= 0.9.14])
 AC_SUBST(LIBXR_CFLAGS)
 AC_SUBST(LIBXR_LIBS)
 
+#
 # Get packages for EDS 3e backend
+#
+
+edsversion=`$PKG_CONFIG --variable=execversion evolution-data-server-1.2`
+
 PKG_CHECK_MODULES(EDS3E, [
   libecal-1.2
   libedata-cal-1.2
@@ -43,27 +48,47 @@ AC_SUBST(EDS3E_LIBS)
 extensiondir=`$PKG_CONFIG --variable=extensiondir evolution-data-server-1.2`
 AC_SUBST(extensiondir)
 
+#
 # Get packages for Evolution 3e plugin
+#
+
+PKG_CHECK_EXISTS([evolution-plugin-2.10], [evoversion=2.10], [])
+PKG_CHECK_EXISTS([evolution-plugin], [evoversion=2.12], [])
+
+if [[ "$evoversion" = "2.10" ]]; then
+  evoplugpkg=evolution-plugin-2.10
+elif [[ "$evoversion" = "2.12" ]]; then
+  evoplugpkg=evolution-plugin
+else
+  AC_MSG_ERROR([Unsupported evolution version, you need 2.10 or 2.12])
+fi
+
 PKG_CHECK_MODULES(EVO3E, [
-  evolution-plugin-2.10
+  $evoplugpkg
   libglade-2.0
 ])
 
 AC_SUBST(EVO3E_CFLAGS)
 AC_SUBST(EVO3E_LIBS)
 
-plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin-2.10`
+plugindir=`$PKG_CONFIG --variable=plugindir $evoplugpkg`
+errordir=`$PKG_CONFIG --variable=errordir $evoplugpkg`
 AC_SUBST(plugindir)
-
-errordir=`$PKG_CONFIG --variable=errordir evolution-plugin-2.10`
 AC_SUBST(errordir)
+
+#
+# Misc
+#
 
 SOEXT='.so'
 AC_SUBST(SOEXT)
 
 CFLAGS="$CFLAGS -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable"
 
+#
 # Output
+#
+
 AC_OUTPUT([
   Makefile
   docs/Makefile
@@ -73,3 +98,16 @@ AC_OUTPUT([
   evolution-plugin/org-gnome-evolution-eee.eplug
   evolution-plugin/org-gnome-eee-cal-subscription.xml
 ])
+
+cat << EOF
+
+Plugins configured:
+
+  Evolution     = $evoversion
+  EDS           = $evoversion
+
+  plugindir     = $plugindir
+  errordir      = $errordir
+  extensiondir  = $extensiondir
+
+EOF
