@@ -87,6 +87,7 @@ void eds_module_initialize(GTypeModule * module)
   g_type_class_ref(E_TYPE_CAL_BACKEND_CACHE);
   g_type_class_ref(E_TYPE_LIST_ITERATOR);
   g_type_class_ref(E_TYPE_LIST);
+  icaltimezone_get_utc_timezone();
 
   eee_types[0] = backend_factory_get_type(module);
 }
