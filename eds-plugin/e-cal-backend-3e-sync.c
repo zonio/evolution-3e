@@ -696,8 +696,6 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
   components = e_cal_backend_cache_get_components(cb->priv->cache);
   g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
 
-  xr_debug_enabled = XR_DEBUG_CALL;
-
   if (!e_cal_backend_3e_open_connection(cb, &local_err))
   {
     g_warning("Sync failed. Can't open connection to the 3E server. (%s)", local_err->message);
@@ -791,8 +789,6 @@ static icalcomponent* get_server_objects(ECalBackend3e* cb, const char* query)
   char* servercal;
   icalcomponent* ical;
   
-  xr_debug_enabled = XR_DEBUG_CALL;
-
   if (!e_cal_backend_3e_open_connection(cb, &local_err))
   {
     g_warning("Sync failed. Can't open connection to the 3E server. (%s)", local_err->message);

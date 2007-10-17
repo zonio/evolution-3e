@@ -80,6 +80,8 @@ void eds_module_initialize(GTypeModule * module)
 {
   xr_init();
   
+  //xr_debug_enabled = XR_DEBUG_CALL;
+
   // make some types thread safe, add more if you see g_type_plugin_*() bug
   g_type_class_ref(E_TYPE_CAL_COMPONENT);
   g_type_class_ref(E_TYPE_CAL_BACKEND_CACHE);
