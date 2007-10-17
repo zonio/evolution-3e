@@ -1004,6 +1004,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_ldap_attribute (ECalBackendSyn
 
 /** Returns TRUE if the the passed-in backend is already in a loaded state,
  * otherwise FALSE
+ *
+ * @todo priv->is_loaded may need to be protected
  */
 static gboolean e_cal_backend_3e_is_loaded (ECalBackend * backend)
 {
