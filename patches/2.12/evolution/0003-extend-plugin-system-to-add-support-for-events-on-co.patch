@@ -1,4 +1,4 @@
-From 5f64c3dff2cf789bc74810438004ba0ed1f94d01 Mon Sep 17 00:00:00 2001
+From e639835bbbcbdbb88824f0468c6d49ac379440a8 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Tue, 13 Mar 2007 01:55:53 +0100
 Subject: [PATCH] extend plugin system to add support for events on component activation
@@ -10,7 +10,7 @@ Subject: [PATCH] extend plugin system to add support for events on component act
  3 files changed, 34 insertions(+), 1 deletions(-)
 
 diff --git a/shell/e-shell-window.c b/shell/e-shell-window.c
-index b97138b..07310bb 100644
+index eb4708c..66bb79c 100644
 --- a/shell/e-shell-window.c
 +++ b/shell/e-shell-window.c
 @@ -36,6 +36,7 @@

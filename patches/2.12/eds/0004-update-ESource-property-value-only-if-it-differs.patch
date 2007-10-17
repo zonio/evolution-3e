@@ -1,7 +1,7 @@
-From ceafe36ac0273d6285d2a493f976d8ac5bf02757 Mon Sep 17 00:00:00 2001
+From 02ff8b64986a6397b7b4851aa97a9fd0d18131da Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
-Date: Sat, 2 Jun 2007 18:22:08 +0200
-Subject: [PATCH] Update ESource property value only if it differs.
+Date: Wed, 17 Oct 2007 20:36:49 +0200
+Subject: [PATCH] update ESource property value only if it differs
 
 This prevents some races between uses of ESource in multiple threads.
 ---

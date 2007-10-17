@@ -1,4 +1,4 @@
-From 367c7a5b12bb7466d36cdc82cd7d7bd9043ed445 Mon Sep 17 00:00:00 2001
+From 42471a456a50290c72366c2ad56e11e2bb7b2871 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Fri, 12 Oct 2007 13:55:37 +0200
 Subject: [PATCH] fix memory corruption in e_file_cache_get_keys()

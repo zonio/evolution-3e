@@ -1,4 +1,4 @@
-From 316ad07f259f68624b1516e7534df093a2655607 Mon Sep 17 00:00:00 2001
+From 0d410cb60a2d1519f38cba2db6ecf21b66d71d55 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sun, 14 Oct 2007 20:24:34 +0200
 Subject: [PATCH] remove useless EBook access from EMeetingStore

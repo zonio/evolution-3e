@@ -1,4 +1,4 @@
-From 4b53b54162a86f6dabb76c4ad02204881c347df4 Mon Sep 17 00:00:00 2001
+From 9efd3371e45ba2ccecbc4dc0767cd0bbed5f6718 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Fri, 12 Oct 2007 13:57:12 +0200
 Subject: [PATCH] fix bug in e_cal_backend_cache_get_timezone()
@@ -9,10 +9,10 @@ Invalid pointer was returned for invalid timezones.
  1 files changed, 1 insertions(+), 0 deletions(-)
 
 diff --git a/calendar/libedata-cal/e-cal-backend-cache.c b/calendar/libedata-cal/e-cal-backend-cache.c
-index 66588e5..a3b6bd2 100644
+index ad16ec6..378c4ad 100644
 --- a/calendar/libedata-cal/e-cal-backend-cache.c
 +++ b/calendar/libedata-cal/e-cal-backend-cache.c
-@@ -580,6 +580,7 @@ e_cal_backend_cache_get_timezone (ECalBackendCache *cache, const char *tzid)
+@@ -581,6 +581,7 @@ e_cal_backend_cache_get_timezone (ECalBackendCache *cache, const char *tzid)
  			else {
  				icalcomponent_free (icalcomp);
  				icaltimezone_free (zone, 1);

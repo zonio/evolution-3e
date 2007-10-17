@@ -1,4 +1,4 @@
-From 9a9d322b690c2fe3ac1e2e0eb27a894cc49ee2d0 Mon Sep 17 00:00:00 2001
+From 537596663c7da41e6f53dd814eaa53d587ad7282 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 24 Feb 2007 18:22:38 +0100
 Subject: [PATCH] overriding of popup menu items as documented in e_popup_add_items()

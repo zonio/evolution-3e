@@ -1,4 +1,4 @@
-From e3e02f437e928c705cdada6193b0678db281ef8c Mon Sep 17 00:00:00 2001
+From 7550c571cd501598187e6563e96f1faeffb8958d Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <megous@megous.com>
 Date: Sat, 24 Feb 2007 17:21:42 +0100
 Subject: [PATCH] install e-cal-popup.h includes

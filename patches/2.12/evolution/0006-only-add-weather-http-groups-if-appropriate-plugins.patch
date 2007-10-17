@@ -1,4 +1,4 @@
-From d5871026d8f6e576efdafcb5bbd97bcc0b129cd9 Mon Sep 17 00:00:00 2001
+From f0d37935fee37533d129a3174bbf7528d0efdd0f Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 13 Oct 2007 09:53:23 +0200
 Subject: [PATCH] only add weather/http groups if appropriate plugins are enabled
@@ -8,7 +8,7 @@ Subject: [PATCH] only add weather/http groups if appropriate plugins are enabled
  1 files changed, 23 insertions(+), 2 deletions(-)
 
 diff --git a/calendar/gui/calendar-component.c b/calendar/gui/calendar-component.c
-index 6168988..3a87f16 100644
+index b73d4ec..a545b70 100644
 --- a/calendar/gui/calendar-component.c
 +++ b/calendar/gui/calendar-component.c
 @@ -148,6 +148,27 @@ calcomp_vpane_resized (GtkWidget *vpane, GdkEventButton *e, CalendarComponentVie

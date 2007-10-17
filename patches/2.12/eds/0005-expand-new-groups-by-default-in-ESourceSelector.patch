@@ -1,4 +1,4 @@
-From 296b4bf6b27fc866b5db6a45d22d171766aeef76 Mon Sep 17 00:00:00 2001
+From 7c9788c30895fdf805bd309bc88bf9e1b12fe3c0 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 23 Jun 2007 13:58:04 +0200
 Subject: [PATCH] expand new groups by default in ESourceSelector

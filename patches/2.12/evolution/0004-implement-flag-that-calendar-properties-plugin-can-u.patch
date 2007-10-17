@@ -1,7 +1,7 @@
-From af6667284825117578ad4515fd918d4a61544a92 Mon Sep 17 00:00:00 2001
+From f0c37b9c5d94ebd8e585c2aba0b7fb2e5c65d7cb Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
-Date: Sat, 2 Jun 2007 18:17:16 +0200
-Subject: [PATCH] Implement flag that calendar properties plugin can use to disable sync.
+Date: Wed, 17 Oct 2007 20:40:33 +0200
+Subject: [PATCH] implement flag that calendar properties plugin can use to disable sync
 
 Basicaly this is useful if plugin does it's own ESourceList sync.
 ---

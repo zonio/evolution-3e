@@ -1,0 +1,57 @@
+From 3345dcd4f1c0be25598d42aa183bd205cabc4fde Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Wed, 17 Oct 2007 20:38:30 +0200
+Subject: [PATCH] no-send: add EBook leak testing code
+
+---
+ addressbook/libebook/e-book-view.c |    2 ++
+ addressbook/libebook/e-book.c      |    6 ++++++
+ 2 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/addressbook/libebook/e-book-view.c b/addressbook/libebook/e-book-view.c
+index 229ba6f..f61d016 100644
+--- a/addressbook/libebook/e-book-view.c
++++ b/addressbook/libebook/e-book-view.c
+@@ -269,6 +269,8 @@ e_book_view_dispose (GObject *object)
+ 	EBookView             *book_view = E_BOOK_VIEW (object);
+ 	CORBA_Environment  ev;
+ 
++  g_print("XXXXXXXXXXXXXXX: free book view %p\n", object);
++
+ 	if (book_view->priv) {
+ 		if (book_view->priv->book) {
+ 			g_object_unref (book_view->priv->book);
+diff --git a/addressbook/libebook/e-book.c b/addressbook/libebook/e-book.c
+index f22ed09..824dc5c 100644
+--- a/addressbook/libebook/e-book.c
++++ b/addressbook/libebook/e-book.c
+@@ -1866,6 +1866,9 @@ do_get_book_view (gboolean sync,
+ 	query_string = e_book_query_to_string (query);
+ 
+ 	our_op->cb.book_view = cb;
++
++  g_print("XXXXXXXXXXXXXXX: new book view %p %p\n", book, cb);
++
+ 	our_op->closure = closure;
+ 
+ 	/* will eventually end up calling e_book_response_get_book_view */
+@@ -3988,6 +3991,7 @@ e_book_init (EBook *book)
+ 	book->priv->mutex         = g_mutex_new ();
+ 	book->priv->id_to_op      = g_hash_table_new (g_int_hash, g_int_equal);
+ 	book->priv->current_op_id = 1;
++  g_print("XXXXXXXXXXXXXXX: new book %p\n", book);
+ }
+ 
+ static void
+@@ -3995,6 +3999,8 @@ e_book_dispose (GObject *object)
+ {
+ 	EBook             *book = E_BOOK (object);
+ 
++  g_print("XXXXXXXXXXXXXXX: free book %p\n", book);
++
+ 	if (book->priv) {
+ 		if (book->priv->comp_listener) {
+ 			g_signal_handler_disconnect (book->priv->comp_listener, book->priv->died_signal);
+-- 
+1.5.3.2.99-dirty
+
