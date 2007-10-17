@@ -97,11 +97,11 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove (ECalBackendSync * backend,
 
   if (priv->is_loaded)
   {
+    priv->is_loaded = FALSE;
     e_cal_backend_3e_periodic_sync_disable(cb);
     e_file_cache_remove (E_FILE_CACHE (priv->cache));
     g_object_unref(priv->cache);
     priv->cache = NULL;
-    priv->is_loaded = FALSE;
   }
 
   return GNOME_Evolution_Calendar_Success;
