@@ -924,28 +924,10 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_static_capabilities (ECalBacke
 
   *capabilities = g_strdup (
     CAL_STATIC_CAPABILITY_NO_THISANDFUTURE ","
+    CAL_STATIC_CAPABILITY_NO_THISANDPRIOR ","
     CAL_STATIC_CAPABILITY_NO_CONV_TO_RECUR ","
-    CAL_STATIC_CAPABILITY_NO_THISANDPRIOR
-  );
-
-  /*
-    CAL_STATIC_CAPABILITY_NO_TASK_ASSIGNMENT ","
-    CAL_STATIC_CAPABILITY_NO_TRANSPARENCY ","
-    CAL_STATIC_CAPABILITY_ONE_ALARM_ONLY "," // Checks if a calendar supports only one alarm per component.
-    CAL_STATIC_CAPABILITY_ORGANIZER_MUST_ATTEND "," // Checks if a calendar forces organizers of meetings to be also attendees.
-    CAL_STATIC_CAPABILITY_ORGANIZER_NOT_EMAIL_ADDRESS ","
-    CAL_STATIC_CAPABILITY_REMOVE_ALARMS ","
-    CAL_STATIC_CAPABILITY_SAVE_SCHEDULES "," // Checks whether the calendar saves schedules.
-    CAL_STATIC_CAPABILITY_NO_CONV_TO_ASSIGN_TASK ","
-    CAL_STATIC_CAPABILITY_NO_GEN_OPTIONS ","
-    CAL_STATIC_CAPABILITY_RECURRENCES_NO_MASTER "," // Checks if the calendar has a master object for recurrences.
-    CAL_STATIC_CAPABILITY_ORGANIZER_MUST_ACCEPT "," // Checks whether a calendar requires organizer to accept their attendance to meetings.
-    CAL_STATIC_CAPABILITY_DELEGATE_SUPPORTED ","
-    CAL_STATIC_CAPABILITY_NO_ORGANIZER ","
-    CAL_STATIC_CAPABILITY_DELEGATE_TO_MANY ","
-    CAL_STATIC_CAPABILITY_HAS_UNACCEPTED_MEETING ","
     CAL_STATIC_CAPABILITY_REQ_SEND_OPTIONS
-  */
+  );
 
   return GNOME_Evolution_Calendar_Success;
 }
