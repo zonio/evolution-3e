@@ -746,8 +746,9 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
 
       case E_CAL_COMPONENT_CACHE_STATE_REMOVED:
       {
-        //XXX: handle uid/rid
-        ESClient_deleteObject(cb->priv->conn, cb->priv->calspec, id->uid, &local_err);
+        char* oid = id->rid ? g_strdup_printf("%s@%s", id->uid, id->rid) : g_strdup(id->uid);
+        ESClient_deleteObject(cb->priv->conn, cb->priv->calspec, oid, &local_err);
+        g_free(oid);
         if (local_err)
         {
           g_clear_error(&local_err);
