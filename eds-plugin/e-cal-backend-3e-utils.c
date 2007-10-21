@@ -24,7 +24,7 @@ void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GEr
   if (err == NULL)
     return;
 
-  char *error_message = g_strdup_printf("%s (%d: %s).", message, err->code, err->message);
+  char *error_message = g_strdup_printf("%s (%s)", message, err->message);
   e_cal_backend_notify_error(backend, error_message);
   g_free(error_message);
 }
