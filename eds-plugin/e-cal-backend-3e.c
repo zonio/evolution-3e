@@ -844,7 +844,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_objects (ECalBackendSync *
 
 /** Send a set of meetings in one go, which means, for backends that do support
  * it, sending information about the meeting to all attendees.
- * @todo needs testing
  */
 static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * backend, EDataCal * cal, const char *calobj, GList ** users, char **modified_calobj)
 {
@@ -873,8 +872,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * ba
     return GNOME_Evolution_Calendar_InvalidObject;
   }
   
-/* Do not use server sending facility yet (server does not support it yet) */
-#if 0
+  /* connect to the server and send iTip */
   if (!e_cal_backend_3e_calendar_is_online(cb))
     return GNOME_Evolution_Calendar_RepositoryOffline;
 
@@ -890,16 +888,15 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * ba
   {
     g_error_free(local_err);
     icalcomponent_free(vtop);
+    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't send iTIPs.", local_err);
     return GNOME_Evolution_Calendar_OtherError;
   }
-#endif
 
-  for (iter = recipients; iter; iter = iter->next)
-    *users = g_list_append(*users, iter->data);
-
+  /* this tells evolution that it should not send emails (iMIPs) by itself */
+  *users = NULL;
   *modified_calobj = g_strdup(calobj);
 
-  icalcomponent_free (vtop);
+  icalcomponent_free(vtop);
   return GNOME_Evolution_Calendar_Success;
 }
 
