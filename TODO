@@ -1,5 +1,6 @@
 Evolution Plugin
 ~~~~~~~~~~~~~~~~
+- fix ESourceList loop bug (reproduce with corba trace on)
 - fix update acl eee_account_calendar_acl_set_shared()
 - check for cross-subscription in evolution (two EAccounts both with 3e support,
   one is subscribing from other)
@@ -10,10 +11,10 @@ EDS Plugin
 ~~~~~~~~~~
 - corba problem on dualcore
 - sync to server error handling (can't write, can't remove, can't update)
+- problem when starting evo in on-line mode while server is off
+  - don't fail in ->open()
 
-- send/receive iTip messages through backend
 - somehow listen for backend e-source changes and update calendar info
-- figure out how to store recurring events on the server
 - attachments
 - alarms
 
