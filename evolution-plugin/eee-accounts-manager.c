@@ -350,6 +350,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
     {
       group = e_source_group_new(group_name, EEE_URI_PREFIX);
       e_source_list_add_group(self->priv->eslist, group, -1);
+      g_object_unref(group);
     }
     g_free(group_name);
 
@@ -388,6 +389,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
           {
             source = e_source_new_3e_with_attrs(cal->name, cal->owner, account, cal->perm, cal->attrs);
             e_source_group_add_source(group, source, -1);
+            g_object_unref(source);
           }
           else
             e_source_set_3e_properties_with_attrs(source, cal->name, cal->owner, account, cal->perm, cal->attrs);
@@ -401,6 +403,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
           {
             owner_group = e_source_group_new(owner_group_name, EEE_URI_PREFIX);
             e_source_list_add_group(self->priv->eslist, owner_group, -1);
+            g_object_unref(owner_group);
           }
           g_object_set_data(G_OBJECT(owner_group), "synced", (gpointer)TRUE);
 
@@ -409,6 +412,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager* self)
           {
             source = e_source_new_3e_with_attrs(cal->name, cal->owner, account, cal->perm, cal->attrs);
             e_source_group_add_source(owner_group, source, -1);
+            g_object_unref(source);
           }
           else
           {
@@ -472,6 +476,7 @@ void eee_accounts_manager_add_source(EeeAccountsManager* self, const char* group
   {
     group = e_source_group_new(real_group_name, EEE_URI_PREFIX);
     e_source_list_add_group(self->priv->eslist, group, -1);
+    g_object_unref(group);
   }
   g_free(real_group_name);
 
@@ -683,6 +688,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager* self)
     {
       group = e_source_group_new(group_name, EEE_URI_PREFIX);
       e_source_list_add_group(self->priv->eslist, group, -1);
+      g_object_unref(group);
     }
     else
     {
