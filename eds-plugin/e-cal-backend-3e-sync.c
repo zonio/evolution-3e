@@ -259,10 +259,7 @@ void e_cal_backend_3e_calendar_set_perm(ECalBackend3e* cb, const char* perm)
  */
 gboolean e_cal_backend_3e_calendar_is_online(ECalBackend3e* cb)
 {
-  ESource *source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
-  const char* online = e_source_get_property(source, "online");
-
-  return cb->priv->mode == CAL_MODE_REMOTE && (online == NULL || !strcmp(online, "1"));
+  return cb->priv->mode == CAL_MODE_REMOTE;
 }
 
 /** Check if backend method should call sync immediately after cache
