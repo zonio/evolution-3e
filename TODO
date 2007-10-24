@@ -11,10 +11,6 @@ EDS Plugin
 ~~~~~~~~~~
 - corba problem on dualcore
 - sync to server error handling (can't write, can't remove, can't update)
-- problem when starting evo in on-line mode while server is off
-  - don't fail in ->open()
-
-- somehow listen for backend e-source changes and update calendar info
 - attachments
 - alarms
 
