@@ -56,21 +56,19 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
   {
     /* load calendar info */
     if (!e_cal_backend_3e_calendar_info_load(cb))
-      return GNOME_Evolution_Calendar_OtherError;
-
-    /* setup connection info */
-    if (!e_cal_backend_3e_setup_connection(cb, username, password, e_cal_backend_3e_calendar_is_online(cb), &local_err))
     {
-      //e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Failed to setup calendar server connection in the 3E backend.", local_err);
-      g_error_free(local_err);
+      e_cal_backend_notify_error(E_CAL_BACKEND(cb), "Trying to open non-3E source using 3E backend.");
       return GNOME_Evolution_Calendar_OtherError;
     }
+
+    /* setup connection info */
+    e_cal_backend_3e_setup_connection(cb, username, password);
 
     /* open/create cache */
     priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(cb)), E_CAL_SOURCE_TYPE_EVENT);
     if (priv->cache == NULL)
     {
-      e_cal_backend_notify_error (E_CAL_BACKEND (cb), "Failed to open local calendar store.");
+      e_cal_backend_notify_error (E_CAL_BACKEND (cb), "Failed to open local calendar cache.");
       return GNOME_Evolution_Calendar_OtherError;
     }
 

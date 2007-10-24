@@ -14,43 +14,32 @@
 /** @addtogroup eds_conn */
 /** @{ */
 
-/** Setup 3E server connection data and check if connection works.
+/** Setup 3E server connection information.
  * 
  * @param cb 3E calendar backend.
  * @param username Username used for authentication.
  * @param password Password.
- * @param test_conn Test connection to verify that username/password/server_uri is valid.
  * @param err Error pointer.
- * 
- * @return FALSE if data are not valid or connection does not work.
  */
-gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password, gboolean test_conn, GError** err)
+gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password)
 {
   ESource *source;
 
   g_return_val_if_fail(cb != NULL, FALSE);
   g_return_val_if_fail(username != NULL, FALSE);
   g_return_val_if_fail(password != NULL, FALSE);
-  g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
 
   source = e_cal_backend_get_source(E_CAL_BACKEND(cb));
 
   g_free(cb->priv->username);
   g_free(cb->priv->password);
   g_free(cb->priv->server_uri);
+  cb->priv->server_uri = NULL;
 
   if (e_source_get_property(source, "eee-server"))
     cb->priv->server_uri = g_strdup_printf("https://%s/RPC2", e_source_get_property(source, "eee-server"));
   cb->priv->username = g_strdup(username);
   cb->priv->password = g_strdup(password);
-
-  if (test_conn)
-  {
-    if (!e_cal_backend_3e_open_connection(cb, err))
-      return FALSE;
-
-    e_cal_backend_3e_close_connection(cb);
-  }
 
   return TRUE;
 }
@@ -159,19 +148,6 @@ void e_cal_backend_3e_close_connection(ECalBackend3e* cb)
   }
 }
 
-/** Get connection state.
- * 
- * @param cb 3E calendar backend.
- * 
- * @return TRUE if open, FALSE if closed.
- */
-gboolean e_cal_backend_3e_connection_is_open(ECalBackend3e* cb)
-{
-  g_return_val_if_fail(cb != NULL, FALSE);
-
-  return cb->priv->is_open;
-}
-
 /** Close conenction and free private data.
  * 
  * @param cb 3E calendar backend.
@@ -180,6 +156,7 @@ void e_cal_backend_3e_free_connection(ECalBackend3e* cb)
 {
   g_return_if_fail(cb != NULL);
 
+  g_static_rec_mutex_lock(&cb->priv->conn_mutex);
   e_cal_backend_3e_close_connection(cb);
 
   g_free(cb->priv->username);
@@ -192,6 +169,8 @@ void e_cal_backend_3e_free_connection(ECalBackend3e* cb)
   cb->priv->password = NULL;
   cb->priv->server_uri = NULL;
   cb->priv->conn = NULL;
+
+  g_static_rec_mutex_unlock(&cb->priv->conn_mutex);
 }
 
 /** @} */

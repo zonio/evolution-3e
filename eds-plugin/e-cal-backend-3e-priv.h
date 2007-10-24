@@ -70,10 +70,9 @@ typedef enum {
 /** @} */
 
 /* server connection */
-gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password, gboolean test_conn, GError** err);
+gboolean e_cal_backend_3e_setup_connection(ECalBackend3e* cb, const char* username, const char* password);
 gboolean e_cal_backend_3e_open_connection(ECalBackend3e* cb, GError** err);
 void e_cal_backend_3e_close_connection(ECalBackend3e* cb);
-gboolean e_cal_backend_3e_connection_is_open(ECalBackend3e* cb);
 void e_cal_backend_3e_free_connection(ECalBackend3e* cb);
 
 /* calendar info */
