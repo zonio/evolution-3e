@@ -75,14 +75,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
     priv->is_loaded = TRUE;
   }
 
+  /* enable sync */
   if (e_cal_backend_3e_calendar_is_online(cb))
-  {
-    /* do initial sync and enable periodic sync */
-    e_cal_backend_3e_sync_server_to_cache(cb);
-    e_cal_backend_3e_sync_cache_to_server(cb);
-
     e_cal_backend_3e_periodic_sync_enable(cb);
-  }
 
   return GNOME_Evolution_Calendar_Success;
 }
@@ -96,7 +91,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove (ECalBackendSync * backend,
   if (priv->is_loaded)
   {
     priv->is_loaded = FALSE;
-    e_cal_backend_3e_periodic_sync_disable(cb);
+    e_cal_backend_3e_periodic_sync_stop(cb);
     e_file_cache_remove (E_FILE_CACHE (priv->cache));
     g_object_unref(priv->cache);
     priv->cache = NULL;
@@ -255,8 +250,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object (ECalBackendSync * b
     return GNOME_Evolution_Calendar_OtherError;
   }
 
-  if (e_cal_backend_3e_calendar_needs_immediate_sync(cb))
-    e_cal_backend_3e_sync_cache_to_server(cb);
+  e_cal_backend_3e_do_immediate_sync(cb);
 
   g_object_unref(comp);
   return GNOME_Evolution_Calendar_Success;
@@ -350,8 +344,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_modify_object (ECalBackendSync * b
     e_cal_backend_cache_put_component(priv->cache, new_comp);
   }
 
-  if (e_cal_backend_3e_calendar_needs_immediate_sync(cb))
-    e_cal_backend_3e_sync_cache_to_server(cb);
+  e_cal_backend_3e_do_immediate_sync(cb);
 
   g_object_unref(new_comp);
   e_cal_component_free_id(new_id);
@@ -451,8 +444,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object (ECalBackendSync * b
   else
     return GNOME_Evolution_Calendar_UnsupportedMethod;
 
-  if (e_cal_backend_3e_calendar_needs_immediate_sync(cb))
-    e_cal_backend_3e_sync_cache_to_server(cb);
+  e_cal_backend_3e_do_immediate_sync(cb);
 
   return GNOME_Evolution_Calendar_Success;
 }
@@ -480,8 +472,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_timezone (ECalBackendSync * ba
        cache, and it will be synced to the 3E server */
     e_cal_backend_cache_put_timezone (priv->cache, zone);
 
-    if (e_cal_backend_3e_calendar_needs_immediate_sync(cb))
-      e_cal_backend_3e_sync_cache_to_server(cb);
+    e_cal_backend_3e_do_immediate_sync(cb);
   }
 
   icalcomp = icaltimezone_get_component (zone);
@@ -520,8 +511,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_add_timezone (ECalBackendSync * ba
     e_cal_backend_cache_put_timezone(priv->cache, zone);
   icaltimezone_free(zone, TRUE);
 
-  if (e_cal_backend_3e_calendar_needs_immediate_sync(cb))
-    e_cal_backend_3e_sync_cache_to_server(cb);
+  e_cal_backend_3e_do_immediate_sync(cb);
 
   return GNOME_Evolution_Calendar_Success;
 }
@@ -832,8 +822,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_objects (ECalBackendSync *
   else
     status = GNOME_Evolution_Calendar_InvalidObject;
 
-  if (e_cal_backend_3e_calendar_needs_immediate_sync(cb))
-    e_cal_backend_3e_sync_cache_to_server(cb);
+  e_cal_backend_3e_do_immediate_sync(cb);
 
   icalcomponent_free(vtop);
 
@@ -1015,15 +1004,7 @@ static void e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
     {
       /* mode changed to remote */
       if (priv->is_loaded)
-      {
-        if (e_cal_backend_3e_calendar_is_online(cb))
-        {
-          e_cal_backend_3e_sync_server_to_cache(cb);
-          e_cal_backend_3e_sync_cache_to_server(cb);
-        }
-
         e_cal_backend_3e_periodic_sync_enable(cb);
-      }
     }
     else if (mode == CAL_MODE_LOCAL)
     {
@@ -1075,6 +1056,7 @@ static void e_cal_backend_3e_init (ECalBackend3e* cb)
 
   g_static_rw_lock_init(&cb->priv->cache_lock);
   g_static_rec_mutex_init(&cb->priv->conn_mutex);
+  cb->priv->sync_mutex = g_mutex_new();
 
   e_cal_backend_sync_set_lock (E_CAL_BACKEND_SYNC (cb), TRUE);
 }
@@ -1083,12 +1065,12 @@ static void e_cal_backend_3e_finalize (GObject* backend)
 {
   BACKEND_METHOD_CHECKED_NORETVAL();
 
-  e_cal_backend_3e_periodic_sync_disable(cb);
-  //XXX: wait for sync to finish?
+  e_cal_backend_3e_periodic_sync_stop(cb);
   e_cal_backend_3e_free_connection(cb);
 
   g_static_rw_lock_free(&priv->cache_lock);
   g_static_rec_mutex_free(&priv->conn_mutex);
+  g_mutex_free(priv->sync_mutex);
 
   /* calinfo */
   g_free (priv->calname);

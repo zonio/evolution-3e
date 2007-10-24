@@ -32,12 +32,8 @@ EDS backend methods manipulate the cache using wrapped e_cal_backend_cache_*()
 methods. These methods update X-EEE-CACHE-STATE property to keep track the
 changes that have been done.
 
-EDS backend methods may then call e_cal_backend_3e_sync_cache_to_server() to
+EDS backend methods may then call e_cal_backend_3e_do_immediate_sync() to
 write changes to the server whenever necessary.
-
-EDS backend methods may also call e_cal_backend_3e_sync_server_to_cache() to
-update the cache from the server and notify listeners (GUI) of any new, modified
-or removed obejcts.
 
 The cache is protected by RW lock.
 

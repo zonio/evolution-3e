@@ -55,7 +55,9 @@ struct _ECalBackend3ePrivate
 
   /** @addtogroup eds_sync */
   /** @{ */
-  guint sync_id;
+  volatile gint sync_request;
+  GThread* sync_thread;
+  GMutex* sync_mutex;
   /** @} */
 };
 
@@ -96,8 +98,11 @@ gboolean e_cal_backend_3e_cache_put_timezone (ECalBackend3e* cb, ECalBackendCach
 /* sync API */
 gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb);
 gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb);
+
 void e_cal_backend_3e_periodic_sync_enable(ECalBackend3e* cb);
 void e_cal_backend_3e_periodic_sync_disable(ECalBackend3e* cb);
+void e_cal_backend_3e_periodic_sync_stop(ECalBackend3e* cb);
+void e_cal_backend_3e_do_immediate_sync(ECalBackend3e* cb);
 
 /* component cache state */
 void e_cal_component_set_cache_state(ECalComponent* comp, ECalComponentCacheState state);

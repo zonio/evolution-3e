@@ -287,6 +287,7 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e* cb)
   GSList* cals;
   GSList* iter;
 
+  /* don't sync perm for owned calendars because it can't change */
   if (e_cal_backend_3e_calendar_is_owned(cb))
   {
     e_cal_backend_3e_calendar_set_perm(cb, "write");
@@ -925,24 +926,52 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
   return TRUE;
 }
 
+enum { SYNC_NORMAL, SYNC_NOW, SYNC_PAUSE, SYNC_STOP };
+
 /** Periodic sync callback.
  * 
  * @param cb 3E calendar backend.
  * 
  * @return Always TRUE (continue sync).
  */
-static gboolean periodic_sync_cb(ECalBackend3e* cb)
+static gpointer sync_thread(ECalBackend3e* cb)
 {
-  if (e_cal_backend_3e_calendar_is_online(cb))
-  {
-    e_cal_backend_3e_calendar_load_perm(cb);
-    e_cal_backend_3e_sync_server_to_cache(cb);
-    e_cal_backend_3e_sync_cache_to_server(cb);
-  }
-  else
-    g_warning("Sync omitted because calendar '%s' is in offline mode.", cb->priv->calspec ? cb->priv->calspec : "Unknown 3E Calendar");
+  int timeout = 5;
 
-  return TRUE;
+  while (TRUE)
+  {
+    switch (g_atomic_int_get(&cb->priv->sync_request))
+    {
+      case SYNC_NORMAL:
+        g_usleep(1000000);
+        if (--timeout > 0)
+          break;
+
+      case SYNC_NOW:
+        if (g_atomic_int_get(&cb->priv->sync_request) == SYNC_STOP)
+          return NULL;
+        timeout = 5;
+
+        g_atomic_int_set(&cb->priv->sync_request, SYNC_NORMAL);
+        if (e_cal_backend_3e_calendar_is_online(cb) && e_cal_backend_3e_calendar_load_perm(cb))
+        {
+          e_cal_backend_3e_sync_server_to_cache(cb);
+
+          if (e_cal_backend_3e_calendar_has_perm(cb, "write"))
+            e_cal_backend_3e_sync_cache_to_server(cb);
+        }
+        break;
+
+      case SYNC_PAUSE:
+        g_usleep(1000000);
+        break;
+
+      case SYNC_STOP:
+        return NULL;
+    }
+  }
+
+  return NULL;
 }
 
 /** Enable periodic sync on this backend.
@@ -951,8 +980,18 @@ static gboolean periodic_sync_cb(ECalBackend3e* cb)
  */
 void e_cal_backend_3e_periodic_sync_enable(ECalBackend3e* cb)
 {
-  if (cb->priv->sync_id == 0)
-    cb->priv->sync_id = g_timeout_add_seconds(5, (GSourceFunc)periodic_sync_cb, cb);
+  g_mutex_lock(cb->priv->sync_mutex);
+
+  /* do sync ASAP after enable */
+  g_atomic_int_set(&cb->priv->sync_request, SYNC_NOW);
+
+  /* start thread if necessary */
+  if (cb->priv->sync_thread == NULL)
+    cb->priv->sync_thread = g_thread_create((GThreadFunc)sync_thread, cb, TRUE, NULL);
+  if (cb->priv->sync_thread == NULL)
+    g_warning("Failed to create sync thread for 3E calendar.");
+
+  g_mutex_unlock(cb->priv->sync_mutex);
 }
 
 /** Disable periodic sync.
@@ -961,11 +1000,44 @@ void e_cal_backend_3e_periodic_sync_enable(ECalBackend3e* cb)
  */
 void e_cal_backend_3e_periodic_sync_disable(ECalBackend3e* cb)
 {
-  if (cb->priv->sync_id)
+  g_mutex_lock(cb->priv->sync_mutex);
+  g_atomic_int_set(&cb->priv->sync_request, SYNC_PAUSE);
+  g_mutex_unlock(cb->priv->sync_mutex);
+}
+
+/** Stop synchronization thread. This function will return after completion of
+ * current sync.
+ * 
+ * @param cb 3E calendar backend.
+ */
+void e_cal_backend_3e_periodic_sync_stop(ECalBackend3e* cb)
+{
+  g_mutex_lock(cb->priv->sync_mutex);
+
+  /* stop thread if necessary */
+  if (cb->priv->sync_thread)
   {
-    g_source_remove(cb->priv->sync_id);
-    cb->priv->sync_id = 0;
+    g_atomic_int_set(&cb->priv->sync_request, SYNC_STOP);
+    g_thread_join(cb->priv->sync_thread);
+    cb->priv->sync_thread = NULL;
   }
+
+  g_mutex_unlock(cb->priv->sync_mutex);
+}
+
+/** Schedule immediate synchronization if necessary.
+ *
+ * 'Necessary' means:
+ * - calendar is online
+ * - calendar is in immediate sync mode
+ * - last connection to the 3E server was successfull
+ * 
+ * @param cb 3E calendar backend.
+ */
+void e_cal_backend_3e_do_immediate_sync(ECalBackend3e* cb)
+{
+  if (e_cal_backend_3e_calendar_needs_immediate_sync(cb))
+    g_atomic_int_set(&cb->priv->sync_request, SYNC_NOW);
 }
 
 /* @} */
