@@ -1,16 +1,15 @@
-From f3aa4c7bbaa35bcbd6e6448b796a97f72f5654ce Mon Sep 17 00:00:00 2001
+From ae0a7ef0b7cd457d6ced89472b4ccfb150162f4d Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
-Date: Tue, 16 Oct 2007 20:12:32 +0200
+Date: Wed, 24 Oct 2007 20:55:07 +0200
 Subject: [PATCH] fix e_book_* ref counting/leaks
 
 ---
  addressbook/libebook/e-book.c                      |    5 +----
  .../backends/contacts/e-cal-backend-contacts.c     |    2 ++
- libedataserverui/e-book-auth-util.c                |    2 +-
- 3 files changed, 4 insertions(+), 5 deletions(-)
+ 2 files changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/addressbook/libebook/e-book.c b/addressbook/libebook/e-book.c
-index 7239a61..f22ed09 100644
+index 195069d..824dc5c 100644
 --- a/addressbook/libebook/e-book.c
 +++ b/addressbook/libebook/e-book.c
 @@ -938,8 +938,6 @@ e_book_response_get_required_fields (EBook       *book,
@@ -31,7 +30,7 @@ index 7239a61..f22ed09 100644
  		for (l = fields; l; l = l->next)
  			e_list_append (efields, l->data);
  
-@@ -3562,6 +3558,7 @@ e_book_get_self (EContact **contact, EBook **book, GError **error)
+@@ -3565,6 +3561,7 @@ e_book_get_self (EContact **contact, EBook **book, GError **error)
  
  	status = e_book_open (*book, FALSE, &e);
  	if (status == FALSE) {
@@ -52,20 +51,6 @@ index d860a27..d59864c 100644
                  return NULL;
          }
          e_book_query_unref (query);
-diff --git a/libedataserverui/e-book-auth-util.c b/libedataserverui/e-book-auth-util.c
-index 7aa746e..398c07b 100644
---- a/libedataserverui/e-book-auth-util.c
-+++ b/libedataserverui/e-book-auth-util.c
-@@ -292,8 +292,8 @@ e_load_book_source (ESource *source, EBookCallback open_func, gpointer user_data
- 	if (!book)
- 		return NULL;
- 
-+  g_object_ref(book);
- 	load_source_data->book = book;
--	g_object_ref (book);
- 	e_book_async_open (book, FALSE, load_source_cb, load_source_data);
- 	return book;
- }
 -- 
-1.5.3.2.99-dirty
+1.5.3.4.206-dirty
 

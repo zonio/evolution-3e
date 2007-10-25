@@ -1,4 +1,4 @@
-From 7c9788c30895fdf805bd309bc88bf9e1b12fe3c0 Mon Sep 17 00:00:00 2001
+From d7bd36a4a7ef63566259623f5403c8d40ce75936 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 23 Jun 2007 13:58:04 +0200
 Subject: [PATCH] expand new groups by default in ESourceSelector
@@ -8,21 +8,21 @@ Subject: [PATCH] expand new groups by default in ESourceSelector
  1 files changed, 7 insertions(+), 0 deletions(-)
 
 diff --git a/libedataserverui/e-source-selector.c b/libedataserverui/e-source-selector.c
-index ed861e7..7a623fb 100644
+index ed861e7..f94eb11 100644
 --- a/libedataserverui/e-source-selector.c
 +++ b/libedataserverui/e-source-selector.c
 @@ -253,11 +253,14 @@ rebuild_model (ESourceSelector *selector)
  		ESourceGroup *group = E_SOURCE_GROUP (p->data);
  		GSList *sources, *q;
  		GtkTreeRowReference *row_ref;
-+    GtkTreePath *path_expand = NULL;
++		GtkTreePath *path_expand = NULL;
  		
  		row_ref = g_hash_table_lookup (rebuild_data->remaining_uids, e_source_group_peek_uid (group));
  		if (!row_ref) {
 +
  			gtk_tree_store_append (GTK_TREE_STORE (tree_store), &iter, NULL);
  			gtk_tree_store_set (GTK_TREE_STORE (tree_store), &iter, 0, group, -1);
-+      path_expand = gtk_tree_model_get_path (GTK_TREE_MODEL (tree_store), &iter);
++			path_expand = gtk_tree_model_get_path (GTK_TREE_MODEL (tree_store), &iter);
  		} else {
  			GtkTreePath *path;
  			
@@ -30,13 +30,13 @@ index ed861e7..7a623fb 100644
  				gtk_tree_path_free (path);
  			}
  		}
-+    if (path_expand) {
-+      gtk_tree_view_expand_row (GTK_TREE_VIEW (selector), path_expand, TRUE);
++		if (path_expand) {
++			gtk_tree_view_expand_row (GTK_TREE_VIEW (selector), path_expand, TRUE);
 +			gtk_tree_path_free (path_expand);
-+    }
++		}
  	}
  
  	if (rebuild_data->selection_changed)
 -- 
-1.5.3.2.99-dirty
+1.5.3.4.206-dirty
 

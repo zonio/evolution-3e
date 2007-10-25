@@ -1,15 +1,14 @@
-From 31d9de7fc86881a4466f9c6a4b402d7622ae02ac Mon Sep 17 00:00:00 2001
+From fe851b42aa12857d1e9983b9239b8f4c0b25169c Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
-Date: Wed, 17 Oct 2007 04:31:30 +0200
+Date: Wed, 24 Oct 2007 21:08:04 +0200
 Subject: [PATCH] don't leak ENameSelectorDialog in ENameSelector
 
 ---
  libedataserverui/e-name-selector-dialog.c |    8 +++++---
- libedataserverui/e-name-selector.c        |    8 ++++++++
- 2 files changed, 13 insertions(+), 3 deletions(-)
+ 1 files changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/libedataserverui/e-name-selector-dialog.c b/libedataserverui/e-name-selector-dialog.c
-index f2b244d..c02843e 100644
+index f2b244d..dd728fd 100644
 --- a/libedataserverui/e-name-selector-dialog.c
 +++ b/libedataserverui/e-name-selector-dialog.c
 @@ -118,8 +118,11 @@ e_name_selector_dialog_populate_categories (ENameSelectorDialog *name_selector_d
@@ -18,11 +17,11 @@ index f2b244d..c02843e 100644
  	/* Categories are already sorted */
 -	category_list = e_categories_get_list () ;
 -	category_list = g_list_prepend (category_list, _("Any Category"));
-+  if (category_list == NULL)
-+  {
-+    category_list = e_categories_get_list () ;
-+    category_list = g_list_prepend (category_list, _("Any Category"));
-+  }
++	if (category_list == NULL)
++	{
++		category_list = e_categories_get_list () ;
++		category_list = g_list_prepend (category_list, _("Any Category"));
++	}
  
  	category_menu = gtk_menu_new ();
  	l = category_list;
@@ -34,25 +33,6 @@ index f2b244d..c02843e 100644
  
  	if (G_OBJECT_CLASS (e_name_selector_dialog_parent_class)->finalize)
  		G_OBJECT_CLASS (e_name_selector_dialog_parent_class)->finalize (object);
-diff --git a/libedataserverui/e-name-selector.c b/libedataserverui/e-name-selector.c
-index 14123e8..9bb1cd2 100644
---- a/libedataserverui/e-name-selector.c
-+++ b/libedataserverui/e-name-selector.c
-@@ -145,6 +145,14 @@ e_name_selector_init (ENameSelector *name_selector)
- static void
- e_name_selector_finalize (GObject *object)
- {
-+  ENameSelector* name_selector = E_NAME_SELECTOR(object);
-+
-+  if (name_selector->dialog)
-+  {
-+    gtk_widget_destroy(GTK_WIDGET(name_selector->dialog));
-+    name_selector->dialog = NULL;
-+  }
-+
- 	if (G_OBJECT_CLASS (e_name_selector_parent_class)->finalize)
- 		G_OBJECT_CLASS (e_name_selector_parent_class)->finalize (object);
- }
 -- 
-1.5.3.2.99-dirty
+1.5.3.4.206-dirty
 
