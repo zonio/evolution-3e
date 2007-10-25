@@ -870,7 +870,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * ba
     return GNOME_Evolution_Calendar_OtherError;
   }
 
-  ESClient_sendMessage(priv->conn, priv->calspec, recipients, calobj, &local_err);
+  ESClient_sendMessage(priv->conn, recipients, calobj, &local_err);
   if (local_err)
   {
     g_error_free(local_err);

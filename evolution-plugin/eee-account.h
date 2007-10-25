@@ -14,7 +14,6 @@
 #include <gtk/gtk.h>
 #include <libedataserver/e-source-list.h>
 #include "interface/ESClient.xrc.h"
-#include "interface/ESAdmin.xrc.h"
 
 #define EEE_PASSWORD_COMPONENT "3E Account"
 

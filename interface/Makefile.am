@@ -2,13 +2,9 @@ BUILT_SOURCES = \
   ESCommon.c \
   ESClient.xrc.c \
   ESClient.c \
-  ESAdmin.xrc.c \
-  ESAdmin.c \
   ESCommon.h \
   ESClient.xrc.h \
-  ESClient.h \
-  ESAdmin.xrc.h \
-  ESAdmin.h
+  ESClient.h
 
 CLEANFILES = \
   $(BUILT_SOURCES)
@@ -32,6 +28,4 @@ noinst_LTLIBRARIES = \
 libinterface_la_SOURCES = \
   ESCommon.c \
   ESClient.xrc.c \
-  ESClient.c \
-  ESAdmin.xrc.c \
-  ESAdmin.c
+  ESClient.c
