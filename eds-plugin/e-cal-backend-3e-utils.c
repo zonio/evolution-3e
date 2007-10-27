@@ -41,8 +41,8 @@ static void icomp_x_prop_set(icalcomponent *comp, const char *key, const char *v
 
   g_return_if_fail(comp != NULL);
   g_return_if_fail(key != NULL);
-  g_return_if_fail(value != NULL);
 
+again:
   for (iter = icalcomponent_get_first_property(comp, ICAL_X_PROPERTY);
        iter;
        iter = icalcomponent_get_next_property(comp, ICAL_X_PROPERTY))
@@ -53,12 +53,16 @@ static void icomp_x_prop_set(icalcomponent *comp, const char *key, const char *v
     {
       icalcomponent_remove_property(comp, iter);
       icalproperty_free(iter);
+      goto again;
     }
   }
 
-  iter = icalproperty_new_x(value);
-  icalproperty_set_x_name(iter, key);
-  icalcomponent_add_property(comp, iter);
+  if (value)
+  {
+    iter = icalproperty_new_x(value);
+    icalproperty_set_x_name(iter, key);
+    icalcomponent_add_property(comp, iter);
+  }
 }
 
 /** Get X-* property value from icalcomponent object.
@@ -101,7 +105,7 @@ void icalcomponent_set_cache_state(icalcomponent* comp, int state)
     return;
   
   val = g_strdup_printf("%d", state);
-  icomp_x_prop_set(comp, "X-EEE-CACHE-STATE", val);
+  icomp_x_prop_set(comp, "X-EEE-CACHE-STATE", state == E_CAL_COMPONENT_CACHE_STATE_NONE ? NULL : val);
   g_free(val);
 }
 
