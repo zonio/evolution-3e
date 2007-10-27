@@ -1,0 +1,213 @@
+From f4134498dd76dc7de21694c5c5fe5a511c805768 Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Sat, 27 Oct 2007 04:22:23 +0200
+Subject: [PATCH] add support for error/outofsync icons/messages on events in day view
+
+---
+ art/Makefile.am                    |    4 +-
+ art/category_error_16.png          |  Bin 0 -> 202 bytes
+ art/category_outofsync_16.png      |  Bin 0 -> 209 bytes
+ calendar/libecal/e-cal-component.c |   98 +++++++++++++++++++++++++++++++++++-
+ calendar/libecal/e-cal-component.h |    3 +
+ libedataserver/e-categories.c      |    4 ++
+ 6 files changed, 107 insertions(+), 2 deletions(-)
+ create mode 100644 art/category_error_16.png
+ create mode 100644 art/category_outofsync_16.png
+
+diff --git a/art/Makefile.am b/art/Makefile.am
+index 4bc6dac..a7aeaad 100644
+--- a/art/Makefile.am
++++ b/art/Makefile.am
+@@ -16,7 +16,9 @@ images_DATA = \
+ 	category_status_16.png			\
+ 	category_strategies_16.png		\
+ 	category_suppliers_16.png		\
+-	category_time-and-expenses_16.png
++	category_time-and-expenses_16.png       \
++	category_error_16.png			\
++	category_outofsync_16.png
+ 
+ EXTRA_DIST = \
+ 	$(images_DATA)
+diff --git a/art/category_error_16.png b/art/category_error_16.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..43e777830bb16fb56253bc3fdc81753f3c21eda2
+GIT binary patch
+literal 202
+zcmeAS@N?(olHy`uVBq!ia0vp^0wB!61|;P_|4#%`jKx9jP7LeL$-D$|I14-?iy0WW
+zg+Z8+Vb&Z8pkThIi(`nz>Ewh1%<t+a|E&K%`%HaJmc++Qw`bZ#wg*>D>uhv7&~g6T
+z>==Iu5V*4c<bx8{qk0KSPs*K&u9Pw^)HuAXtx8YfSXoY1<Oj_bSNVe_4X4Y#lr->(
+s?3`y1G*8I$qxH!+1(t$TgGmewRw9OnyKGN30j*~6boFyt=akR{07vab=l}o!
+
+literal 0
+HcmV?d00001
+
+diff --git a/art/category_outofsync_16.png b/art/category_outofsync_16.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..0d6d6d4842e2f107f5f508ee5282c1a2aa4f24eb
+GIT binary patch
+literal 209
+zcmeAS@N?(olHy`uVBq!ia0vp^0wB!61|;P_|4#%`jKx9jP7LeL$-D$|*pj^6T^Rm@
+z;DWu&Cj&(|3p^r=85p>QL70(Y)*K0-AbW|YuPgg?E@@^a)ly@(DL|n>PZ!4!i_^&o
+z5+Mof%!liPz8VBBn%M{h6C=*b1#FejQ@EbCgK>wCnl?jcA@43JHK#h26b@z8z*h$k
+v95~^TIV)k2%AFHk3`xwhSDl=@je+6)Oz~se7rxpIG@QZH)z4*}Q$iB}D$_u%
+
+literal 0
+HcmV?d00001
+
+diff --git a/calendar/libecal/e-cal-component.c b/calendar/libecal/e-cal-component.c
+index edb79b0..183eda8 100644
+--- a/calendar/libecal/e-cal-component.c
++++ b/calendar/libecal/e-cal-component.c
+@@ -1755,6 +1755,7 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+ 	const char *p;
+ 	const char *cat_start;
+ 	char *str;
++  const char* prop;
+ 
+ 	g_return_if_fail (comp != NULL);
+ 	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
+@@ -1763,8 +1764,17 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+ 	priv = comp->priv;
+ 	g_return_if_fail (priv->icalcomp != NULL);
+ 
++  *categ_list = NULL;
++
++  /*XXX: a little bit hacky, but it is the simplest solution anyway */
++  e_cal_component_get_x_property (comp, "X-EVOLUTION-STATUS", &prop);
++  if (prop)
++    *categ_list = g_slist_prepend (*categ_list, g_strdup("outofsync"));
++  e_cal_component_get_x_property (comp, "X-EVOLUTION-ERROR", &prop);
++  if (prop)
++    *categ_list = g_slist_prepend (*categ_list, g_strdup("error"));
++
+ 	if (!priv->categories) {
+-		*categ_list = NULL;
+ 		return;
+ 	}
+ 
+@@ -4704,6 +4714,92 @@ e_cal_component_set_location (ECalComponent *comp, const char *location)
+ 	}
+ }
+ 
++/**
++ * e_cal_component_get_x_property:
++ * @comp: A calendar component object
++ * @name: Property name.
++ * @value: Return value for the property value.
++ * 
++ * Queries the location property of a calendar component object.
++ **/
++void
++e_cal_component_get_x_property (ECalComponent *comp, const char* name, const char **value)
++{
++	ECalComponentPrivate *priv;
++  icalproperty *iter;
++
++	g_return_if_fail (comp != NULL);
++	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
++	g_return_if_fail (name != NULL);
++	g_return_if_fail (value != NULL);
++
++	priv = comp->priv;
++	g_return_if_fail (priv->icalcomp != NULL);
++
++  *value = NULL;
++  for (iter = icalcomponent_get_first_property(priv->icalcomp, ICAL_X_PROPERTY);
++       iter;
++       iter = icalcomponent_get_next_property(priv->icalcomp, ICAL_X_PROPERTY))
++  {
++    const char *str = icalproperty_get_x_name (iter);
++
++		if (str && !strcmp (str, name))
++    {
++      *value = icalproperty_get_value_as_string (iter);
++      return;
++    }
++  }
++}
++
++/**
++ * e_cal_component_set_x_property:
++ * @comp: A calendar component object
++ * @name: Property name.
++ * @value: Property value.
++ * 
++ * Queries the location property of a calendar component object.
++ **/
++void
++e_cal_component_set_x_property (ECalComponent *comp, const char* name, const char *value)
++{
++	ECalComponentPrivate *priv;
++  icalproperty *iter;
++
++	g_return_if_fail (comp != NULL);
++	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
++	g_return_if_fail (name != NULL);
++
++	priv = comp->priv;
++	g_return_if_fail (priv->icalcomp != NULL);
++
++again:
++  for (iter = icalcomponent_get_first_property(priv->icalcomp, ICAL_X_PROPERTY);
++       iter;
++       iter = icalcomponent_get_next_property(priv->icalcomp, ICAL_X_PROPERTY))
++  {
++    const char *str = icalproperty_get_x_name (iter);
++
++    if (str && !strcmp (str, name))
++    {
++      icalcomponent_remove_property(priv->icalcomp, iter);
++      icalproperty_free(iter);
++      goto again;
++    }
++  }
++
++  if (value)
++  {
++    /* XXX: commas are bad (libical does not escape them) */
++    char** v = g_strsplit(value, ",", -1);
++    char* e_value = g_strjoinv("", v);
++    g_strfreev(v);
++    iter = icalproperty_new_x(e_value);
++    g_free(e_value);
++    icalproperty_set_x_name(iter, name);
++    icalcomponent_add_property(priv->icalcomp, iter);
++  }
++}
++
+ 
+ 
+ /**
+diff --git a/calendar/libecal/e-cal-component.h b/calendar/libecal/e-cal-component.h
+index 4b1c1c8..a24e99f 100644
+--- a/calendar/libecal/e-cal-component.h
++++ b/calendar/libecal/e-cal-component.h
+@@ -330,6 +330,9 @@ gboolean e_cal_component_has_attendees (ECalComponent *comp);
+ void e_cal_component_get_location (ECalComponent *comp, const char **location);
+ void e_cal_component_set_location (ECalComponent *comp, const char *location);
+ 
++void e_cal_component_get_x_property (ECalComponent *comp, const char* name, const char **value);
++void e_cal_component_set_x_property (ECalComponent *comp, const char* name, const char *value);
++
+ /* Attachment handling */
+ void e_cal_component_get_attachment_list (ECalComponent *comp, GSList **attachment_list);
+ void e_cal_component_set_attachment_list (ECalComponent *comp, GSList *attachment_list);
+diff --git a/libedataserver/e-categories.c b/libedataserver/e-categories.c
+index 74c8208..059e0bb 100644
+--- a/libedataserver/e-categories.c
++++ b/libedataserver/e-categories.c
+@@ -377,6 +377,10 @@ initialize_categories (void)
+ 
+ 	g_atexit (finalize_categories);
+ 
++  /*XXX: always add our categories */
++  e_categories_add ( "error", NULL, g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_error_16.png", NULL), FALSE);
++  e_categories_add ( "outofsync", NULL, g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_outofsync_16.png", NULL), FALSE);
++
+ 	n_added = load_categories ();
+ 	if (n_added > 0) {
+ 		g_debug ("Loaded %d categories", n_added);
+-- 
+1.5.3.4.320-dirty
+
