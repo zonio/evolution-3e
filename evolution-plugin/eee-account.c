@@ -97,7 +97,7 @@ static gboolean remove_acl(xr_client_conn* conn, const char* calname)
   GError* err = NULL;
   GSList* iter;
 
-  GSList* perms = ESClient_getPermissions(conn, (char*)calname, &err);
+  GSList* perms = ESClient_getPermissions(conn, calname, &err);
   if (err)
   {
     g_warning("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -107,7 +107,7 @@ static gboolean remove_acl(xr_client_conn* conn, const char* calname)
   for (iter = perms; iter; iter = iter->next)
   {
     ESPermission* perm = iter->data;
-    ESClient_setPermission(conn, (char*)calname, perm->user, "none", &err);
+    ESClient_setPermission(conn, calname, perm->user, "none", &err);
     if (err)
     {
       g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -128,7 +128,7 @@ static gboolean remove_acl(xr_client_conn* conn, const char* calname)
 static gboolean add_wildcard(xr_client_conn* conn, const char* calname)
 {
   GError* err = NULL;
-  ESClient_setPermission(conn, (char*)calname, "*", "read", &err);
+  ESClient_setPermission(conn, calname, "*", "read", &err);
   if (err)
   {
     g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -294,7 +294,7 @@ gboolean eee_account_get_shared_calendars(EeeAccount* self, const char* query, G
   if (query == NULL || cals == NULL || !eee_account_auth(self))
     return FALSE;
 
-  *cals = ESClient_getSharedCalendars(self->priv->conn, (char*)query, &err);
+  *cals = ESClient_getSharedCalendars(self->priv->conn, query, &err);
   if (err)
   {
     g_warning("** EEE ** Failed to get calendars for account '%s'. (%d:%s)", self->name, err->code, err->message);
@@ -320,7 +320,7 @@ gboolean eee_account_get_user_attributes(EeeAccount* self, const char* username,
   if (username == NULL || attrs == NULL || !eee_account_auth(self))
     return FALSE;
 
-  *attrs = ESClient_getUserAttributes(self->priv->conn, (char*)username, &err);
+  *attrs = ESClient_getUserAttributes(self->priv->conn, username, &err);
   if (err)
   {
     g_warning("** EEE ** Failed to get calendars for account '%s'. (%d:%s)", self->name, err->code, err->message);
@@ -347,7 +347,7 @@ gboolean eee_account_set_calendar_attribute(EeeAccount* self, const char* owner,
     return FALSE;
 
   char* calspec = g_strdup_printf("%s:%s", owner, calname);
-  ESClient_setCalendarAttribute(self->priv->conn, calspec, (char*)name, (char*)(value ? value : ""), is_public, &err);
+  ESClient_setCalendarAttribute(self->priv->conn, calspec, name, value ? value : "", is_public, &err);
   g_free(calspec);
 
   if (err)
@@ -459,7 +459,7 @@ gboolean eee_account_delete_calendar(EeeAccount* self, const char* calname)
   if (calname == NULL || !eee_account_auth(self))
     return FALSE;
 
-  ESClient_deleteCalendar(self->priv->conn, (char*)calname, &err);
+  ESClient_deleteCalendar(self->priv->conn, calname, &err);
 
   if (err)
   {
