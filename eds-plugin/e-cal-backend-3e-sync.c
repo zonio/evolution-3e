@@ -8,6 +8,7 @@
  *                                                                         *
  ***************************************************************************/
 
+#include <time.h>
 #include "e-cal-backend-3e-priv.h"
 #include "dns-txt-search.h"
 
@@ -819,10 +820,19 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
   GError* local_err = NULL;
   icalcomponent* ical;
   icalcomponent* icomp;
+  char filter[128];
+  struct tm tm;
+  time_t stamp = e_cal_backend_3e_get_sync_timestamp(cb) - 60*60*24; /*XXX: always add 1 day padding to prevent timezone problems */
 
-  ical = get_server_objects(cb, "date_from('1970-01-01 00:00')");
+  /* prepare query filter string */
+  gmtime_r(&stamp, &tm);
+  strftime(filter, sizeof(filter), "date_from('%F %T')", &tm);
+
+  ical = get_server_objects(cb, filter);
   if (ical == NULL)
     return FALSE;
+
+  e_cal_backend_3e_set_sync_timestamp(cb, time(NULL));
   
   for (icomp = icalcomponent_get_first_component(ical, ICAL_ANY_COMPONENT);
        icomp;
@@ -986,6 +996,40 @@ static gpointer sync_thread(ECalBackend3e* cb)
   }
 
   return NULL;
+}
+
+/** Get timestamp of last sync.
+ * 
+ * @param cb 3E calendar backend.
+ * 
+ * @return Timestamp in local time.
+ */
+time_t e_cal_backend_3e_get_sync_timestamp(ECalBackend3e* cb)
+{
+  time_t stamp = 0;
+
+  g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
+  const char* ts = e_cal_backend_cache_get_server_utc_time(cb->priv->cache);
+  g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
+  if (ts)
+  {
+    icaltimetype time = icaltime_from_string(ts);
+    stamp = icaltime_as_timet_with_zone(time, NULL);
+  }
+
+  return stamp;
+}
+
+/** Store timestamp of last sync.
+ * 
+ * @param cb 3E calendar backend.
+ * @param stamp Timestamp in local time.
+ */
+void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e* cb, time_t stamp)
+{
+  g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
+  e_cal_backend_cache_put_server_utc_time(cb->priv->cache, icaltime_as_ical_string(icaltime_from_timet_with_zone(stamp, 0, NULL)));
+  g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 }
 
 /** Enable periodic sync on this backend.

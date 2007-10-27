@@ -58,6 +58,7 @@ struct _ECalBackend3ePrivate
   volatile gint sync_request;    /**< Sync state/request. */
   GThread* sync_thread;          /**< Sync thread. */
   GMutex* sync_mutex;            /**< Protects access to the sync_thread. */
+  time_t sync_timestamp;         /**< Last sync time (local time). */
   /** @} */
 };
 
@@ -99,6 +100,8 @@ gboolean e_cal_backend_3e_cache_put_timezone (ECalBackend3e* cb, ECalBackendCach
 gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb);
 gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb);
 
+time_t e_cal_backend_3e_get_sync_timestamp(ECalBackend3e* cb);
+void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e* cb, time_t stamp);
 void e_cal_backend_3e_periodic_sync_enable(ECalBackend3e* cb);
 void e_cal_backend_3e_periodic_sync_disable(ECalBackend3e* cb);
 void e_cal_backend_3e_periodic_sync_stop(ECalBackend3e* cb);
