@@ -1,0 +1,168 @@
+From fe78fa3dacc3232dceeec3753e34530ee592522d Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Thu, 25 Oct 2007 02:54:15 +0200
+Subject: [PATCH] no-send: remove debugging output
+
+---
+ addressbook/backends/file/e-book-backend-file.c |    1 -
+ addressbook/libedata-book/e-data-book-factory.c |    5 -----
+ addressbook/libedata-book/e-data-book.c         |   16 ----------------
+ calendar/libedata-cal/e-data-cal-factory.c      |    3 ---
+ src/server-logging.c                            |    2 --
+ 5 files changed, 0 insertions(+), 27 deletions(-)
+
+diff --git a/addressbook/backends/file/e-book-backend-file.c b/addressbook/backends/file/e-book-backend-file.c
+index 171d8f1..b844900 100644
+--- a/addressbook/backends/file/e-book-backend-file.c
++++ b/addressbook/backends/file/e-book-backend-file.c
+@@ -638,7 +638,6 @@ book_view_thread (gpointer data)
+ 		e_data_book_view_notify_complete (book_view, GNOME_Evolution_Addressbook_Success);
+ 
+ 	/* unref the */
+-	printf("book_view file uref \n");
+ 	bonobo_object_unref (book_view);
+ 
+ 	d(printf ("finished population of book view\n"));
+diff --git a/addressbook/libedata-book/e-data-book-factory.c b/addressbook/libedata-book/e-data-book-factory.c
+index 8122941..52c9c18 100644
+--- a/addressbook/libedata-book/e-data-book-factory.c
++++ b/addressbook/libedata-book/e-data-book-factory.c
+@@ -299,8 +299,6 @@ impl_GNOME_Evolution_Addressbook_BookFactory_getBook (PortableServer_Servant
+ 	ESource *source;
+ 	gchar *uri;
+ 
+-	printf ("impl_GNOME_Evolution_Addressbook_BookFactory_getBook\n");
+-
+ 	source = e_source_new_from_standalone_xml (source_xml);
+ 	if (!source) {
+ 		CORBA_exception_set (ev, CORBA_USER_EXCEPTION,
+@@ -317,7 +315,6 @@ impl_GNOME_Evolution_Addressbook_BookFactory_getBook (PortableServer_Servant
+ 				     NULL);
+ 		return CORBA_OBJECT_NIL;
+ 	}
+-	printf (" + %s\n", uri);
+ 
+ 	/* Look up the backend and create one if needed */
+ 	g_mutex_lock (factory->priv->map_mutex);
+@@ -365,8 +362,6 @@ impl_GNOME_Evolution_Addressbook_BookFactory_getBook (PortableServer_Servant
+ 	}
+ 
+ 	g_object_unref (source);
+-	if (book)
+-		printf (" => %p\n", book);
+ 	return corba_book;
+ }
+ 
+diff --git a/addressbook/libedata-book/e-data-book.c b/addressbook/libedata-book/e-data-book.c
+index 8691235..86bb827 100644
+--- a/addressbook/libedata-book/e-data-book.c
++++ b/addressbook/libedata-book/e-data-book.c
+@@ -35,8 +35,6 @@ impl_GNOME_Evolution_Addressbook_Book_open (PortableServer_Servant servant,
+ {
+ 	EDataBook *book = E_DATA_BOOK (bonobo_object (servant));
+ 
+-	printf ("impl_GNOME_Evolution_Addressbook_Book_open (%p)\n", book);
+-
+ 	e_book_backend_open (e_data_book_get_backend (book), book, opid, only_if_exists);
+ }
+ 
+@@ -47,8 +45,6 @@ impl_GNOME_Evolution_Addressbook_Book_remove (PortableServer_Servant servant,
+ {
+ 	EDataBook *book = E_DATA_BOOK (bonobo_object (servant));
+ 
+-	printf ("impl_GNOME_Evolution_Addressbook_Book_remove\n");
+-
+ 	e_book_backend_remove (e_data_book_get_backend (book), book, opid);
+ }
+ 
+@@ -60,8 +56,6 @@ impl_GNOME_Evolution_Addressbook_Book_getContact (PortableServer_Servant servant
+ {
+ 	EDataBook *book = E_DATA_BOOK (bonobo_object (servant));
+ 
+-	printf ("impl_GNOME_Evolution_Addressbook_Book_getContact\n");
+-
+ 	e_book_backend_get_contact (e_data_book_get_backend (book), book, opid, id);
+ }
+ 
+@@ -73,8 +67,6 @@ impl_GNOME_Evolution_Addressbook_Book_getContactList (PortableServer_Servant ser
+ {
+ 	EDataBook *book = E_DATA_BOOK (bonobo_object (servant));
+ 
+-	printf ("impl_GNOME_Evolution_Addressbook_Book_getContactList\n");
+-
+ 	e_book_backend_get_contact_list (e_data_book_get_backend (book), book, opid, query);
+ }
+ 
+@@ -146,8 +138,6 @@ impl_GNOME_Evolution_Addressbook_Book_getBookView (PortableServer_Servant servan
+ 	EBookBackendSExp *card_sexp;
+ 	EDataBookView *view;
+ 
+-	g_warning ("impl_GNOME_Evolution_Addressbook_Book_getBookView (%s)\n", search);
+-
+ 	/* we handle this entirely here, since it doesn't require any
+ 	   backend involvement now that we have e_data_book_view_start to
+ 	   actually kick off the search. */
+@@ -518,8 +508,6 @@ e_data_book_respond_get_required_fields (EDataBook
+ 		stringlist._buffer[i] = CORBA_string_dup ((char*)iter->data);
+ 	}
+ 
+-	printf ("calling GNOME_Evolution_Addressbook_BookListener_notifyRequiredFields\n");
+-
+ 	GNOME_Evolution_Addressbook_BookListener_notifyRequiredFields (
+ 			book->priv->listener, opid, status,
+ 			&stringlist,
+@@ -564,8 +552,6 @@ e_data_book_respond_get_supported_fields (EDataBook
+ 		stringlist._buffer[i] = CORBA_string_dup ((char*)iter->data);
+ 	}
+ 
+-	printf ("calling GNOME_Evolution_Addressbook_BookListener_notifySupportedFields\n");
+-
+ 	GNOME_Evolution_Addressbook_BookListener_notifySupportedFields (
+ 			book->priv->listener, opid, status,
+ 			&stringlist,
+@@ -646,8 +632,6 @@ e_data_book_respond_get_book_view (EDataBook                              *book,
+ 	CORBA_Environment ev;
+ 	CORBA_Object      object = CORBA_OBJECT_NIL;
+ 
+-	printf ("e_data_book_respond_get_book_view\n");
+-
+ 	CORBA_exception_init (&ev);
+ 
+ 	if (book_view) {
+diff --git a/calendar/libedata-cal/e-data-cal-factory.c b/calendar/libedata-cal/e-data-cal-factory.c
+index d221eb9..cc548cf 100644
+--- a/calendar/libedata-cal/e-data-cal-factory.c
++++ b/calendar/libedata-cal/e-data-cal-factory.c
+@@ -103,8 +103,6 @@ backend_last_client_gone_cb (ECalBackend *backend, gpointer data)
+ 	const char *uristr;
+ 	char *uri;
+ 
+-	fprintf (stderr, "backend_last_client_gone_cb() called!\n");
+-
+ 	factory = E_DATA_CAL_FACTORY (data);
+ 	priv = factory->priv;
+ 
+@@ -223,7 +221,6 @@ impl_CalFactory_getCal (PortableServer_Servant servant,
+ 	
+ 	/* Create the corba calendar */
+ 	cal = e_data_cal_new (backend, listener);
+-	printf ("cal = %p\n", cal);
+ 	if (!cal) {
+ 		g_warning (G_STRLOC ": could not create the corba calendar");
+ 		bonobo_exception_set (ev, ex_GNOME_Evolution_Calendar_CalFactory_UnsupportedMethod);
+diff --git a/src/server-logging.c b/src/server-logging.c
+index c000a10..b2f809c 100644
+--- a/src/server-logging.c
++++ b/src/server-logging.c
+@@ -120,8 +120,6 @@ server_log_handler(const gchar *domain,
+ 	CORBA_any value;
+ 	GNOME_Evolution_DataServer_Logging_LogEvent log_event;
+ 
+-	printf ("in server_log_handler\n");
+-
+ 	if ((flags & G_LOG_LEVEL_ERROR) == G_LOG_LEVEL_ERROR)
+ 		log_event.level = GNOME_Evolution_DataServer_Logging_Error;
+ 	else if ((flags & G_LOG_LEVEL_CRITICAL) == G_LOG_LEVEL_CRITICAL)
+-- 
+1.5.3.4.320-dirty
+

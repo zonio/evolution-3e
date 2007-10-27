@@ -1,0 +1,117 @@
+From 66d97b2d3f2ddadba16588731eded5d7bd1ef2d6 Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Tue, 13 Mar 2007 01:55:53 +0100
+Subject: [PATCH] extend plugin system to add support for events on component activation
+
+---
+ shell/e-shell-window.c |   14 ++++++++++++++
+ shell/es-event.c       |   11 +++++++++++
+ shell/es-event.h       |   10 +++++++++-
+ 3 files changed, 34 insertions(+), 1 deletions(-)
+
+diff --git a/shell/e-shell-window.c b/shell/e-shell-window.c
+index 094d090..baa9652 100644
+--- a/shell/e-shell-window.c
++++ b/shell/e-shell-window.c
+@@ -36,6 +36,7 @@
+ #include "e-shell-marshal.h"
+ #include "e-sidebar.h"
+ #include "es-menu.h"
++#include "es-event.h"
+ 
+ #include <gtk/gtkbutton.h>
+ #include <gtk/gtkhbox.h>
+@@ -325,6 +326,7 @@ switch_view (EShellWindow *window, ComponentView *component_view)
+ 							       ECR_FIELD_ID,
+ 							       component_view->component_id);
+ 	char *title;
++	ESEvent *ese;
+ 
+ 	if (component_view->sidebar_widget == NULL) {
+ 		init_view (window, component_view);
+@@ -357,6 +359,18 @@ switch_view (EShellWindow *window, ComponentView *component_view)
+ 
+ 	g_object_unref (gconf_client);
+ 
++	/** @Event: Shell component activated/changed
++	 * @Id: component.activated
++	 * @Target: ESEventTargetComponent
++	 * 
++	 * This event is emitted whenever the shell successfully activates component
++   * view.
++	 *
++	 */
++	ese = es_event_peek();
++  printf("event: component.activated = %s\n", component_view->component_id);
++	e_event_emit((EEvent *)ese, "component.activated", (EEventTarget *)es_event_target_new_component(ese, component_view->component_id));
++
+ 	g_signal_emit (window, signals[COMPONENT_CHANGED], 0);
+ }
+ 
+diff --git a/shell/es-event.c b/shell/es-event.c
+index 78847e3..dfeb356 100644
+--- a/shell/es-event.c
++++ b/shell/es-event.c
+@@ -151,6 +151,16 @@ es_event_target_new_upgrade(ESEvent *eme, int major, int minor, int revision)
+ 	return t;	
+ }
+ 
++ESEventTargetComponent *
++es_event_target_new_component(ESEvent *eme, const char* name)
++{
++	ESEventTargetComponent *t = e_event_target_new(&eme->event, ES_EVENT_TARGET_COMPONENT, sizeof(*t));
++
++	t->name = g_strdup(name);
++
++	return t;
++}
++
+ /* ********************************************************************** */
+ 
+ static void *emeh_parent_class;
+@@ -166,6 +176,7 @@ static const EEventHookTargetMap emeh_targets[] = {
+ 	{ "state", ES_EVENT_TARGET_STATE, emeh_state_masks },
+ 	{ "upgrade", ES_EVENT_TARGET_UPGRADE, NULL },
+ 	{ "shell", ES_EVENT_TARGET_SHELL, NULL },
++	{ "component", ES_EVENT_TARGET_COMPONENT, NULL },
+ 	{ NULL }
+ };
+ 
+diff --git a/shell/es-event.h b/shell/es-event.h
+index 9612198..cb61438 100644
+--- a/shell/es-event.h
++++ b/shell/es-event.h
+@@ -40,7 +40,8 @@ typedef struct _ESEventClass ESEventClass;
+ enum _es_event_target_t {
+ 	ES_EVENT_TARGET_STATE,
+ 	ES_EVENT_TARGET_UPGRADE,
+-	ES_EVENT_TARGET_SHELL
++	ES_EVENT_TARGET_SHELL,
++	ES_EVENT_TARGET_COMPONENT
+ };
+ 
+ /* Flags that qualify TARGET_STATE */
+@@ -52,6 +53,7 @@ enum {
+ typedef struct _ESEventTargetState ESEventTargetState;
+ typedef struct _ESEventTargetUpgrade ESEventTargetUpgrade;
+ typedef struct _ESEventTargetShell ESEventTargetShell;
++typedef struct _ESEventTargetComponent ESEventTargetComponent;
+ 
+ struct _ESEventTargetShell {
+ 	EEventTarget target;
+@@ -73,6 +75,12 @@ struct _ESEventTargetUpgrade {
+ 	int revision;
+ };
+ 
++struct _ESEventTargetComponent {
++	EEventTarget target;
++
++	char* name;
++};
++
+ typedef struct _EEventItem ESEventItem;
+ 
+ /* The object */
+-- 
+1.5.3.4.320-dirty
+
