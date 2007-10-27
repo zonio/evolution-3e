@@ -669,24 +669,29 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
   GError* local_err = NULL;
   GList* components, *iter;
   
-  g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-  components = e_cal_backend_cache_get_components(cb->priv->cache);
-  g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
-
   if (!e_cal_backend_3e_open_connection(cb, &local_err))
   {
     g_warning("Sync failed. Can't open connection to the 3E server. (%s)", local_err->message);
-    g_error_free(local_err);
+    g_clear_error(&local_err);
     return FALSE;
   }
 
   sync_timezones_to_server(cb);
+
+  g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
+  components = e_cal_backend_cache_get_components(cb->priv->cache);
+  g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
 
   for (iter = components; iter; iter = iter->next)
   {
     ECalComponent *comp = E_CAL_COMPONENT (iter->data);
     ECalComponentId* id = e_cal_component_get_id(comp);
     ECalComponentCacheState state = e_cal_component_get_cache_state(comp);
+    /* remove client properties before sending component to the server */
+    e_cal_component_set_x_property(comp, "X-EVOLUTION-STATUS", NULL);
+    e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", NULL);
+    e_cal_component_set_cache_state(comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
+    e_cal_component_set_x_property(comp, "X-3E-DELETED", NULL);
     char* object = e_cal_component_get_as_string(comp);
 
     switch (state)
@@ -696,10 +701,14 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
         ESClient_addObject(cb->priv->conn, cb->priv->calspec, object, &local_err);
         if (local_err)
         {
+          e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", local_err->message);
           g_clear_error(&local_err);
-          break;
         }
-        e_cal_component_set_cache_state(comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
+
+        char* new_object = e_cal_component_get_as_string(comp);
+        e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), object, new_object);
+        g_free(new_object);
+
         g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
         e_cal_backend_cache_put_component(cb->priv->cache, comp);
         g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
@@ -711,10 +720,14 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
         ESClient_updateObject(cb->priv->conn, cb->priv->calspec, object, &local_err);
         if (local_err)
         {
+          e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", local_err->message);
           g_clear_error(&local_err);
-          break;
         }
-        e_cal_component_set_cache_state(comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
+
+        char* new_object = e_cal_component_get_as_string(comp);
+        e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), object, new_object);
+        g_free(new_object);
+
         g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
         e_cal_backend_cache_put_component(cb->priv->cache, comp);
         g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
@@ -731,6 +744,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
           g_clear_error(&local_err);
           break;
         }
+
         g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
         e_cal_backend_cache_remove_component(cb->priv->cache, id->uid, id->rid);
         g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);

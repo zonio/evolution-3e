@@ -244,6 +244,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object (ECalBackendSync * b
   if (comp == NULL)
     return GNOME_Evolution_Calendar_InvalidObject;
 
+  e_cal_component_set_x_property(comp, "X-EVOLUTION-STATUS", "outofsync");
+  *calobj = e_cal_component_get_as_string(comp);
+
   if (!e_cal_backend_cache_put_component (priv->cache, comp))
   {
     g_object_unref(comp);
@@ -318,6 +321,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_modify_object (ECalBackendSync * b
         e_cal_component_commit_sequence (inst);
         e_cal_backend_cache_put_component(priv->cache, inst);
 
+        e_cal_component_set_x_property(inst, "X-EVOLUTION-STATUS", "outofsync");
         char* new_inst_str = e_cal_component_get_as_string(inst);
         e_cal_backend_notify_object_modified (E_CAL_BACKEND (backend), inst_str, new_inst_str);
         g_free(new_inst_str);
@@ -340,6 +344,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_modify_object (ECalBackendSync * b
       g_object_unref(cache_comp);
     }
 
+    e_cal_component_set_x_property(new_comp, "X-EVOLUTION-STATUS", "outofsync");
     *new_object = e_cal_component_get_as_string(new_comp);
     e_cal_backend_cache_put_component(priv->cache, new_comp);
   }
