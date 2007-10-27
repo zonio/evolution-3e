@@ -138,23 +138,81 @@ static gboolean add_wildcard(xr_client_conn* conn, const char* calname)
   return TRUE;
 }
 
-static gboolean add_acl(xr_client_conn* conn, const char* calname, GSList* new_perms)
+static gboolean update_acl(xr_client_conn* conn, const char* calname, GSList* new_perms)
 {
   GError* err = NULL;
   GSList* iter;
+  GSList* iter2;
+  gboolean retval = TRUE;
 
+  GSList* perms = ESClient_getPermissions(conn, calname, &err);
+  if (err)
+  {
+    g_warning("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", calname, err->code, err->message);
+    return FALSE;
+  }
+
+  new_perms = g_slist_copy(new_perms);
+  /* for each existing perm */
+  for (iter = perms; iter; iter = iter->next)
+  {
+    ESPermission* perm = iter->data;
+    gboolean not_found = TRUE;
+
+    /* find matching new perm */
+    for (iter2 = new_perms; iter2; iter2 = iter2->next)
+    {
+      ESPermission* new_perm = iter2->data;
+
+      if (!strcmp(perm->user, new_perm->user))
+      {
+        /* perm is already set, check if it differs */
+        if (strcmp(perm->perm, new_perm->perm))
+        {
+          ESClient_setPermission(conn, calname, new_perm->user, new_perm->perm, &err);
+          if (err)
+          {
+            g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
+            g_clear_error(&err);
+            retval = FALSE;
+          }
+        }
+        new_perms = g_slist_remove_link(new_perms, iter2);
+        not_found = FALSE;
+        break;
+      }
+    }
+
+    /* if existing perm was not found in new perms, unset it */
+    if (not_found)
+    {
+      ESClient_setPermission(conn, calname, perm->user, "none", &err);
+      if (err)
+      {
+        g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
+        g_clear_error(&err);
+        retval = FALSE;
+      }
+    }
+  }
+
+  /* set remaining new perms */
   for (iter = new_perms; iter; iter = iter->next)
   {
     ESPermission* perm = iter->data;
-    ESClient_setPermission(conn, (char*)calname, perm->user, perm->perm, &err);
+
+    ESClient_setPermission(conn, calname, perm->user, perm->perm, &err);
     if (err)
     {
       g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
       g_clear_error(&err);
-      return FALSE;
+      retval = FALSE;
     }
   }
-  return TRUE;
+
+  g_slist_free(new_perms);
+
+  return retval;
 }
 
 gboolean eee_account_calendar_acl_set_private(EeeAccount* self, const char* calname)
@@ -175,10 +233,7 @@ gboolean eee_account_calendar_acl_set_shared(EeeAccount* self, const char* calna
 {
   if (calname == NULL || !eee_account_auth(self))
     return FALSE;
-  //XXX: this is broken because we need to change permissions more gently
-  // remove acl will automatically unsubscribe all users subscribed to our
-  // calendar
-  return remove_acl(self->priv->conn, calname) && add_acl(self->priv->conn, calname, new_perms);
+  return update_acl(self->priv->conn, calname, new_perms);
 }
 
 gboolean eee_account_load_calendars(EeeAccount* self, GSList** cals)
