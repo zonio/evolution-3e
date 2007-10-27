@@ -1,7 +1,6 @@
 Evolution Plugin
 ~~~~~~~~~~~~~~~~
 - fix ESourceList loop bug (reproduce with corba trace on)
-- fix update acl eee_account_calendar_acl_set_shared()
 - check for cross-subscription in evolution (two EAccounts both with 3e support,
   one is subscribing from other)
 - subscribe: too many users handling
@@ -9,8 +8,6 @@ Evolution Plugin
 
 EDS Plugin
 ~~~~~~~~~~
-- corba problem on dualcore
-- sync to server error handling (can't write, can't remove, can't update)
 - attachments
 - alarms
 
