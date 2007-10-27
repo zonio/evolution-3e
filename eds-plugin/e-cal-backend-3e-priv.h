@@ -55,9 +55,9 @@ struct _ECalBackend3ePrivate
 
   /** @addtogroup eds_sync */
   /** @{ */
-  volatile gint sync_request;
-  GThread* sync_thread;
-  GMutex* sync_mutex;
+  volatile gint sync_request;    /**< Sync state/request. */
+  GThread* sync_thread;          /**< Sync thread. */
+  GMutex* sync_mutex;            /**< Protects access to the sync_thread. */
   /** @} */
 };
 
