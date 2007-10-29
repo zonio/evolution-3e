@@ -822,7 +822,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
   icalcomponent* icomp;
   char filter[128];
   struct tm tm;
-  time_t stamp = e_cal_backend_3e_get_sync_timestamp(cb) - 60*60*24; /*XXX: always add 1 day padding to prevent timezone problems */
+  time_t stamp = MAX(e_cal_backend_3e_get_sync_timestamp(cb) - 60*60*24, 0); /*XXX: always add 1 day padding to prevent timezone problems */
 
   /* prepare query filter string */
   gmtime_r(&stamp, &tm);
