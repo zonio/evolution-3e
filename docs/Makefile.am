@@ -1,4 +1,4 @@
-EXTRA_DIST = Doxyfile footer.html header.html index.doc
+EXTRA_DIST = Doxyfile footer.html header.html index.doc eds-evo.doc evo-sched.doc
 
 doxy:
 	SRCDIR=$(top_srcdir) OUTDIR=$(builddir) \

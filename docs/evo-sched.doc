@@ -1,0 +1,69 @@
+/* vim:set ft=doxygen: */
+/** @page evosched Evolution Meeting Scheduling
+
+@section evosched_overview Overview
+
+Code involved in scheduling meetings:
+- Backend methods:
+  - e_cal_backend_3e_send_objects()
+  - e_cal_backend_3e_receive_objects()
+    - 
+- Meeting dialog:
+  - comp_editor_init()
+    - base class for event/task/memo component editors
+    - attachments ui
+    - notebook manipulation
+    - ESource/ECal manipulation
+  - comp_editor_page_init()
+    - base class for notebook pages inside comp_editors
+    - implements some signals and defines virtual methods
+  - event_editor_new()
+    - event editor (implements both appointment view and meeting view)
+    - sets up menu and notebook pages (see below)
+    - event_editor_edit_comp() / comp_editor_edit_comp()
+      - setup dialog content based on ECalComponent
+      - called usually righ after creating new CompEditor dialog
+    - menu_file_save_cb()
+      - called when user clicks save in meeting dialog
+      - calls event_editor_send_comp()
+    - prompt_and_save_changes()
+      - called when user closes dialog
+      - calls event_editor_send_comp()
+    - event_editor_send_comp() / real_send_comp()
+      - get list of attachments from dialog
+      - send ECalComponent using itip_send_comp()
+    - itip_send_comp()
+      - ignored if CAL_STATIC_CAPABILITY_SAVE_SCHEDULES is iset
+      - use e_cal_send_objects() to send objects using server, if empty users
+        list is returned, rest of itip_send_comp() is ignored
+      - generate headers (from, to, subject)/body/attachment and send iMIP
+  - event_page_new()
+    - implements main appointment/meeting page with summary, location,
+      attendees, etc.
+    - e_meeting_store_new()
+    - e_meeting_list_view_new()
+      - list of attendees
+    - alarm_list_dialog_peek()
+    - e_alarm_list_new()
+    - e_sendoptions_dialog_new()
+  - schedule_page_new()
+    - scheduling (free/busy view) page
+  - recurrence_page_new()
+    - recurrence editor
+
+- Meeting view in e-mail:
+  - itip_view_new()
+  - itip_formatter_page_factory()
+    - mail preferences "Calendar and Tasks" tab
+  - format_itip_object()
+    - gtkhtml object implementing iMIP formatting in email view
+    - view_response_cb()
+      - called when user clicks on one of the buttons
+      - uses update_item()/e_cal_receive_objects() to send iTip to the backend
+      - uses send_item()/itip_send_comp() to send iTip back
+      - sends reply to clients using itip_send_comp() 
+  - e_itip_control_new()
+    - bonobo iTip control similar to itip_view_new() not used in evolution
+      itself
+
+*/

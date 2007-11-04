@@ -3,6 +3,19 @@
 
 This is documentation for @b evolution-3e plugins.
 
+@section toc Table of Contents
+
+- @ref evosched
+- @ref edsevo
+- EDS Plugin API
+  - @ref eds_cal
+  - @ref eds_conn
+  - @ref eds_sync
+  - @ref eds_misc
+  - @ref eds_back
+- Evolution Plugin API
+- @ref todo
+
 @defgroup eds_cal EDS Calendar Information API
 
 These functions are used to get infromation about calendar. Following
