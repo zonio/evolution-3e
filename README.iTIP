@@ -1,0 +1,104 @@
+squashed iTip standard: (complete without VTODO/VJOURNAL/VFREEBUSY related stuff
+  i.e. first 30 pages)
+ principles:
+   - there is always one organizer
+   - there may be multiple attendees (group events) or none (published events)
+   - initial meeting request has attendee status set to NEEDS-ACTION
+   - delegation is when one CU acts on behal of another
+   - sent-by parameter says who acted on behalf of ATTENDEE or organizer
+   - there are rules for incrementing SEQUENCE (basically whenever organizes
+     changes meeting schedule)
+   - there are rules to manage arrival of REPLY out of order (older revision
+     after newer one)
+     - UID@RID is primary key
+     - SEQUENCE is secondary key
+     - latest component is that with highets SEQUENCE and latest DTSTAMP
+   - each attendee prop must store SEQUENCE and DTSTAMP of REPLY
+   - iTip is VCALENDAR object with PRODID and VERSION:2.0 props
+   - iTip must contain all VTIMEZONE that are referenced by dates in VEVENTs
+   - there may be only one VEVENT in iTip (but can contain multiple detached
+     instances)
+   - rescheduling is changing dates, recurrences, location or description
+   - updating is sending REQUEST without changing SEQUENCE, if ATTENDEE already
+     have VEVENT with same UID/RID/SEQUENCE, it can be updated automatically
+ methods: (method is VCALENDAR with METHOD and some subcomponents like VEVENT or
+     VTIMEZONE, when I write CANCEL contais I usually refer to VCALENDAR or
+     contained VEVENT within that VCALENDAR)
+   PUBLISH: sharing event without interactivity (says: hey! event exists)
+     must contain ORGANIZER must not contain ATTENDEEs, can be CANCELed
+   REQUEST: sent by organizer (initiate/update), expects REPLY from attendee
+     (says: hey! event exists and I want you to come)
+   REPLY: sent by attendee in reply to REQUEST (partstat can be ACCEPTED, 
+     DECLINED, TENTATIVE, or DELEGATED), contains one ATTENDEE and one ORGANIZER
+     property
+   REFRESH: sent by attendee to get latest version of VEVENT from organizer
+   ADD: add instance to existing VEVENT (organizer says: hey, let's move one
+     instance of recurring monday meeting to tuesday) if attendee does not have
+     master VEVENT, he must send REFRESH and organizer must reply with full
+     VEVENT data, if ADD is not supported by ATTENDEE's CUA he must set
+     REQUEST-STATUS to 3.14 (sic! tell me about magic numbers)
+   CANCEL: remove instance from existing VEVENT - organizer may cancel instance
+     (RID is set) or whole recurring event (RID is not set), organizer may
+     cancel whole meeting (all ATTENDEEs are present in CANCEL) or just remove
+     some attendees (only removed ATTENDEEs are present in CANCEL), org. may
+     CANCEL multiple instances by specifying multiple RIDs or RID and RANGE set
+     to THISANDPRIOR or THISANDFUTURE, SEQUENCE must be incremented
+   COUNTER: attendee sends this to the organizer to request change in the
+     meeting, COUNTER contains complete description of new VEVENT, if organizer
+     agrees he will re-send REQUEST with new values from COUNTER
+   DECLINECOUNTER: organizer responds with this to COUNTER to deny it
+ delegation:
+   - delegator forwards REQUEST to delegate with ATTENDEE changed to delegate
+     address
+   - delegator sends REPLY to organizer with partstat set to delegated and
+     delegated-to set to email of delegate (role can be set to NON-PARTICIPANT
+     to continue receiving updates from organizer)
+   - delegate sends REPLY to organizer (delegated-from parameter should be set
+     to delegator's address - value is probably guessed from the fact that
+     iTip sender != organizer)
+ organizer change:
+   - one of attendess sends REQUEST with incremented SEQUENCE with changed
+     ORGANIZER property
+ acting on behalf of organizer:
+   - send updated REQUEST with sent-by parameter (?) set to the address of the
+     actual sender
+   - responses are still directed to organizer (this is not useful for alice-bob
+     scenario at all...)
+ adding uninvited person (by attendee):
+   - attendee forwards original REQUEST to person he wants to invite to the
+     meeting
+ removing some attendees:
+   - send CANCEL to removed attenddees and udpated REQUEST to remaining
+     attendees
+ requesting status update from attendee:
+   - organizer sets ATTENDEE;RSVP=TRUE (SEQUENCE is left unchanged)
+   - attendee notices it and responds with REPLY containing new data
+ receiving REPLY from unknown CU:
+   - organizer may respond with CANCEL if he does not wnat to add him to the
+     meeting
+ acting on behalf of attendee:
+   - send REPLY with sent-by set to actual sender
+ recurring events:
+   - storage is implementation specific: 
+     - master VEVENT with RRULE and detached instances with RID for instance
+       modifications (our approach)
+     - separate VEVENTs for each instance (AFAIK this is used in groupwise)
+   - organizer actions:
+     - delete/change single instance
+     - change this and all future instances
+     - change this and all prior instances
+     - delete or modify previously changed instances (this is separate case
+       because in our case these are stored differently than those that were
+       never changed - they are "detached")
+   - when changing specific instance, organizer identifies instance with RID
+     that is equal to the current DTSTART value
+ scheduling with groups: (sending meeting request to team@zonio.net)
+   - REPLY must contain ATTENDEE where TYPE=INDIVIDUAL and GROUP=team@zonio.net,
+     something like: ATTENDEE;TYPE=INDIVIDUAL;GROUP=team@zonio.net:bob@zonio.net
+ other stuff in the spec:
+   - status replies (supported values for REQUEST-STATUS), how much are they used
+     in real world?
+   - iTip examples
+   - fallbacks (guidelines for incomplete standard impelmtantions)
+   - security considerations
+
