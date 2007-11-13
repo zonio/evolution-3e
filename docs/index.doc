@@ -5,8 +5,11 @@ This is documentation for @b evolution-3e plugins.
 
 @section toc Table of Contents
 
-- @ref evosched
 - @ref edsevo
+- @ref evosched
+- @ref squashed_itip
+- @ref eeesched
+- @ref attadesign
 - EDS Plugin API
   - @ref eds_cal
   - @ref eds_conn
@@ -15,6 +18,10 @@ This is documentation for @b evolution-3e plugins.
   - @ref eds_back
 - Evolution Plugin API
 - @ref todo
+
+@section main_todo Main TODO
+
+@include TODO
 
 @defgroup eds_cal EDS Calendar Information API
 

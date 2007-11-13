@@ -1,0 +1,143 @@
+/* vim:set ft=doxygen: */
+/** @page eeesched 3E Meeting Scheduling
+
+@code
+
+Pozadavky:
+  - alice muze planovat meeting za boba
+  - automaticke zpracovani ntekterych iTip metod
+
+Alice:
+  - odselat za boba uvodni meeting REQUEST
+  - upravit za boba existujici meeting
+  - videt stav ucastniku z informaci ktere poslali v REPLY na REQUEST
+Ucastnici:
+  - odpovedet na prvni REQUEST a na rescheduling REQUEST
+  - pokud jiz na REQUEST zodpovedeli, pak by se aktualizace (REQUESTy se stejnym
+    SEQUENCE) meli automaticky zapisovat do jejich kalendare
+Bob:
+  - musi videt ve svem kalendari to same co vidi alice (master VEVENT [1])
+  - musi by byt schopen pokracovat v planovani meetingu ktery pridala alice
+
+Nejlepsi reseni ktere vyhovuje standardu a je implementovatelne bez nutnosti
+sdileni INBOXu (i bez nutnosti mit INBOXy pro iTipy na serveru) je toto:
+
+- Alice/bob se vzdy domluvi na tom kdo bude delat organizatora mimo system
+  (treba telefonem)
+
+- V evolution naimplementujeme moznost zaslat REQUEST za vlastnika sdileneho
+  kalendare, cimz se:
+  - prida parametr sent-by[2] k ORGANIZER property v REQUESTu
+  - existujici meeting organizovany vlastnikem sdileneho kalendare pujde upravit
+    s tim ze pri odesilani se prida sent-by
+  - novy meeting se posle za vlastnika sdileneho kalendare, tzn.
+    ORGANIZER;sent-by=alice@travel.cz:bob@travel.cz
+  - odpovedi budou chodit vlastnikovi sdileneho kalendare
+
+  Bude to tedy mozne bez checkboxu (o kterem jsem mluvil na poslednim meetingu)
+  a bez nastaveni.
+
+- Protoze odpovedi na REQUEST budou vzdy chodit organizatorovi a pouze
+  organizator je ma k dispozici, potrebujeme nejaky system ktery by nektere
+  informace z iTipu zasilanych ucastniky dostal do kalendare pokud je
+  organizator mimo a planuje za nej sekretarka. Potrebujeme alespon:
+  - aktualizovat statusy ATTENDEEs v master VEVENTu
+  - posilat aktualizovany REQUEST ucastnikum
+  - odpovidat na REFRESH ucastnikum
+
+- iTipy mohou prijit organizatorovi dvema cestami:
+  - dorucenim pres 3E server pomoci RPC deliverMessage() - z cizicho serveru
+  - dorucenim pres 3E server pomoci RPC sendMessage() - od jineho uzivatele
+    stejneho serveru
+  - dorucenim pres iMIP (do mail INBOXu organizatora)
+
+Doruceni pres iMIP se deje vzdy, doruceni jinymi cestami se deje navic
+v pripadech kdy odesilatel pouziva CUA s podporou 3E serveru a ma 3E ucet.
+Komunikace s uzivately jinych systemu probiha pouze pomoci iMIPu.
+
+Automaticka aktualizace master VEVENTu je volitelna a neni nutna pro spravne
+fungovani systemu. K automaticke aktualizaci muze dochazet pouze na 3E serveru,
+protoze CUA muze byt offline, atp.
+
+Zasilani iMIPu od uzivatelu 3E serveru probiha pres server a mame moznost
+zaslani v urcitych situacich prerusit. Napriklad pokud planuji mezi sebou dva
+uzivatele 3E serveru a ucastnik potvrzuje svoji ucast, muze byt REPLY iTip
+zpracovan na serveru tak ze se automaticky zaktualizuje master VEVENT
+organizatora a neni treba jiz organizatorovi poslat mail s iTipem, protoze
+informace o stavu bude uz ulozena v kalendari. Tim usetrime organizatorovi
+praci. [3]
+
+Server bude provadet nasledujici zpracovani prichozich iTipu:
+- REPLY: prohledaji se vsechny kalendare prijemce (organizatora) a provede se
+    automaticka aktualizace stavu ATTENDEE a v pripade uspechu se iMIP neposle
+- REFRESH: prohledaji se vsechny kalendare prijemce (organizatora)
+    a pokud se najde master VEVENT, tak se automaticky odesle aktualni REQUEST
+    zpet ucastnikovi a puvodni iTIP se zahodi. Pokud se nenajde, tak se iTIP
+    zahodi (pze CUA by si s nim stejne nevedel rady)
+- CANCEL: prohledaji se kalendare ucastnika a pokud se nalezne odpovidajici
+    VEVENT, automaticky se nastavi stav na zruseno (iMIP se i presto posle,
+    aby mel ucastnik neco v mailu a ne jen tichou aktualizaci)
+- REQUEST: prohledaji se vsechny kalendare prijemce a pokud se najde VEVENT a 
+    SEQUENCE REQUESTu a VEVENTu se rovanji, pak se provede 'ticha' aktualizace
+    a REQUEST se zahodi, pokud je SEQUENCE REQUESTu mensi tak se REQUEST
+    zahodi, pokud je SEQUENCE vetsi, nebo VEVENT nebyl nalezen, pak se
+    neprovede zadna automaticka aktualizace a REQUESTu se posle adresatovi
+    jako iMIP
+- COUNTER/DECLINECOUNTER/ADD/...: zadne zpracovani
+
+Aby server mohl automaticky zpracovavat i iMIPy uzivatelu ostatnich systemu,
+naimplementujeme filter pro mail server, ktery bude zpracovavat veskerou
+prichozi postu a pokud narazi na iMIP, vyextrahuje z nej iTip a zasle ho pomoci
+RPC deliverMessage() (metoda pro meziserverovou komunikaci) 3E serveru
+nastavenenemu v konfiguraku filtru. iMIP bude mozne zahodit pokud se metode
+deliverMessage() podari provest automaticke zpracovani. Viz. vyse.
+
+Tim volitelne umoznime i automaticke zpracovani odpovedi od uzivatelu cizich
+systemu. Coz by mohla byt docela unikatni ficura.
+
+Plan se sklada ze tri casti: 
+- evolution: podpora pro planovani ve sdilenem kalendari
+  - povoleni editace meetingu na zaklade informaci z ESource (vlastnik kal je
+    ORGANIZER)
+  - spraven nastaveni sent-by v iTipech
+- server: automaticke zpracovani iTipu podle metody
+- mail filter: parsovani iMIPu a predavani serveru
+- eds: kesovani iTipu v e_cal_backend_3e_send_objects() v offline modu
+  (offline planovani)
+- zmena deliverMessage() aby vracelo stav zpracovani:
+  "delivered" - volajici (druhy server nebo mail filter) musi odeslat i iMIP
+  "processed" - volajici nemusi odeslat iMIP, pze doslo k automatickemu
+    zpracovani a aktualziaci master VEVENTu
+  "error" - volajici musi odeslat iMIP, pze doslo k chybe
+- deliverMessage() bude take prijimat pouze jednoho recipienta, ne seznam jako
+  ted, cimz zjednodusime osetrovani navratovych stavu
+
+Tedy to bude fungovat v nejkomplikovanejsim pripade takto: bob zacne planovat,
+ale musi odejit, zavola alici ze potrebuje meeting presunout, alice otevre
+sdileny kalendar a proste provede zmeny (system pozna ze meeting jorganizuje bob
+a ze alice muze upravovat bobuv kalendar a zmeny umozni a nastavi sent-by). Pote
+se rozeslou aktualizovane REQUESTY vsem ucastnikum, kteri na ne odpovi bobovi.
+Odpovedi system automaticky integruje do master VEVENTu primo na serveru, takze
+alice bude videt stav ucastniku a bude ho moci sdelit bobovi.
+
+[1] Master VEVENT je VEVENT objekt v kalendari organizatora reprezentujici
+skupinovou schuzku. Tento VEVENT objket se zasila ucastnikum formou iTip
+REQUESTu a uklada se do jejich kalendare jako slave VEVENT. Slave VEVENT by mel
+byt kopii master VEVENTu.
+
+[2] Sent-by parametr se pozuiva kdyz jeden CU chce jednat docasne za jineho CU,
+ale dalsi komunikace by mela pokracovat s puvodnim CU. Dalsi moznost jednani za
+jineho CU, je trvale nahrazeni organizatora tim ze novy organizator vezme slave
+VEVENT a nahradi v nem ORGANIZER property svou adresou a posle ho vsem
+ucastnikum jako novy iTip REQUEST.
+
+[3] Jestli je to vhodne je jina otazka, protoze ty maily kterymi se posila iTip
+slouzi take jako upozorneni ze se neco zmenilo. V pripade automatickych
+aktualizaci ale muzeme naimplementovat ikonku u meetingu oznacujici ze server
+provedl nejakou zmenu. (napriklad aktualizaci stavu ucastnika) Podobne jako se
+ted u kazdeho eventu zobrazuje ikonka oznacujici ze dany event neni jeste
+synchronizovany se serverem.
+
+@endcode
+
+*/

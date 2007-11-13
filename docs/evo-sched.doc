@@ -52,7 +52,9 @@ Code involved in scheduling meetings:
     - recurrence editor
 
 - Meeting view in e-mail:
-  - itip_view_new()
+  - itip_view_new()/set_buttons()
+    - set what buttons should be shown in the view, what responses are processed
+      based on iTip METHOD
   - itip_formatter_page_factory()
     - mail preferences "Calendar and Tasks" tab
   - format_itip_object()
@@ -65,5 +67,45 @@ Code involved in scheduling meetings:
   - e_itip_control_new()
     - bonobo iTip control similar to itip_view_new() not used in evolution
       itself
+  - possible actions based on the METHOD:
+    - PUBLISH: accept/decline
+    - REQUEST: decline/accept/tentative
+    - ADD: decline/accept/tentative
+    - REFRESH: refresh
+    - REPLY: update
+    - CANCEL: cancel
+    - COUNTER: decline/accept/tentative
+    - DECLINECOUNTER: decline/accept/tentative
+  - actions description: (view_response_cb())
+    - accept: change ATTENDEE status and update_item()/e_cal_receive_objects(),
+      itip_send_comp() response (REPLY) to ATTENDEES if RSVP checkbox was set
+    - decline: change ATTENDEE status and update_item()/e_cal_receive_objects()
+      itip_send_comp() response (REPLY) to ATTENDEES if RSVP checkbox was set
+    - tentative: change ATTENDEE status and update_item()/e_cal_receive_objects()
+      itip_send_comp() response (REPLY) to ATTENDEES if RSVP checkbox was set
+    - refresh: send REQUEST using send_item()/itip_send_comp()
+    - update: find VEVENT in calendar and update ATTENDEE status using
+      e_cal_modify_object(), itip_send_comp() response (REPLY) to ATTENDEES if
+      RSVP checkbox was set
+    - cancel: update_item()/e_cal_receive_objects() itip_send_comp() response
+      (REPLY) to ATTENDEES if RSVP checkbox was set
+
+- e_cal_receive_objects()
+  - called only from iTip view in e-mail via update_item()
+  - from buttons ACCEPT/DECLINE/TENTATIVE/CANCEL
+  - in response to PUBLISH/REQUEST/ADD/CANCEL/COUNTER/DECLINECOUNTER methods
+
+- prichozi iMIPy z mail inboxu uzivatele (od uzivatelu nepouzivajicich 3E, nebo
+  od 3E uzivatelu v pripade kde nedochazi k automatickemu zpracovani iTipu na
+  serveru a server ho odesle mailem)
+  - zpracovani probiha tak ze se bud zavola metoda backendu receive_objects,
+    s tim ze dalsi zpracovani podle METHOD iTipu se provede v EDS rucne
+    nebo iTip view primo odesle odpoved pres metodu backendu send_objects()
+    (podrobnosti viz. "Evolution Meeting Scheduling")
+  - aktualizaci meetingu z REPLY provadi iTip view primo pomoci modify_object()
+  - toto zpracovani na strane EDS pluginu v nekterych pripadech uplne objedeme
+    tak ze se provede uz pri volani sendMessage() odesilatelem na strane serveru,
+    ale stejne musime udelat ekvivalentni implementaci i v EDS, pze automaticke
+    zpracovani na serveru bude probihat jen pro uzivatele 3E
 
 */
