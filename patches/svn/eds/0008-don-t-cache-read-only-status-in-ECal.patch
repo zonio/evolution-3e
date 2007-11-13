@@ -1,4 +1,4 @@
-From 14537b64f9f63334c35694aafeb0f7f5f0fd0745 Mon Sep 17 00:00:00 2001
+From f33e31c5fcb32da0057f91a9cb8e6ad9111ec0df Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Thu, 25 Oct 2007 02:52:46 +0200
 Subject: [PATCH] don't cache read only status in ECal
@@ -29,5 +29,5 @@ index c914600..fdc76ea 100644
  
  static gboolean
 -- 
-1.5.3.4.320-dirty
+1.5.3.5.474-dirty
 

@@ -1,4 +1,4 @@
-From c5b22f97dbc38999441c45790b46196e56ac245e Mon Sep 17 00:00:00 2001
+From ff8505755d5f4b4435f74adb73cede88b2116ea4 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 24 Oct 2007 20:45:23 +0200
 Subject: [PATCH] no-send: add EBook/ECal leak testing code
@@ -24,10 +24,10 @@ index 229ba6f..f61d016 100644
  		if (book_view->priv->book) {
  			g_object_unref (book_view->priv->book);
 diff --git a/addressbook/libebook/e-book.c b/addressbook/libebook/e-book.c
-index 46d06fd..80e1722 100644
+index c6f829b..f407485 100644
 --- a/addressbook/libebook/e-book.c
 +++ b/addressbook/libebook/e-book.c
-@@ -1870,6 +1870,9 @@ do_get_book_view (gboolean sync,
+@@ -1866,6 +1866,9 @@ do_get_book_view (gboolean sync,
  	query_string = e_book_query_to_string (query);
  
  	our_op->cb.book_view = cb;
@@ -37,7 +37,7 @@ index 46d06fd..80e1722 100644
  	our_op->closure = closure;
  
  	/* will eventually end up calling e_book_response_get_book_view */
-@@ -3991,6 +3994,7 @@ e_book_init (EBook *book)
+@@ -3989,6 +3992,7 @@ e_book_init (EBook *book)
  	book->priv->mutex         = g_mutex_new ();
  	book->priv->id_to_op      = g_hash_table_new (g_int_hash, g_int_equal);
  	book->priv->current_op_id = 1;
@@ -45,7 +45,7 @@ index 46d06fd..80e1722 100644
  }
  
  static void
-@@ -3998,6 +4002,8 @@ e_book_dispose (GObject *object)
+@@ -3996,6 +4000,8 @@ e_book_dispose (GObject *object)
  {
  	EBook             *book = E_BOOK (object);
  
@@ -99,5 +99,5 @@ index 1184339..2d3d935 100644
  	
  	e_calendar_remove_op (ecal, our_op);
 -- 
-1.5.3.4.320-dirty
+1.5.3.5.474-dirty
 

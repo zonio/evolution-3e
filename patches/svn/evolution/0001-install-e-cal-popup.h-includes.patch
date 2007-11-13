@@ -1,4 +1,4 @@
-From 6daec2daea9932bf6ca43738bd811f5aa121cfc3 Mon Sep 17 00:00:00 2001
+From e85be8d531ed4b3ab51aed1aaa188e208f991beb Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <megous@megous.com>
 Date: Sat, 24 Feb 2007 17:21:42 +0100
 Subject: [PATCH] install e-cal-popup.h includes
@@ -42,5 +42,5 @@ index 2ade11e..6dd8a4c 100644
  
  libcal_dialogs_la_LIBADD =					\
 -- 
-1.5.3.4.320-dirty
+1.5.3.5.474-dirty
 

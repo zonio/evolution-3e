@@ -1,4 +1,4 @@
-From fe78fa3dacc3232dceeec3753e34530ee592522d Mon Sep 17 00:00:00 2001
+From cf0e8fe8d01acccbb3db6b4d10dd42398b58806e Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Thu, 25 Oct 2007 02:54:15 +0200
 Subject: [PATCH] no-send: remove debugging output
@@ -12,10 +12,10 @@ Subject: [PATCH] no-send: remove debugging output
  5 files changed, 0 insertions(+), 27 deletions(-)
 
 diff --git a/addressbook/backends/file/e-book-backend-file.c b/addressbook/backends/file/e-book-backend-file.c
-index 171d8f1..b844900 100644
+index 59da41d..ea37544 100644
 --- a/addressbook/backends/file/e-book-backend-file.c
 +++ b/addressbook/backends/file/e-book-backend-file.c
-@@ -638,7 +638,6 @@ book_view_thread (gpointer data)
+@@ -636,7 +636,6 @@ book_view_thread (gpointer data)
  		e_data_book_view_notify_complete (book_view, GNOME_Evolution_Addressbook_Success);
  
  	/* unref the */
@@ -164,5 +164,5 @@ index c000a10..b2f809c 100644
  		log_event.level = GNOME_Evolution_DataServer_Logging_Error;
  	else if ((flags & G_LOG_LEVEL_CRITICAL) == G_LOG_LEVEL_CRITICAL)
 -- 
-1.5.3.4.320-dirty
+1.5.3.5.474-dirty
 

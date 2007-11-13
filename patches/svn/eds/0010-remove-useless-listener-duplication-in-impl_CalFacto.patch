@@ -1,4 +1,4 @@
-From e8b9fdac3223dffe1326fe7cc54f6aae56b2a344 Mon Sep 17 00:00:00 2001
+From 5cb6588c206a504da71c1d12f2b1d2ff7a897848 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Thu, 25 Oct 2007 02:55:26 +0200
 Subject: [PATCH] remove useless listener duplication in impl_CalFactory_getCal()
@@ -71,5 +71,5 @@ index cc548cf..191a300 100644
  	e_uri_free (uri);
  	g_free (uri_type_string);
 -- 
-1.5.3.4.320-dirty
+1.5.3.5.474-dirty
 

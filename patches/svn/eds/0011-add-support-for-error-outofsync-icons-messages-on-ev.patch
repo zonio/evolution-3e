@@ -1,4 +1,4 @@
-From dde342e927e5cfd7b7eaddfdd4b3ebef86ea2e53 Mon Sep 17 00:00:00 2001
+From 5a03d8f3a022f82e893b5d2dcba8da02460561e8 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 27 Oct 2007 04:22:23 +0200
 Subject: [PATCH] add support for error/outofsync icons/messages on events in day view
@@ -209,5 +209,5 @@ index 74c8208..059e0bb 100644
  	if (n_added > 0) {
  		g_debug ("Loaded %d categories", n_added);
 -- 
-1.5.3.4.320-dirty
+1.5.3.5.474-dirty
 
