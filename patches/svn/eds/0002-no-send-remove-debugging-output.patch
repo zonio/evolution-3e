@@ -1,4 +1,4 @@
-From cf0e8fe8d01acccbb3db6b4d10dd42398b58806e Mon Sep 17 00:00:00 2001
+From eb244429f1b0ea3ad9da0d775d618a38259c8fae Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Thu, 25 Oct 2007 02:54:15 +0200
 Subject: [PATCH] no-send: remove debugging output
@@ -12,7 +12,7 @@ Subject: [PATCH] no-send: remove debugging output
  5 files changed, 0 insertions(+), 27 deletions(-)
 
 diff --git a/addressbook/backends/file/e-book-backend-file.c b/addressbook/backends/file/e-book-backend-file.c
-index 59da41d..ea37544 100644
+index 8ecfe90..c002ed9 100644
 --- a/addressbook/backends/file/e-book-backend-file.c
 +++ b/addressbook/backends/file/e-book-backend-file.c
 @@ -636,7 +636,6 @@ book_view_thread (gpointer data)
@@ -24,7 +24,7 @@ index 59da41d..ea37544 100644
  
  	d(printf ("finished population of book view\n"));
 diff --git a/addressbook/libedata-book/e-data-book-factory.c b/addressbook/libedata-book/e-data-book-factory.c
-index 8122941..52c9c18 100644
+index 08ae1af..f129131 100644
 --- a/addressbook/libedata-book/e-data-book-factory.c
 +++ b/addressbook/libedata-book/e-data-book-factory.c
 @@ -299,8 +299,6 @@ impl_GNOME_Evolution_Addressbook_BookFactory_getBook (PortableServer_Servant
@@ -54,7 +54,7 @@ index 8122941..52c9c18 100644
  }
  
 diff --git a/addressbook/libedata-book/e-data-book.c b/addressbook/libedata-book/e-data-book.c
-index 8691235..86bb827 100644
+index bfe59f2..26bab5b 100644
 --- a/addressbook/libedata-book/e-data-book.c
 +++ b/addressbook/libedata-book/e-data-book.c
 @@ -35,8 +35,6 @@ impl_GNOME_Evolution_Addressbook_Book_open (PortableServer_Servant servant,
@@ -130,7 +130,7 @@ index 8691235..86bb827 100644
  
  	if (book_view) {
 diff --git a/calendar/libedata-cal/e-data-cal-factory.c b/calendar/libedata-cal/e-data-cal-factory.c
-index d221eb9..cc548cf 100644
+index 2188e12..2384131 100644
 --- a/calendar/libedata-cal/e-data-cal-factory.c
 +++ b/calendar/libedata-cal/e-data-cal-factory.c
 @@ -103,8 +103,6 @@ backend_last_client_gone_cb (ECalBackend *backend, gpointer data)
@@ -143,7 +143,7 @@ index d221eb9..cc548cf 100644
  	priv = factory->priv;
  
 @@ -223,7 +221,6 @@ impl_CalFactory_getCal (PortableServer_Servant servant,
- 	
+ 
  	/* Create the corba calendar */
  	cal = e_data_cal_new (backend, listener);
 -	printf ("cal = %p\n", cal);
@@ -151,7 +151,7 @@ index d221eb9..cc548cf 100644
  		g_warning (G_STRLOC ": could not create the corba calendar");
  		bonobo_exception_set (ev, ex_GNOME_Evolution_Calendar_CalFactory_UnsupportedMethod);
 diff --git a/src/server-logging.c b/src/server-logging.c
-index c000a10..b2f809c 100644
+index 9d75ea2..0744eef 100644
 --- a/src/server-logging.c
 +++ b/src/server-logging.c
 @@ -120,8 +120,6 @@ server_log_handler(const gchar *domain,

@@ -1,4 +1,4 @@
-From 61b3076be3c2cd39c376c3be66775a7da6a66df6 Mon Sep 17 00:00:00 2001
+From 4a6e09e3ece0e21c18b8516fa2b3f1a574ecae4a Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 17 Oct 2007 20:40:33 +0200
 Subject: [PATCH] implement flag that calendar properties plugin can use to disable sync
@@ -10,7 +10,7 @@ Basicaly this is useful if plugin does it's own ESourceList sync.
  2 files changed, 5 insertions(+), 0 deletions(-)
 
 diff --git a/calendar/gui/dialogs/calendar-setup.c b/calendar/gui/dialogs/calendar-setup.c
-index a7b2e15..643eb40 100644
+index 3f6bcf4..23d03f1 100644
 --- a/calendar/gui/dialogs/calendar-setup.c
 +++ b/calendar/gui/dialogs/calendar-setup.c
 @@ -79,6 +79,10 @@ eccp_commit (EConfig *ec, GSList *items, void *data)

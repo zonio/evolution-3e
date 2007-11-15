@@ -1,4 +1,4 @@
-From 54c3aedc6fd3c21b45a62fafddd750ea9e43ca7a Mon Sep 17 00:00:00 2001
+From 631a7371614158e7813eff70c2f1e044ea55eb32 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 23 Jun 2007 13:58:04 +0200
 Subject: [PATCH] expand new groups by default in ESourceSelector
@@ -8,7 +8,7 @@ Subject: [PATCH] expand new groups by default in ESourceSelector
  1 files changed, 8 insertions(+), 0 deletions(-)
 
 diff --git a/libedataserverui/e-source-selector.c b/libedataserverui/e-source-selector.c
-index ca24b3d..2df6c77 100644
+index c69509e..a3d0962 100644
 --- a/libedataserverui/e-source-selector.c
 +++ b/libedataserverui/e-source-selector.c
 @@ -317,11 +317,14 @@ rebuild_model (ESourceSelector *selector)
@@ -16,7 +16,7 @@ index ca24b3d..2df6c77 100644
  		GtkTreeRowReference *row_ref;
  		gint position;
 +		GtkTreePath *path_expand = NULL;
- 		
+ 
  		row_ref = g_hash_table_lookup (rebuild_data->remaining_uids, e_source_group_peek_uid (group));
  		if (!row_ref) {
 +
@@ -25,7 +25,7 @@ index ca24b3d..2df6c77 100644
 +			path_expand = gtk_tree_model_get_path (GTK_TREE_MODEL (tree_store), &iter);
  		} else {
  			GtkTreePath *path;
- 			
+ 
 @@ -361,6 +364,11 @@ rebuild_model (ESourceSelector *selector)
  
  		if (sources)

@@ -1,4 +1,4 @@
-From a7aaae43089ca14179e46a0748bcfbd3e9172659 Mon Sep 17 00:00:00 2001
+From 4153b8e369f794aaed60db93932ea5a126bdc28b Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 27 Oct 2007 07:33:44 +0200
 Subject: [PATCH] show error message in event tooltip
@@ -8,15 +8,16 @@ Subject: [PATCH] show error message in event tooltip
  1 files changed, 15 insertions(+), 0 deletions(-)
 
 diff --git a/calendar/gui/e-calendar-view.c b/calendar/gui/e-calendar-view.c
-index 7f84d6e..c2c15a1 100644
+index c4f4117..66dba25 100644
 --- a/calendar/gui/e-calendar-view.c
 +++ b/calendar/gui/e-calendar-view.c
-@@ -2185,6 +2185,20 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
+@@ -2184,6 +2184,20 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
+ 
  	gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
  	g_free (tmp);
- 	
++	
 +  /* display error */
-+  e_cal_component_get_x_property (newcomp, "X-EVOLUTION-ERROR", &str);
++	e_cal_component_get_x_property (newcomp, "X-EVOLUTION-ERROR", &str);
 +	if (str) {
 +		tmp = g_strdup_printf (_("Error: %s"), str);
 +		label = gtk_label_new (NULL);
@@ -28,10 +29,9 @@ index 7f84d6e..c2c15a1 100644
 +		gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
 +		g_free (tmp);
 +	}
-+
+ 
  	e_cal_component_get_organizer (newcomp, &organiser);
  	if (organiser.cn) {
- 		char *ptr ; 
 @@ -2223,6 +2237,7 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
  		gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
  		g_free (tmp);
@@ -39,7 +39,7 @@ index 7f84d6e..c2c15a1 100644
 +
  	e_cal_component_get_dtstart (newcomp, &dtstart);
  	e_cal_component_get_dtend (newcomp, &dtend);
- 			
+ 
 -- 
 1.5.3.5.474-dirty
 

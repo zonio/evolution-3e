@@ -1,4 +1,4 @@
-From 2fc5082e017e516ff0c66cea21ad21a74272a383 Mon Sep 17 00:00:00 2001
+From 241761fd1e49fffa636a43bd7e736b0bac89fbee Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 17 Oct 2007 20:37:56 +0200
 Subject: [PATCH] no-send: remove useless backend code
@@ -10,7 +10,7 @@ It hurt's the eye. :)
  2 files changed, 0 insertions(+), 28 deletions(-)
 
 diff --git a/calendar/libedata-cal/e-cal-backend.c b/calendar/libedata-cal/e-cal-backend.c
-index c44b5c2..1877288 100644
+index debe316..542ef7e 100644
 --- a/calendar/libedata-cal/e-cal-backend.c
 +++ b/calendar/libedata-cal/e-cal-backend.c
 @@ -64,8 +64,6 @@ enum props {
@@ -52,7 +52,7 @@ index c44b5c2..1877288 100644
  	class->get_cal_address = NULL;
  	class->get_alarm_email_address = NULL;
 diff --git a/calendar/libedata-cal/e-cal-backend.h b/calendar/libedata-cal/e-cal-backend.h
-index 093f1bc..b56edf3 100644
+index 50560e6..d0fefb4 100644
 --- a/calendar/libedata-cal/e-cal-backend.h
 +++ b/calendar/libedata-cal/e-cal-backend.h
 @@ -57,15 +57,9 @@ struct _ECalBackendClass {

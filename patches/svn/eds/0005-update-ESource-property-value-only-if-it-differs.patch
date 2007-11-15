@@ -1,4 +1,4 @@
-From ec8866b85cd1bb64f60b858016f14af9022e0b61 Mon Sep 17 00:00:00 2001
+From 56f999ab88180f83c786e36365a0f58b187e4731 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 17 Oct 2007 20:36:49 +0200
 Subject: [PATCH] update ESource property value only if it differs
@@ -9,7 +9,7 @@ This prevents some races between uses of ESource in multiple threads.
  1 files changed, 5 insertions(+), 0 deletions(-)
 
 diff --git a/libedataserver/e-source.c b/libedataserver/e-source.c
-index cb53a31..12fb4fb 100644
+index d8887ab..3b6128e 100644
 --- a/libedataserver/e-source.c
 +++ b/libedataserver/e-source.c
 @@ -874,7 +874,12 @@ e_source_set_property (ESource *source,

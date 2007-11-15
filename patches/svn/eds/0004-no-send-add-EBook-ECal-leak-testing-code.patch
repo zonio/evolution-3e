@@ -1,4 +1,4 @@
-From ff8505755d5f4b4435f74adb73cede88b2116ea4 Mon Sep 17 00:00:00 2001
+From 289b96baab779917eddeba90c6ea6b92637a447c Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 24 Oct 2007 20:45:23 +0200
 Subject: [PATCH] no-send: add EBook/ECal leak testing code
@@ -11,7 +11,7 @@ Subject: [PATCH] no-send: add EBook/ECal leak testing code
  4 files changed, 16 insertions(+), 0 deletions(-)
 
 diff --git a/addressbook/libebook/e-book-view.c b/addressbook/libebook/e-book-view.c
-index 229ba6f..f61d016 100644
+index 51c4ba0..0c6313b 100644
 --- a/addressbook/libebook/e-book-view.c
 +++ b/addressbook/libebook/e-book-view.c
 @@ -269,6 +269,8 @@ e_book_view_dispose (GObject *object)
@@ -24,7 +24,7 @@ index 229ba6f..f61d016 100644
  		if (book_view->priv->book) {
  			g_object_unref (book_view->priv->book);
 diff --git a/addressbook/libebook/e-book.c b/addressbook/libebook/e-book.c
-index c6f829b..f407485 100644
+index 26c7def..737f0c8 100644
 --- a/addressbook/libebook/e-book.c
 +++ b/addressbook/libebook/e-book.c
 @@ -1866,6 +1866,9 @@ do_get_book_view (gboolean sync,
@@ -55,7 +55,7 @@ index c6f829b..f407485 100644
  		if (book->priv->comp_listener) {
  			g_signal_handler_disconnect (book->priv->comp_listener, book->priv->died_signal);
 diff --git a/calendar/libecal/e-cal-view.c b/calendar/libecal/e-cal-view.c
-index 77c5799..4795bf4 100644
+index 35b45e9..6b9a17b 100644
 --- a/calendar/libecal/e-cal-view.c
 +++ b/calendar/libecal/e-cal-view.c
 @@ -216,6 +216,8 @@ e_cal_view_finalize (GObject *object)
@@ -68,7 +68,7 @@ index 77c5799..4795bf4 100644
  	priv = view->priv;
  
 diff --git a/calendar/libecal/e-cal.c b/calendar/libecal/e-cal.c
-index 1184339..2d3d935 100644
+index cf14118..019cc1c 100644
 --- a/calendar/libecal/e-cal.c
 +++ b/calendar/libecal/e-cal.c
 @@ -1046,6 +1046,8 @@ e_cal_init (ECal *ecal, ECalClass *klass)
@@ -96,7 +96,7 @@ index 1184339..2d3d935 100644
 +  g_print("XXXXXXXXXXXXXXX: new cal view %p %p\n", ecal, *query);
 +
  	bonobo_object_unref (BONOBO_OBJECT (our_op->listener));
- 	
+ 
  	e_calendar_remove_op (ecal, our_op);
 -- 
 1.5.3.5.474-dirty

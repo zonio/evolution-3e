@@ -1,4 +1,4 @@
-From 20057e6bac8aaaf753c5c7057539092fdd43a31f Mon Sep 17 00:00:00 2001
+From 626d17d04609e831635da9c7134bb62ced0b68fc Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Tue, 13 Mar 2007 01:55:53 +0100
 Subject: [PATCH] extend plugin system to add support for events on component activation
@@ -10,7 +10,7 @@ Subject: [PATCH] extend plugin system to add support for events on component act
  3 files changed, 34 insertions(+), 1 deletions(-)
 
 diff --git a/shell/e-shell-window.c b/shell/e-shell-window.c
-index a76183c..f7e4476 100644
+index d897160..51cc8b6 100644
 --- a/shell/e-shell-window.c
 +++ b/shell/e-shell-window.c
 @@ -36,6 +36,7 @@
@@ -49,11 +49,11 @@ index a76183c..f7e4476 100644
  }
  
 diff --git a/shell/es-event.c b/shell/es-event.c
-index 78847e3..dfeb356 100644
+index 89ba18f..4fd25e9 100644
 --- a/shell/es-event.c
 +++ b/shell/es-event.c
 @@ -151,6 +151,16 @@ es_event_target_new_upgrade(ESEvent *eme, int major, int minor, int revision)
- 	return t;	
+ 	return t;
  }
  
 +ESEventTargetComponent *

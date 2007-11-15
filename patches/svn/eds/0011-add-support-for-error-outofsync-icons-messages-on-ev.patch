@@ -1,4 +1,4 @@
-From 5a03d8f3a022f82e893b5d2dcba8da02460561e8 Mon Sep 17 00:00:00 2001
+From ac097956f6cb8d40ea433af4f345a894dbaafcd4 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 27 Oct 2007 04:22:23 +0200
 Subject: [PATCH] add support for error/outofsync icons/messages on events in day view
@@ -56,7 +56,7 @@ literal 0
 HcmV?d00001
 
 diff --git a/calendar/libecal/e-cal-component.c b/calendar/libecal/e-cal-component.c
-index edb79b0..183eda8 100644
+index 92bd4b3..72c2d64 100644
 --- a/calendar/libecal/e-cal-component.c
 +++ b/calendar/libecal/e-cal-component.c
 @@ -1755,6 +1755,7 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
@@ -180,7 +180,7 @@ index edb79b0..183eda8 100644
  
  /**
 diff --git a/calendar/libecal/e-cal-component.h b/calendar/libecal/e-cal-component.h
-index 4b1c1c8..a24e99f 100644
+index 4995eeb..06467b2 100644
 --- a/calendar/libecal/e-cal-component.h
 +++ b/calendar/libecal/e-cal-component.h
 @@ -330,6 +330,9 @@ gboolean e_cal_component_has_attendees (ECalComponent *comp);
@@ -194,7 +194,7 @@ index 4b1c1c8..a24e99f 100644
  void e_cal_component_get_attachment_list (ECalComponent *comp, GSList **attachment_list);
  void e_cal_component_set_attachment_list (ECalComponent *comp, GSList *attachment_list);
 diff --git a/libedataserver/e-categories.c b/libedataserver/e-categories.c
-index 74c8208..059e0bb 100644
+index eee93ed..ed2d1ae 100644
 --- a/libedataserver/e-categories.c
 +++ b/libedataserver/e-categories.c
 @@ -377,6 +377,10 @@ initialize_categories (void)
