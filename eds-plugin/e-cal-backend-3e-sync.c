@@ -672,7 +672,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
   
   if (!e_cal_backend_3e_open_connection(cb, &local_err))
   {
-    g_warning("Sync failed. Can't open connection to the 3E server. (%s)", local_err->message);
+    g_warning("Sync failed. Can't open connection to the 3E server. (%s)", local_err ? local_err->message : "Unknown error");
     g_clear_error(&local_err);
     return FALSE;
   }
