@@ -111,7 +111,7 @@ gboolean e_cal_backend_3e_open_connection(ECalBackend3e* cb, GError** err)
     return TRUE;
   }
 
-  if (xr_client_open(cb->priv->conn, cb->priv->server_uri, err) < 0)
+  if (!xr_client_open(cb->priv->conn, cb->priv->server_uri, err))
     goto err;
 
   ESClient_auth(cb->priv->conn, cb->priv->username, cb->priv->password, &local_err);
