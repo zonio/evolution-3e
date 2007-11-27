@@ -1,4 +1,4 @@
-From ac097956f6cb8d40ea433af4f345a894dbaafcd4 Mon Sep 17 00:00:00 2001
+From 885d755aa7cee9e966dbfcb5586acc16ecf2d784 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 27 Oct 2007 04:22:23 +0200
 Subject: [PATCH] add support for error/outofsync icons/messages on events in day view
@@ -194,10 +194,10 @@ index 4995eeb..06467b2 100644
  void e_cal_component_get_attachment_list (ECalComponent *comp, GSList **attachment_list);
  void e_cal_component_set_attachment_list (ECalComponent *comp, GSList *attachment_list);
 diff --git a/libedataserver/e-categories.c b/libedataserver/e-categories.c
-index eee93ed..ed2d1ae 100644
+index c190416..89cd94e 100644
 --- a/libedataserver/e-categories.c
 +++ b/libedataserver/e-categories.c
-@@ -377,6 +377,10 @@ initialize_categories (void)
+@@ -399,6 +399,10 @@ initialize_categories (void)
  
  	g_atexit (finalize_categories);
  
@@ -209,5 +209,5 @@ index eee93ed..ed2d1ae 100644
  	if (n_added > 0) {
  		g_debug ("Loaded %d categories", n_added);
 -- 
-1.5.3.5.474-dirty
+1.5.3.6.728-dirty
 

@@ -1,4 +1,4 @@
-From 631a7371614158e7813eff70c2f1e044ea55eb32 Mon Sep 17 00:00:00 2001
+From 8398daeb818fc9a43f8cd0222fea11caba8d997a Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 23 Jun 2007 13:58:04 +0200
 Subject: [PATCH] expand new groups by default in ESourceSelector
@@ -39,5 +39,5 @@ index c69509e..a3d0962 100644
  
  	if (rebuild_data->selection_changed)
 -- 
-1.5.3.5.474-dirty
+1.5.3.6.728-dirty
 

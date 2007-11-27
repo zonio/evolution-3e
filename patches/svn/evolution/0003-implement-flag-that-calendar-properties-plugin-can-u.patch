@@ -1,4 +1,4 @@
-From 4a6e09e3ece0e21c18b8516fa2b3f1a574ecae4a Mon Sep 17 00:00:00 2001
+From b32e7f12e553db4988c4ff1010eb0e1052c553f2 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 17 Oct 2007 20:40:33 +0200
 Subject: [PATCH] implement flag that calendar properties plugin can use to disable sync
@@ -37,5 +37,5 @@ index 015a3f0..4bbd675 100644
  
  struct _ECalConfigTargetPrefs {
 -- 
-1.5.3.5.474-dirty
+1.5.3.6.728-dirty
 

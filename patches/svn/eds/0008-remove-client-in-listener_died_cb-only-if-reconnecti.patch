@@ -1,4 +1,4 @@
-From 0fe1caef936eb59bb6afe63dba5ee035674680a5 Mon Sep 17 00:00:00 2001
+From 8091213d502aa7250eb7f055a4b8497d4a693857 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Thu, 25 Oct 2007 02:53:45 +0200
 Subject: [PATCH] remove client in listener_died_cb only if reconnection failed
@@ -22,5 +22,5 @@ index 542ef7e..166858a 100644
  
  static void
 -- 
-1.5.3.5.474-dirty
+1.5.3.6.728-dirty
 

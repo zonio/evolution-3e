@@ -1,4 +1,4 @@
-From 289b96baab779917eddeba90c6ea6b92637a447c Mon Sep 17 00:00:00 2001
+From 0034a9e3b70670b0735fdcf0482d95fe426d014c Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 24 Oct 2007 20:45:23 +0200
 Subject: [PATCH] no-send: add EBook/ECal leak testing code
@@ -99,5 +99,5 @@ index cf14118..019cc1c 100644
  
  	e_calendar_remove_op (ecal, our_op);
 -- 
-1.5.3.5.474-dirty
+1.5.3.6.728-dirty
 

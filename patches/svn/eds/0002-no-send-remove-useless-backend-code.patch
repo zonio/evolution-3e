@@ -1,4 +1,4 @@
-From 241761fd1e49fffa636a43bd7e736b0bac89fbee Mon Sep 17 00:00:00 2001
+From c07608b50b2dad15c2243ec60a1b279c55bfe75d Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 17 Oct 2007 20:37:56 +0200
 Subject: [PATCH] no-send: remove useless backend code
@@ -72,5 +72,5 @@ index 50560e6..d0fefb4 100644
  	void (* is_read_only) (ECalBackend *backend, EDataCal *cal);
  	void (* get_cal_address) (ECalBackend *backend, EDataCal *cal);
 -- 
-1.5.3.5.474-dirty
+1.5.3.6.728-dirty
 

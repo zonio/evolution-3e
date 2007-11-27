@@ -1,4 +1,4 @@
-From 626d17d04609e831635da9c7134bb62ced0b68fc Mon Sep 17 00:00:00 2001
+From afe9b1e04c31ff4c38c313e6bff34de3a9d4e04d Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Tue, 13 Mar 2007 01:55:53 +0100
 Subject: [PATCH] extend plugin system to add support for events on component activation
@@ -113,5 +113,5 @@ index 9612198..cb61438 100644
  
  /* The object */
 -- 
-1.5.3.5.474-dirty
+1.5.3.6.728-dirty
 

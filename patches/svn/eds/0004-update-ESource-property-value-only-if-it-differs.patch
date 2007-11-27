@@ -1,4 +1,4 @@
-From 56f999ab88180f83c786e36365a0f58b187e4731 Mon Sep 17 00:00:00 2001
+From 5c1d79a36e890b240d7998a1688ca87ab7b0b50e Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 17 Oct 2007 20:36:49 +0200
 Subject: [PATCH] update ESource property value only if it differs
@@ -26,5 +26,5 @@ index d8887ab..3b6128e 100644
  		g_hash_table_remove (priv->properties, property);
  
 -- 
-1.5.3.5.474-dirty
+1.5.3.6.728-dirty
 
