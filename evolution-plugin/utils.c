@@ -78,6 +78,8 @@ void e_source_set_3e_properties(ESource* source, const char* calname, const char
   e_source_set_property(source, "eee-server", account->server);
   e_source_set_property(source, "eee-owner", owner);
   e_source_set_property(source, "eee-account", account->name);
+  if (g_ascii_strcasecmp(account->name, owner))
+    e_source_set_property(source, "subscriber", account->name);
   e_source_set_property(source, "eee-calname", calname);
   if (perm)
     e_source_set_property(source, "eee-perm", perm);
