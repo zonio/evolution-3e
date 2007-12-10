@@ -937,13 +937,16 @@ static ECalBackendSyncStatus e_cal_backend_3e_is_read_only (ECalBackendSync * ba
 }
 
 /** Returns the email address of the owner of the calendar.
+ *
+ * If owner differs from username, ORGANIZER;SENT-BY=xxx will be set by the
+ * event-page.c:event_page_fill_component() code.
  */
 static ECalBackendSyncStatus e_cal_backend_3e_get_cal_address (ECalBackendSync * backend, EDataCal * cal, char **address)
 {
   BACKEND_METHOD_CHECKED();
   g_return_val_if_fail (address != NULL, GNOME_Evolution_Calendar_OtherError);
 
-  *address = g_strdup (priv->username);
+  *address = g_strdup (priv->owner);
 
   return GNOME_Evolution_Calendar_Success;
 }
