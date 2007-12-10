@@ -914,8 +914,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_static_capabilities (ECalBacke
   *capabilities = g_strdup (
     CAL_STATIC_CAPABILITY_NO_THISANDFUTURE ","
     CAL_STATIC_CAPABILITY_NO_THISANDPRIOR ","
-    CAL_STATIC_CAPABILITY_NO_CONV_TO_RECUR ","
-    CAL_STATIC_CAPABILITY_REQ_SEND_OPTIONS
+    CAL_STATIC_CAPABILITY_NO_CONV_TO_RECUR
   );
 
   return GNOME_Evolution_Calendar_Success;
