@@ -210,7 +210,7 @@ void icalcomponent_collect_recipients(icalcomponent* icomp, const char* organize
   {
     ECalComponentAttendee *attendee = iter->data;
     /* priv->username is the organizer - mail sender, do not send him invitation */
-    if (organizer == NULL || !strcmp(organizer, attendee->value + 7))
+    if (organizer == NULL || g_ascii_strcasecmp(organizer, attendee->value + 7))
       *recipients = g_slist_append(*recipients, g_strdup(attendee->value + 7));
   }
 
