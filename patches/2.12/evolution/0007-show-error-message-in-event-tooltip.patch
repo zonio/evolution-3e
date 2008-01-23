@@ -1,4 +1,4 @@
-From 949562976b37d4cd6798f66ff7f16780b48a0ede Mon Sep 17 00:00:00 2001
+From a318e1bb71b18b44f29942d4c5d4efd563372713 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 27 Oct 2007 07:33:44 +0200
 Subject: [PATCH] show error message in event tooltip
@@ -41,5 +41,5 @@ index f52d05d..f1801b9 100644
  	e_cal_component_get_dtend (newcomp, &dtend);
  			
 -- 
-1.5.3.4.320-dirty
+1.5.4-dirty
 

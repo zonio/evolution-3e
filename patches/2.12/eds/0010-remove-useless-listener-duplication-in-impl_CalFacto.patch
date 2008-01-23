@@ -1,4 +1,4 @@
-From e5728f480d7e6e0fe90118299d7ec10906d0732b Mon Sep 17 00:00:00 2001
+From 1aa457d739060c01d561f4fb04f4b1b9876535c0 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Thu, 25 Oct 2007 02:55:26 +0200
 Subject: [PATCH] remove useless listener duplication in impl_CalFactory_getCal()
@@ -9,10 +9,10 @@ it is already done in e_data_cal_new()
  1 files changed, 7 insertions(+), 22 deletions(-)
 
 diff --git a/calendar/libedata-cal/e-data-cal-factory.c b/calendar/libedata-cal/e-data-cal-factory.c
-index cc548cf..191a300 100644
+index d221eb9..7e24387 100644
 --- a/calendar/libedata-cal/e-data-cal-factory.c
 +++ b/calendar/libedata-cal/e-data-cal-factory.c
-@@ -136,13 +136,11 @@ impl_CalFactory_getCal (PortableServer_Servant servant,
+@@ -138,13 +138,11 @@ impl_CalFactory_getCal (PortableServer_Servant servant,
  			const GNOME_Evolution_Calendar_CalListener listener,
  			CORBA_Environment *ev)
  {
@@ -27,7 +27,7 @@ index cc548cf..191a300 100644
  	ECalBackendFactory *backend_factory;
  	ESource *source;
  	char *str_uri;
-@@ -186,18 +184,6 @@ impl_CalFactory_getCal (PortableServer_Servant servant,
+@@ -188,18 +186,6 @@ impl_CalFactory_getCal (PortableServer_Servant servant,
  		bonobo_exception_set (ev, ex_GNOME_Evolution_Calendar_CalFactory_UnsupportedMethod);
  		goto cleanup;
  	}
@@ -46,10 +46,10 @@ index cc548cf..191a300 100644
  
  	/* Look for an existing backend */
  	backend = g_hash_table_lookup (factory->priv->backends, uri_type_string);
-@@ -221,17 +207,16 @@ impl_CalFactory_getCal (PortableServer_Servant servant,
- 	
+@@ -224,17 +210,16 @@ impl_CalFactory_getCal (PortableServer_Servant servant,
  	/* Create the corba calendar */
  	cal = e_data_cal_new (backend, listener);
+ 	printf ("cal = %p\n", cal);
 -	if (!cal) {
 +	if (cal) {
 +		/* Let the backend know about its clients corba clients */
@@ -71,5 +71,5 @@ index cc548cf..191a300 100644
  	e_uri_free (uri);
  	g_free (uri_type_string);
 -- 
-1.5.3.4.206-dirty
+1.5.4-dirty
 

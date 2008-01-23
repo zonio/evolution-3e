@@ -1,4 +1,4 @@
-From f0d37935fee37533d129a3174bbf7528d0efdd0f Mon Sep 17 00:00:00 2001
+From 8f056e8176e940b903444d820b61202d22c4f42d Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 13 Oct 2007 09:53:23 +0200
 Subject: [PATCH] only add weather/http groups if appropriate plugins are enabled
@@ -58,5 +58,5 @@ index b73d4ec..a545b70 100644
  		group = e_source_group_new (_("Weather"), WEATHER_BASE_URI);
  		e_source_list_add_group (source_list, group, -1);
 -- 
-1.5.3.2.99-dirty
+1.5.4-dirty
 

@@ -1,4 +1,4 @@
-From 537596663c7da41e6f53dd814eaa53d587ad7282 Mon Sep 17 00:00:00 2001
+From 4d574203f632958bb2d856cdd94399efc819600b Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 24 Feb 2007 18:22:38 +0100
 Subject: [PATCH] overriding of popup menu items as documented in e_popup_add_items()
@@ -43,5 +43,5 @@ index 5492ca1..a8d28e0 100644
  		tmp = strrchr(item->path, '/');
  		if (tmp) {
 -- 
-1.5.3.2.99-dirty
+1.5.4-dirty
 

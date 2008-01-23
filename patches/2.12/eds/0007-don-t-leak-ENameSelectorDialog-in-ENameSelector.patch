@@ -1,4 +1,4 @@
-From fe851b42aa12857d1e9983b9239b8f4c0b25169c Mon Sep 17 00:00:00 2001
+From 3450f63a246bcebfcc27e50c0188af8e256bb105 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Wed, 24 Oct 2007 21:08:04 +0200
 Subject: [PATCH] don't leak ENameSelectorDialog in ENameSelector
@@ -34,5 +34,5 @@ index f2b244d..dd728fd 100644
  	if (G_OBJECT_CLASS (e_name_selector_dialog_parent_class)->finalize)
  		G_OBJECT_CLASS (e_name_selector_dialog_parent_class)->finalize (object);
 -- 
-1.5.3.4.206-dirty
+1.5.4-dirty
 
