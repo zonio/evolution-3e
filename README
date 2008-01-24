@@ -1,4 +1,98 @@
-Add this to your dnsmasq.conf for testing:
+3E Calendar Plugin for Evolution
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  txt-record=megous.com,eee server=localhost:4444
-  txt-record=zonio.net,eee server=localhost:4444
+3E calendar plugin for Evolution is implementation of 3E calendaring
+protocol for this popular opensource groupware suite. It allows you to
+access calendars stored on a 3E server and schedule meetings.
+
+Features:
+
+  - Automatic 3E account setup via DNS TXT records
+  - Online and offline calendar access with automatic switchover on server
+    failure
+  - Add and remove calendars from your account
+  - Calendar list synchronization with server (admin can remotely subscribe or
+    add calendars for users, setup ACLs, etc.)
+  - Modify calendar access control list (ACL)
+  - Subscribe or unsubscribe from shared calendars
+  - Free/busy information retrieval
+  - Meeting scheduling (with "act on behalf of" feature for shared calendars)
+  
+  and more...
+
+For more information see http://www.zonio.net/3e or join our mailing list on
+http://zhost.zonio.net/mailman/listinfo/3e-list.
+
+
+Quick Installation Instructions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+3E calendar plugin requires a few small patches to evolution and
+evolution-data-server (EDS). These will be integrated upstream in the future. As
+of now you still need to rebuild evolution and EDS with patches from patches/
+directory.
+
+Get and build libxr-0.9.92 or newer.
+
+Build and install 3E plugin itself:
+
+  ./configure
+  make
+  sudo make install
+
+
+Quick Installation Instructions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These instructions assume you have 'you@your-domain.net' e-mail account in
+evolution.
+
+1) Setup DNS
+
+  Setup DNS TXT records for the domain of your email account. If you just want to
+  try 3E without changing DNS TXT records for your domain globaly, you can setup
+  dnsmasq(8) to act as DNS cache and supply TXT records for your domain.
+
+  Add this line to your /etc/dnsmasq.conf:
+
+    txt-record=your-domain.net,eee server=localhost:4444
+
+2) Get 3E server
+
+  Get 3E server from http://www.zonio.net/3e/releases/m3es-static.tar.gz and
+  start it:
+
+    ./m3es \
+      --bind=*:4444 \
+      --cert=server.pem \
+      --threads=10 \
+      --storage=storage.xml \
+      --daemon \
+      --pid=server.pid
+
+  or
+
+    ./run-server.sh
+
+3) Create your user account on the server
+
+  You can do this by editing storage.xml or using 3E command line client.
+
+  Run ./m3es-client and type in following commands:
+
+    connect 'https://localhost:4444/RPC2'
+    auth 'root' 'qwe'
+    createUser 'you@your-domain.net' 'qwe'
+    sudo 'you@your-domain.net'
+    setUserAttribute 'realname' 'Your Name' 'public'
+    newCalendar 'personal'
+    setCalendarAttribute 'personal' 'title' 'Personal' 'public'
+    setCalendarAttribute 'personal' 'color' 'aabcbc' 'public'
+    disconnect
+    quit
+
+  or edit and run ./create-account.sh.
+
+4) Start evolution
+
+  You should be now able to see your 'Personal' calendar in a calendar list.

@@ -1,0 +1,18 @@
+0.9.3 - 2008-01-24
+~~~~~~~~~~~~~~~~~~
+Initial release!
+
+Supports:
+
+  - Automatic 3E account setup via DNS TXT records
+  - Online and offline calendar access with automatic switchover on server
+    failure
+  - Add and remove calendars from your account
+  - Calendar list synchronization with server (admin can remotely subscribe or
+    add calendars for users, setup ACLs, etc.)
+  - Modify calendar access control list (ACL)
+  - Subscribe or unsubscribe from shared calendars
+  - Free/busy information retrieval
+  - Meeting scheduling (with "act on behalf of" feature for shared calendars)
+
+  and more...
