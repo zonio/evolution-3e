@@ -13,6 +13,7 @@ libecalbackend3e_la_SOURCES = \
   e-cal-backend-3e-factory.h \
   e-cal-backend-3e.c \
   e-cal-backend-3e.h \
+  e-cal-backend-3e-priv.h \
   dns-txt-search.c \
   dns-txt-search.h \
   e-cal-backend-3e-utils.c \

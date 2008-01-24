@@ -95,6 +95,7 @@ AC_OUTPUT([
   interface/Makefile
   eds-plugin/Makefile
   evolution-plugin/Makefile
+  patches/Makefile
   evolution-plugin/org-gnome-evolution-eee.eplug
   evolution-plugin/org-gnome-eee-cal-subscription.xml
 ])
