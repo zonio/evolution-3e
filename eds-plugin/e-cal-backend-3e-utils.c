@@ -198,35 +198,142 @@ gboolean icalcomponent_3e_status_is_deleted(icalcomponent* comp)
   return status && !g_ascii_strcasecmp(status, "deleted");
 }
 
-/** Collect attendee emails from the iCal component.
+/** Get VEVENT from the iTip.
  *
- * To exclude username from the list, pass his name using @a organizer
- * parameter.
+ * VCALENDAR
+ *   VTIMEZONE+
+ *   VEVENT    <--- will return this
  * 
+ * @param comp iCal component.
+ * 
+ * @return VEVENT icalcomponent object or NULL.
+ */
+icalcomponent* icalcomponent_get_itip_payload(icalcomponent* comp)
+{
+  icalcomponent* ret = NULL;
+
+  g_return_val_if_fail(comp != NULL, NULL);
+
+  if (icalcomponent_isa(comp) == ICAL_VCALENDAR_COMPONENT)
+  {
+    icalcomponent *vevent = icalcomponent_get_first_component(comp, ICAL_VEVENT_COMPONENT);
+    if (vevent)
+      ret = icalcomponent_new_clone(vevent);
+  }
+  else if (icalcomponent_isa(comp) == ICAL_VEVENT_COMPONENT)
+    ret = icalcomponent_new_clone(comp);
+
+  return ret;
+}
+
+/** Get iTIP method.
+ * 
+ * @param comp iCal component.
+ * 
+ * @return Method.
+ */
+icalproperty_method icalcomponent_get_itip_method(icalcomponent* comp)
+{
+  icalproperty_method method = ICAL_METHOD_NONE;
+
+  if (icalcomponent_isa(comp) == ICAL_VCALENDAR_COMPONENT)
+  {
+    icalcomponent *vevent = icalcomponent_get_first_component(comp, ICAL_VEVENT_COMPONENT);
+
+    if (vevent && icalcomponent_get_first_property(vevent, ICAL_METHOD_PROPERTY))
+      method = icalcomponent_get_method(vevent);
+    else
+      method = icalcomponent_get_method(comp);
+  }
+  else if (icalcomponent_isa(comp) == ICAL_VEVENT_COMPONENT)
+    method = icalcomponent_get_method(comp);
+
+  return method;
+}
+
+static const char* strip_mailto(const char *address) 
+{
+  if (address && !g_ascii_strncasecmp(address, "mailto:", 7))
+    address += 7;
+  return address;
+}
+
+/** Collect recipients from the iTip (based on the METHOD).
+ * 
+ * To exclude username from the list, pass his name using @a sender
+ * parameter.
+ *
  * @param icomp iCal component.
- * @param organizer Username to exclude from the list.
+ * @param sender Username to exclude from the list.
  * @param recipients Pointer to the list of recipients' emails. It will be
  * appended to.
  */
-void icalcomponent_collect_recipients(icalcomponent* icomp, const char* organizer, GSList** recipients)
+void icalcomponent_collect_recipients(icalcomponent* icomp, const char* sender, GSList** recipients)
 {
-  ECalComponent *comp;
-  GSList *attendees = NULL, *iter;
+  GSList *to_list = NULL, *attendees = NULL, *iter;
+  ECalComponentOrganizer organizer;
+  icalproperty_method method;
+  icalcomponent* payload;
+  ECalComponent* ecomp = NULL;
 
-  comp = e_cal_component_new();
-  e_cal_component_set_icalcomponent(comp, icalcomponent_new_clone(icomp));
+  payload = icalcomponent_get_itip_payload(icomp);
+  method = icalcomponent_get_itip_method(icomp);
 
-  e_cal_component_get_attendee_list(comp, &attendees);
-  for (iter = attendees; iter; iter = iter->next)
+  if (payload == NULL)
+    goto out;
+
+  ecomp = e_cal_component_new();
+  e_cal_component_set_icalcomponent(ecomp, payload);
+  e_cal_component_get_attendee_list(ecomp, &attendees);
+  e_cal_component_get_organizer(ecomp, &organizer);
+  if (organizer.value == NULL)
+    goto out;
+
+  switch (method)
   {
-    ECalComponentAttendee *attendee = iter->data;
-    /* priv->username is the organizer - mail sender, do not send him invitation */
-    if (organizer == NULL || g_ascii_strcasecmp(organizer, attendee->value + 7))
-      *recipients = g_slist_append(*recipients, g_strdup(attendee->value + 7));
+    case ICAL_METHOD_REQUEST:
+    case ICAL_METHOD_CANCEL:
+      for (iter = attendees; iter; iter = iter->next)
+      {
+        ECalComponentAttendee *att = iter->data;
+
+        if (!g_ascii_strcasecmp(att->value, organizer.value))
+          continue;
+        else if (att->sentby && !g_ascii_strcasecmp(att->sentby, organizer.sentby))
+          continue;
+        else if (!g_ascii_strcasecmp(strip_mailto(att->value), sender))
+          continue;
+        else if (att->status == ICAL_PARTSTAT_DELEGATED && (att->delto && *att->delto)
+            && !(att->rsvp) && method == ICAL_METHOD_REQUEST)
+          continue;
+
+        to_list = g_slist_append(to_list, g_strdup(strip_mailto(att->value)));
+      }
+     break;
+
+    case ICAL_METHOD_REPLY:
+      to_list = g_slist_append(to_list, g_strdup(strip_mailto(organizer.value)));
+      break;
+
+    case ICAL_METHOD_ADD:
+    case ICAL_METHOD_REFRESH:
+    case ICAL_METHOD_COUNTER:
+    case ICAL_METHOD_DECLINECOUNTER:
+      to_list = g_slist_append(to_list, g_strdup(strip_mailto(organizer.value)));
+      //XXX: send the status to delegatee to the delegate also
+      break;
+
+    case ICAL_METHOD_PUBLISH:
+    default:
+      break;
   }
 
+out:
   e_cal_component_free_attendee_list(attendees);
-  g_object_unref (comp);	
+  if (ecomp)
+    g_object_unref(ecomp);
+  if (recipients)
+    *recipients = to_list;
 }
 
 gboolean e_cal_component_id_compare(ECalComponentId* id1, ECalComponentId* id2)

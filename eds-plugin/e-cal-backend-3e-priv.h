@@ -127,7 +127,9 @@ int icalcomponent_get_cache_state(icalcomponent* comp);
 /* misc */
 const char* icalcomponent_get_tzid(icalcomponent* comp);
 gboolean icalcomponent_3e_status_is_deleted(icalcomponent* comp);
-void icalcomponent_collect_recipients(icalcomponent* icomp, const char* organizer, GSList** recipients);
+icalproperty_method icalcomponent_get_itip_method(icalcomponent* comp);
+icalcomponent* icalcomponent_get_itip_payload(icalcomponent* comp);
+void icalcomponent_collect_recipients(icalcomponent* icomp, const char* sender, GSList** recipients);
 void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GError* err);
 gboolean e_cal_component_match_id(ECalComponent* comp, ECalComponentId* id);
 gboolean e_cal_component_id_compare(ECalComponentId* id1, ECalComponentId* id2);

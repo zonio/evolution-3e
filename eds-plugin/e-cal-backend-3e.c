@@ -849,9 +849,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_objects (ECalBackendSync *
 /** Send a set of meetings in one go, which means, for backends that do support
  * it, sending information about the meeting to all attendees.
  */
-static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * backend, EDataCal * cal, const char *calobj, GList ** users, char **modified_calobj)
+static ECalBackendSyncStatus e_cal_backend_3e_send_objects(ECalBackendSync* backend, EDataCal* cal, const char* calobj, GList** users, char** modified_calobj)
 {
-  icalcomponent *vtop;
+  icalcomponent *comp;
   GSList* recipients = NULL, *iter;
 
   BACKEND_METHOD_CHECKED("calobj=%s", calobj);
@@ -859,30 +859,19 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * ba
   g_return_val_if_fail(calobj != NULL, GNOME_Evolution_Calendar_InvalidObject);
 
   /* parse calobj */
-  vtop = icalparser_parse_string(calobj);
-  if (icalcomponent_isa(vtop) == ICAL_VCALENDAR_COMPONENT)
-  {
-    icalcomponent *vevent;
-
-    for (vevent = icalcomponent_get_first_component(vtop, ICAL_VEVENT_COMPONENT);
-         vevent; vevent = icalcomponent_get_next_component(vtop, ICAL_VEVENT_COMPONENT))
-      icalcomponent_collect_recipients(vevent, priv->username, &recipients);
-  }
-  else if (icalcomponent_isa(vtop) == ICAL_VEVENT_COMPONENT)
-    icalcomponent_collect_recipients(vtop, priv->username, &recipients);
-  else
-  {
-    icalcomponent_free(vtop);
+  comp = icalparser_parse_string(calobj);
+  if (comp == NULL)
     return GNOME_Evolution_Calendar_InvalidObject;
-  }
-  
+
+  icalcomponent_collect_recipients(comp, priv->username, &recipients);
+  icalcomponent_free(comp);
+
   /* connect to the server and send iTip */
   if (!e_cal_backend_3e_calendar_is_online(cb))
     return GNOME_Evolution_Calendar_RepositoryOffline;
 
   if (!e_cal_backend_3e_open_connection(cb, &local_err))
   {
-    icalcomponent_free(vtop);
     g_error_free(local_err);
     return GNOME_Evolution_Calendar_OtherError;
   }
@@ -894,20 +883,22 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects (ECalBackendSync * ba
     {
       g_slist_free(recipients);
       g_slist_foreach(recipients, (GFunc)g_free, NULL);
-      g_error_free(local_err);
-      icalcomponent_free(vtop);
       e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't send iTIPs.", local_err);
+      g_error_free(local_err);
       return GNOME_Evolution_Calendar_OtherError;
     }
   }
 
   /* this tells evolution that it should not send emails (iMIPs) by itself */
   for (iter = recipients; iter; iter = iter->next)
-    *users = g_list_append(*users, iter->data);
+    //BUG: there is a bug in itip-utils.c:509, name requires MAILTO: for now
+    *users = g_list_append(*users, g_strdup_printf("MAILTO:%s", (char*)iter->data));
+
+  g_slist_foreach(recipients, (GFunc)g_free, NULL);
   g_slist_free(recipients);
+
   *modified_calobj = g_strdup(calobj);
 
-  icalcomponent_free(vtop);
   return GNOME_Evolution_Calendar_Success;
 }
 
