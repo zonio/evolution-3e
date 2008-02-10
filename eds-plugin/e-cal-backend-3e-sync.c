@@ -639,7 +639,8 @@ static gboolean sync_timezones_to_server(ECalBackend3e* cb)
     icalcomponent_set_cache_state(zone_comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
     char* object = icalcomponent_as_ical_string(zone_comp);
 
-    if (state == E_CAL_COMPONENT_CACHE_STATE_CREATED)
+    //XXX: always try to add all timezones from the cache
+    //if (state == E_CAL_COMPONENT_CACHE_STATE_CREATED)
     {
       ESClient_addObject(cb->priv->conn, cb->priv->calspec, object, &local_err);
       if (local_err)
