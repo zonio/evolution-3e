@@ -821,6 +821,19 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_objects (ECalBackendSync *
     icalproperty_method method;
     icalcomponent *vevent;
 
+    // store unknown timezones from the iTip
+    for (vevent = icalcomponent_get_first_component(vtop, ICAL_VTIMEZONE_COMPONENT);
+         vevent; vevent = icalcomponent_get_next_component(vtop, ICAL_VTIMEZONE_COMPONENT))
+    {
+      icaltimezone* zone = icaltimezone_new();
+      icaltimezone_set_component(zone, vevent);
+      const char* tzid = icaltimezone_get_tzid(zone);
+      if (!e_cal_backend_cache_get_timezone(priv->cache, tzid))
+        e_cal_backend_cache_put_timezone(priv->cache, zone);
+      icaltimezone_free(zone, TRUE);
+    }
+
+    // events
     for (vevent = icalcomponent_get_first_component(vtop, ICAL_VEVENT_COMPONENT);
          vevent; vevent = icalcomponent_get_next_component(vtop, ICAL_VEVENT_COMPONENT))
     {
