@@ -639,25 +639,18 @@ static gboolean sync_timezones_to_server(ECalBackend3e* cb)
     icalcomponent_set_cache_state(zone_comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
     char* object = icalcomponent_as_ical_string(zone_comp);
 
-    switch (state)
+    if (state == E_CAL_COMPONENT_CACHE_STATE_CREATED)
     {
-      case E_CAL_COMPONENT_CACHE_STATE_CREATED:
+      ESClient_addObject(cb->priv->conn, cb->priv->calspec, object, &local_err);
+      if (local_err)
       {
-        ESClient_addObject(cb->priv->conn, cb->priv->calspec, object, &local_err);
-        if (local_err)
-        {
-          g_clear_error(&local_err);
-          break;
-        }
-
-        g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-        e_cal_backend_cache_put_timezone(cb->priv->cache, zone);
-        g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
+        g_clear_error(&local_err);
         break;
       }
 
-      default:
-        break;
+      g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
+      e_cal_backend_cache_put_timezone(cb->priv->cache, zone);
+      g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
     }
 
     icaltimezone_free (zone, 1);
