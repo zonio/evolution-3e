@@ -85,22 +85,22 @@ again:
  */
 static const char* icomp_x_prop_get(icalcomponent *comp, const char *key)
 {
-	icalproperty *iter;
+  icalproperty *iter;
 
   g_return_val_if_fail(comp != NULL, NULL);
   g_return_val_if_fail(key != NULL, NULL);
-	
+  
   for (iter = icalcomponent_get_first_property(comp, ICAL_X_PROPERTY);
        iter;
        iter = icalcomponent_get_next_property(comp, ICAL_X_PROPERTY))
   {
     const char *str = icalproperty_get_x_name (iter);
 
-		if (str && !strcmp (str, key))
-      return icalproperty_get_value_as_string (iter);	
+    if (str && !strcmp (str, key))
+      return icalproperty_get_value_as_string (iter); 
   }
 
-	return NULL;
+  return NULL;
 }
 
 /** Set iCal component's X-EEE-CACHE-STATE property.
