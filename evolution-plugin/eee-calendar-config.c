@@ -183,7 +183,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
 {
   ESource* source = target->source;
   ESourceGroup *group = e_source_peek_group(source);
-  guint32 color = 0;
+  const char* color = e_source_peek_color_spec(source);
 
   //g_debug("** EEE ** Properties Dialog Commit Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
@@ -192,9 +192,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
   if (!eee_plugin_online)
     return;
 
-  e_source_get_color(target->source, &color);
-
-  if (is_new_calendar_dialog(target->source))
+  if (is_new_calendar_dialog(source))
   {
     char* calname = NULL;
     EeeAccount* account = eee_accounts_manager_find_account_by_group(mgr(), group);

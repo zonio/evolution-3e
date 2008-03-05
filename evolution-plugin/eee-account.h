@@ -114,7 +114,7 @@ gboolean          eee_account_update_calendar_settings  (EeeAccount* self,
                                                          const char* owner, 
                                                          const char* calname, 
                                                          const char* title, 
-                                                         guint32 color);
+                                                         const char* color);
 gboolean          eee_account_create_new_calendar       (EeeAccount* self, 
                                                          char** calname);
 gboolean          eee_account_unsubscribe_calendar      (EeeAccount* self, 

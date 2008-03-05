@@ -372,17 +372,12 @@ gboolean eee_account_set_calendar_attribute(EeeAccount* self, const char* owner,
   return TRUE;
 }
 
-gboolean eee_account_update_calendar_settings(EeeAccount* self, const char* owner, const char* calname, const char* title, guint32 color)
+gboolean eee_account_update_calendar_settings(EeeAccount* self, const char* owner, const char* calname, const char* title, const char* color)
 {
   gboolean rs = TRUE;
-  char* color_string = NULL;
 
   rs &= eee_account_set_calendar_attribute(self, owner, calname, "title", title, TRUE);
-
-  if (color)
-    color_string = g_strdup_printf("%06x", color);
-  rs &= eee_account_set_calendar_attribute(self, owner, calname, "color", color_string, FALSE);
-  g_free(color_string);
+  rs &= eee_account_set_calendar_attribute(self, owner, calname, "color", color, FALSE);
 
   return rs;
 }
