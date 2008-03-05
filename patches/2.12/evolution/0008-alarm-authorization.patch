@@ -1,0 +1,66 @@
+Index: alarm-notify.c
+===================================================================
+--- alarm-notify.c	(revision 35135)
++++ alarm-notify.c	(working copy)
+@@ -418,25 +418,19 @@
+ {
+ 	AlarmNotifyPrivate *priv;
+ 	ECal *client;
+-	EUri *e_uri;
+ 	char *str_uri;
+-	char *pass_key;
+ 	g_return_if_fail (an != NULL);
+ 	g_return_if_fail (IS_ALARM_NOTIFY (an));
+ 
+ 	/* Make sure the key used in for getting password is properly generated for all types of backends */
+ 	priv = an->priv;
+ 	str_uri = e_source_get_uri (source);
+-	e_uri = e_uri_new (str_uri);
+-	pass_key = e_uri_to_string (e_uri, FALSE);
+-	e_uri_free (e_uri);
+ 	
+ 	g_mutex_lock (an->priv->mutex);
+ 	/* See if we already know about this uri */
+ 	if (g_hash_table_lookup (priv->uri_client_hash[source_type], str_uri)) {
+ 		g_mutex_unlock (an->priv->mutex);
+ 		g_free (str_uri);
+-		g_free (pass_key);
+ 		return;
+ 	}
+ 	/* if loading of this requires password and password is not currently availble in e-password
+@@ -444,16 +438,27 @@
+ 
+ 	if (e_source_get_property (source, "auth")) {
+ 		const gchar *name = e_source_get_property (source, "auth-domain");
++		char* pass_key;
+ 
+ 		if (!name)
+ 			name = e_source_peek_name (source);
+ 
++		pass_key = g_strdup(e_source_get_property (source, "auth-key"));
++		if (!pass_key) {
++			EUri *e_uri = e_uri_new (str_uri);
++			pass_key = e_uri_to_string (e_uri, FALSE);
++			e_uri_free (e_uri);
++		}
++
++
+ 		if (!e_passwords_get_password (name, pass_key)) {
+ 			g_mutex_unlock (an->priv->mutex);
+ 			g_free (str_uri);
+ 			g_free (pass_key);
+ 			return;
+ 		}
++
++		g_free (pass_key);
+ 	}
+ 	
+ 	client = auth_new_cal_from_source (source, source_type);
+@@ -465,7 +470,6 @@
+ 		e_cal_open_async (client, FALSE);
+ 	}
+ 	g_free (str_uri);
+-	g_free (pass_key);
+ 	g_mutex_unlock (an->priv->mutex);
+ }
+ 
