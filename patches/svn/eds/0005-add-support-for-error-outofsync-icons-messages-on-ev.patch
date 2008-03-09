@@ -1,4 +1,4 @@
-From 885d755aa7cee9e966dbfcb5586acc16ecf2d784 Mon Sep 17 00:00:00 2001
+From d30f56aad7f33987db3be22c9c932dae75fbc9da Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 27 Oct 2007 04:22:23 +0200
 Subject: [PATCH] add support for error/outofsync icons/messages on events in day view
@@ -56,10 +56,10 @@ literal 0
 HcmV?d00001
 
 diff --git a/calendar/libecal/e-cal-component.c b/calendar/libecal/e-cal-component.c
-index 92bd4b3..72c2d64 100644
+index 4593936..7710932 100644
 --- a/calendar/libecal/e-cal-component.c
 +++ b/calendar/libecal/e-cal-component.c
-@@ -1755,6 +1755,7 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+@@ -1748,6 +1748,7 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
  	const char *p;
  	const char *cat_start;
  	char *str;
@@ -67,7 +67,7 @@ index 92bd4b3..72c2d64 100644
  
  	g_return_if_fail (comp != NULL);
  	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
-@@ -1763,8 +1764,17 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+@@ -1756,8 +1757,17 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
  	priv = comp->priv;
  	g_return_if_fail (priv->icalcomp != NULL);
  
@@ -86,7 +86,7 @@ index 92bd4b3..72c2d64 100644
  		return;
  	}
  
-@@ -4704,6 +4714,92 @@ e_cal_component_set_location (ECalComponent *comp, const char *location)
+@@ -4697,6 +4707,92 @@ e_cal_component_set_location (ECalComponent *comp, const char *location)
  	}
  }
  
@@ -180,7 +180,7 @@ index 92bd4b3..72c2d64 100644
  
  /**
 diff --git a/calendar/libecal/e-cal-component.h b/calendar/libecal/e-cal-component.h
-index 4995eeb..06467b2 100644
+index 382976f..4d08cc5 100644
 --- a/calendar/libecal/e-cal-component.h
 +++ b/calendar/libecal/e-cal-component.h
 @@ -330,6 +330,9 @@ gboolean e_cal_component_has_attendees (ECalComponent *comp);
@@ -209,5 +209,5 @@ index c190416..89cd94e 100644
  	if (n_added > 0) {
  		g_debug ("Loaded %d categories", n_added);
 -- 
-1.5.3.6.728-dirty
+1.5.4-dirty
 

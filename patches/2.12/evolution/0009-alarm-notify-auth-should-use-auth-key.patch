@@ -1,8 +1,17 @@
-Index: alarm-notify.c
-===================================================================
---- alarm-notify.c	(revision 35135)
-+++ alarm-notify.c	(working copy)
-@@ -418,25 +418,19 @@
+From 6650bb31d75e271a625da55c760bf36a88034b4f Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Sun, 9 Mar 2008 13:33:00 +0100
+Subject: [PATCH] alarm notify auth should use auth-key
+
+---
+ calendar/gui/alarm-notify/alarm-notify.c |   18 +++++++++++-------
+ 1 files changed, 11 insertions(+), 7 deletions(-)
+
+diff --git a/calendar/gui/alarm-notify/alarm-notify.c b/calendar/gui/alarm-notify/alarm-notify.c
+index bc86a42..8f944f2 100644
+--- a/calendar/gui/alarm-notify/alarm-notify.c
++++ b/calendar/gui/alarm-notify/alarm-notify.c
+@@ -418,25 +418,19 @@ alarm_notify_add_calendar (AlarmNotify *an, ECalSourceType source_type,  ESource
  {
  	AlarmNotifyPrivate *priv;
  	ECal *client;
@@ -28,7 +37,7 @@ Index: alarm-notify.c
  		return;
  	}
  	/* if loading of this requires password and password is not currently availble in e-password
-@@ -444,16 +438,27 @@
+@@ -444,16 +438,27 @@ alarm_notify_add_calendar (AlarmNotify *an, ECalSourceType source_type,  ESource
  
  	if (e_source_get_property (source, "auth")) {
  		const gchar *name = e_source_get_property (source, "auth-domain");
@@ -56,7 +65,7 @@ Index: alarm-notify.c
  	}
  	
  	client = auth_new_cal_from_source (source, source_type);
-@@ -465,7 +470,6 @@
+@@ -465,7 +470,6 @@ alarm_notify_add_calendar (AlarmNotify *an, ECalSourceType source_type,  ESource
  		e_cal_open_async (client, FALSE);
  	}
  	g_free (str_uri);
@@ -64,3 +73,6 @@ Index: alarm-notify.c
  	g_mutex_unlock (an->priv->mutex);
  }
  
+-- 
+1.5.4-dirty
+

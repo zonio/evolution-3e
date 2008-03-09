@@ -1,4 +1,4 @@
-From e74a7503d2e940be5cf0fa2a37e8031251271f5a Mon Sep 17 00:00:00 2001
+From 94c9f13f8f795d1bdc1e4442278c466b11976b7d Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <megous@megous.com>
 Date: Sat, 24 Feb 2007 17:21:42 +0100
 Subject: [PATCH] install e-cal-popup.h includes
@@ -10,7 +10,7 @@ This is required by some external evolution plugins.
  2 files changed, 9 insertions(+), 1 deletions(-)
 
 diff --git a/calendar/gui/Makefile.am b/calendar/gui/Makefile.am
-index 2fa778b..34d8027 100644
+index f45b9b6..2b7cfe2 100644
 --- a/calendar/gui/Makefile.am
 +++ b/calendar/gui/Makefile.am
 @@ -49,7 +49,9 @@ component_LTLIBRARIES = libevolution-calendar.la
@@ -42,5 +42,5 @@ index 2ade11e..6dd8a4c 100644
  
  libcal_dialogs_la_LIBADD =					\
 -- 
-1.5.3.6.728-dirty
+1.5.4-dirty
 

@@ -1,4 +1,4 @@
-From afe9b1e04c31ff4c38c313e6bff34de3a9d4e04d Mon Sep 17 00:00:00 2001
+From fa8e49658333991b11c48cd25fb2992cad94df47 Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Tue, 13 Mar 2007 01:55:53 +0100
 Subject: [PATCH] extend plugin system to add support for events on component activation
@@ -10,7 +10,7 @@ Subject: [PATCH] extend plugin system to add support for events on component act
  3 files changed, 34 insertions(+), 1 deletions(-)
 
 diff --git a/shell/e-shell-window.c b/shell/e-shell-window.c
-index d897160..51cc8b6 100644
+index 788aaf2..42653ae 100644
 --- a/shell/e-shell-window.c
 +++ b/shell/e-shell-window.c
 @@ -36,6 +36,7 @@
@@ -21,7 +21,7 @@ index d897160..51cc8b6 100644
  
  #include <gtk/gtkbutton.h>
  #include <gtk/gtkhbox.h>
-@@ -325,6 +326,7 @@ switch_view (EShellWindow *window, ComponentView *component_view)
+@@ -322,6 +323,7 @@ switch_view (EShellWindow *window, ComponentView *component_view)
  							       ECR_FIELD_ID,
  							       component_view->component_id);
  	char *title;
@@ -29,7 +29,7 @@ index d897160..51cc8b6 100644
  
  	if (component_view->sidebar_widget == NULL) {
  		init_view (window, component_view);
-@@ -357,6 +359,18 @@ switch_view (EShellWindow *window, ComponentView *component_view)
+@@ -356,6 +358,18 @@ switch_view (EShellWindow *window, ComponentView *component_view)
  
  	g_object_unref (gconf_client);
  
@@ -49,10 +49,10 @@ index d897160..51cc8b6 100644
  }
  
 diff --git a/shell/es-event.c b/shell/es-event.c
-index 89ba18f..4fd25e9 100644
+index 5d4c536..e48c1a5 100644
 --- a/shell/es-event.c
 +++ b/shell/es-event.c
-@@ -151,6 +151,16 @@ es_event_target_new_upgrade(ESEvent *eme, int major, int minor, int revision)
+@@ -152,6 +152,16 @@ es_event_target_new_upgrade(ESEvent *eme, int major, int minor, int revision)
  	return t;
  }
  
@@ -69,7 +69,7 @@ index 89ba18f..4fd25e9 100644
  /* ********************************************************************** */
  
  static void *emeh_parent_class;
-@@ -166,6 +176,7 @@ static const EEventHookTargetMap emeh_targets[] = {
+@@ -167,6 +177,7 @@ static const EEventHookTargetMap emeh_targets[] = {
  	{ "state", ES_EVENT_TARGET_STATE, emeh_state_masks },
  	{ "upgrade", ES_EVENT_TARGET_UPGRADE, NULL },
  	{ "shell", ES_EVENT_TARGET_SHELL, NULL },
@@ -78,10 +78,10 @@ index 89ba18f..4fd25e9 100644
  };
  
 diff --git a/shell/es-event.h b/shell/es-event.h
-index 9612198..cb61438 100644
+index 518fd44..1172ec3 100644
 --- a/shell/es-event.h
 +++ b/shell/es-event.h
-@@ -40,7 +40,8 @@ typedef struct _ESEventClass ESEventClass;
+@@ -41,7 +41,8 @@ typedef struct _ESEventClass ESEventClass;
  enum _es_event_target_t {
  	ES_EVENT_TARGET_STATE,
  	ES_EVENT_TARGET_UPGRADE,
@@ -91,7 +91,7 @@ index 9612198..cb61438 100644
  };
  
  /* Flags that qualify TARGET_STATE */
-@@ -52,6 +53,7 @@ enum {
+@@ -53,6 +54,7 @@ enum {
  typedef struct _ESEventTargetState ESEventTargetState;
  typedef struct _ESEventTargetUpgrade ESEventTargetUpgrade;
  typedef struct _ESEventTargetShell ESEventTargetShell;
@@ -99,7 +99,7 @@ index 9612198..cb61438 100644
  
  struct _ESEventTargetShell {
  	EEventTarget target;
-@@ -73,6 +75,12 @@ struct _ESEventTargetUpgrade {
+@@ -74,6 +76,12 @@ struct _ESEventTargetUpgrade {
  	int revision;
  };
  
@@ -113,5 +113,5 @@ index 9612198..cb61438 100644
  
  /* The object */
 -- 
-1.5.3.6.728-dirty
+1.5.4-dirty
 

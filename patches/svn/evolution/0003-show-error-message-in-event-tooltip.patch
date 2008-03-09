@@ -1,4 +1,4 @@
-From a90662aecbc30fdd9120989f41ed813a2b40f8f3 Mon Sep 17 00:00:00 2001
+From 7e16be779d60f1b0a72d368d5dd11baf53dced9b Mon Sep 17 00:00:00 2001
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
 Date: Sat, 27 Oct 2007 07:33:44 +0200
 Subject: [PATCH] show error message in event tooltip
@@ -8,10 +8,10 @@ Subject: [PATCH] show error message in event tooltip
  1 files changed, 15 insertions(+), 0 deletions(-)
 
 diff --git a/calendar/gui/e-calendar-view.c b/calendar/gui/e-calendar-view.c
-index c4f4117..66dba25 100644
+index 62f929b..7622443 100644
 --- a/calendar/gui/e-calendar-view.c
 +++ b/calendar/gui/e-calendar-view.c
-@@ -2184,6 +2184,20 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
+@@ -2196,6 +2196,20 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
  
  	gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
  	g_free (tmp);
@@ -32,7 +32,7 @@ index c4f4117..66dba25 100644
  
  	e_cal_component_get_organizer (newcomp, &organiser);
  	if (organiser.cn) {
-@@ -2223,6 +2237,7 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
+@@ -2235,6 +2249,7 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
  		gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
  		g_free (tmp);
  	}
@@ -41,5 +41,5 @@ index c4f4117..66dba25 100644
  	e_cal_component_get_dtend (newcomp, &dtend);
  
 -- 
-1.5.3.6.728-dirty
+1.5.4-dirty
 
