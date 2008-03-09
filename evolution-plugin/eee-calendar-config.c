@@ -435,7 +435,7 @@ static GtkWidget* add_section(GtkWidget* panel, const char* title)
 
   gtk_box_pack_start(GTK_BOX(panel), label = gtk_label_new(markup_title), FALSE, FALSE, 0);
   g_free(markup_title);
-	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
+  gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
   gtk_label_set_use_markup(GTK_LABEL(label), TRUE);
   gtk_box_pack_start(GTK_BOX(panel), hbox = gtk_hbox_new(FALSE, 12), FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(""), FALSE, FALSE, 0);
@@ -455,22 +455,22 @@ void status_changed(GtkToggleButton* button, const char* name)
 
 GtkWidget* eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData *data)
 {
-	EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
   const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
   GtkWidget *panel, *section, *checkbutton_status, *label;
 
-	if (data->old)
-		return data->old;
-	
+  if (data->old)
+    return data->old;
+  
   // toplevel vbox contains frames that group 3E account settings into various
   // groups
-	panel = gtk_vbox_new(FALSE, 12);
+  panel = gtk_vbox_new(FALSE, 12);
   gtk_container_set_border_width(GTK_CONTAINER(panel), 12);
 
   // Status group
   section = add_section(panel, "Account Status");
   char* note = g_strdup_printf("If you have 3E account <i>%s</i>, you can turn it on/off here.", name);
-	label = (GtkWidget*)gtk_object_new(GTK_TYPE_LABEL, 
+  label = (GtkWidget*)gtk_object_new(GTK_TYPE_LABEL, 
     "label", note, 
     "use-markup", TRUE,
     "justify", GTK_JUSTIFY_LEFT, 
@@ -487,26 +487,26 @@ GtkWidget* eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
   g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(status_changed), (gpointer)name); // <<< this should be ok
 
   gtk_widget_show_all(panel);
-	gtk_notebook_insert_page(GTK_NOTEBOOK(data->parent), panel, gtk_label_new("3E Account Settings"), 4);
+  gtk_notebook_insert_page(GTK_NOTEBOOK(data->parent), panel, gtk_label_new("3E Account Settings"), 4);
 
-	return panel;
+  return panel;
 }
 
 gboolean eee_account_properties_check(EPlugin *epl, EConfigHookPageCheckData *data)
 {
-	EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
   const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
-	int status = TRUE;
+  int status = TRUE;
 
-	if (data->pageid == NULL || !strcmp(data->pageid, "40.eee")) 
+  if (data->pageid == NULL || !strcmp(data->pageid, "40.eee")) 
   {
-	}
+  }
 
-	return status;
+  return status;
 }
 
 void eee_account_properties_commit(EPlugin *epl, EConfigHookItemFactoryData *data)
 {
-	EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
   const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
 }
