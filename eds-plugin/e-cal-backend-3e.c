@@ -119,6 +119,140 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove (ECalBackendSync * backend,
 }
 
 // }}}
+// {{{ Calendar metadata extraction
+
+/** Returns the capabilities provided by the backend, like whether it supports
+ * recurrences or not, for instance
+ * @todo figure out what caps are needed
+ */
+static ECalBackendSyncStatus e_cal_backend_3e_get_static_capabilities (ECalBackendSync * backend, EDataCal * cal, char **capabilities)
+{
+  BACKEND_METHOD_CHECKED();
+  g_return_val_if_fail (capabilities != NULL, GNOME_Evolution_Calendar_OtherError);
+
+  *capabilities = g_strdup (
+    CAL_STATIC_CAPABILITY_NO_EMAIL_ALARMS ","
+    CAL_STATIC_CAPABILITY_NO_THISANDFUTURE ","
+    CAL_STATIC_CAPABILITY_NO_THISANDPRIOR ","
+    CAL_STATIC_CAPABILITY_NO_CONV_TO_RECUR
+  );
+
+  return GNOME_Evolution_Calendar_Success;
+}
+
+/** Returns whether the calendar is read only or not.
+ *
+ * The problem with this method is that it is not called as often as we would like to
+ * (not by every object manipulation). Therefore, when evolution is running and permission
+ * is changed on the server, we cannot reflect this situation by this method.
+ */
+static ECalBackendSyncStatus e_cal_backend_3e_is_read_only (ECalBackendSync * backend, EDataCal * cal, gboolean * read_only)
+{
+  BACKEND_METHOD_CHECKED();
+  g_return_val_if_fail (read_only != NULL, GNOME_Evolution_Calendar_OtherError);
+
+  *read_only = !e_cal_backend_3e_calendar_has_perm(cb, "write");
+
+  return GNOME_Evolution_Calendar_Success;
+}
+
+/** Returns the email address of the owner of the calendar.
+ *
+ * If owner differs from username, ORGANIZER;SENT-BY=xxx will be set by the
+ * event-page.c:event_page_fill_component() code.
+ */
+static ECalBackendSyncStatus e_cal_backend_3e_get_cal_address (ECalBackendSync * backend, EDataCal * cal, char **address)
+{
+  BACKEND_METHOD_CHECKED();
+  g_return_val_if_fail (address != NULL, GNOME_Evolution_Calendar_OtherError);
+
+  *address = g_strdup (priv->owner);
+
+  return GNOME_Evolution_Calendar_Success;
+}
+
+/** Returns the email address to be used for alarms.
+ */
+static ECalBackendSyncStatus e_cal_backend_3e_get_alarm_email_address (ECalBackendSync * backend, EDataCal * cal, char **address)
+{
+  BACKEND_METHOD_CHECKED();
+  g_return_val_if_fail (address != NULL, GNOME_Evolution_Calendar_OtherError);
+
+  *address = g_strdup (priv->username);
+
+  return GNOME_Evolution_Calendar_Success;
+}
+
+/** Returns specific LDAP attributes.
+ * @todo huh?
+ */
+static ECalBackendSyncStatus e_cal_backend_3e_get_ldap_attribute (ECalBackendSync * backend, EDataCal * cal, char **attribute)
+{
+  BACKEND_METHOD_CHECKED();
+
+  *attribute = NULL;
+
+  return GNOME_Evolution_Calendar_UnsupportedMethod;
+}
+
+/** Returns TRUE if the the passed-in backend is already in a loaded state,
+ * otherwise FALSE
+ *
+ * @todo priv->is_loaded may need to be protected
+ */
+static gboolean e_cal_backend_3e_is_loaded (ECalBackend * backend)
+{
+  BACKEND_METHOD_CHECKED_RETVAL(FALSE);
+
+  return priv->is_loaded;
+}
+
+// }}}
+// {{{ Mode switching (online/offline)
+
+/** Returns the current online/offline mode for the backend.
+ */
+static CalMode e_cal_backend_3e_get_mode (ECalBackend * backend)
+{
+  BACKEND_METHOD_CHECKED_RETVAL(CAL_MODE_INVALID);
+
+  return priv->mode;
+}
+
+/** Sets the current online/offline mode.
+ * @todo handle sync on transitions between online/offline mode
+ */
+static void e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
+{
+  BACKEND_METHOD_CHECKED_NORETVAL("mode=%d", mode);
+
+  if (priv->mode != mode)
+  {
+    priv->mode = mode;
+
+    if (mode == CAL_MODE_REMOTE)
+    {
+      /* mode changed to remote */
+      if (priv->is_loaded)
+        e_cal_backend_3e_periodic_sync_enable(cb);
+    }
+    else if (mode == CAL_MODE_LOCAL)
+    {
+      /* mode changed to local */
+      e_cal_backend_3e_periodic_sync_disable(cb);
+    }
+    else
+    {
+      /* some bug */
+      e_cal_backend_notify_mode (backend, GNOME_Evolution_Calendar_CalListener_MODE_NOT_SUPPORTED, cal_mode_to_corba(priv->mode));
+      return;
+    }
+  }
+
+  e_cal_backend_notify_mode (backend, GNOME_Evolution_Calendar_CalListener_MODE_SET, cal_mode_to_corba(priv->mode));
+}
+
+// }}}
 // {{{ Objects manipulation
 
 /** Returns an empty object with the default values used for the backend called
@@ -663,110 +797,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy (ECalBackendSync * b
 }
 
 // }}}
-// {{{ Calendar synchronization with external devices
-
-struct _removals_data
-{
-  ECalBackend3e* cb;
-  GList* deletes;
-  EXmlHash* ehash;
-};
-
-/** @todo this will not handle detached recurring instances very vell
- */
-static void calculate_removals (const char *key, const char *value, gpointer data)
-{
-  struct _removals_data *r = data;
-  ECalBackend3e* cb = r->cb;
-                
-  if (!e_cal_backend_cache_get_component (cb->priv->cache, key, NULL))
-  {
-    ECalComponent *comp;
-
-    comp = e_cal_component_new ();
-    e_cal_component_set_new_vtype (comp, E_CAL_COMPONENT_EVENT);
-    e_cal_component_set_uid (comp, key);
-
-    r->deletes = g_list_prepend (r->deletes, e_cal_component_get_as_string (comp));
-
-    e_xmlhash_remove (r->ehash, key);
-    g_object_unref (comp);
-  }
-}
-
-/** Returns a list of changes made since last check.
- * @todo fix recurring detached instances
- */
-static ECalBackendSyncStatus e_cal_backend_3e_get_changes (ECalBackendSync * backend, EDataCal * cal, const char *change_id, GList ** adds, GList ** modifies, GList ** deletes)
-{
-  char* filename;
-  char* path;
-  EXmlHash* ehash;
-  GList* iter;
-  GList* list = NULL;
-  struct _removals_data r;
-  ECalBackendSyncStatus status;
-
-  BACKEND_METHOD_CHECKED();
-  g_return_val_if_fail (change_id != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
-
-  filename = g_strdup_printf ("snapshot-%s.db", change_id);
-  path = g_build_filename (g_get_home_dir (), ".evolution/cache/calendar", priv->calname, filename, NULL);
-  ehash = e_xmlhash_new (path);
-  g_free (filename);
-  g_free (path);
-
-  status = e_cal_backend_3e_get_object_list (backend, NULL, "#t", &list);
-  if (status != GNOME_Evolution_Calendar_Success)
-  {
-    e_xmlhash_destroy(ehash);
-    return status;
-  }
-
-  /* calculate adds and modifies */
-  for (iter = list; iter != NULL; iter = iter->next)
-  {
-    const char *uid;
-    char *calobj;
-
-    e_cal_component_get_uid (iter->data, &uid);
-    calobj = e_cal_component_get_as_string (iter->data);
-
-    /* check what type of change has occurred, if any */
-    switch (e_xmlhash_compare (ehash, uid, calobj))
-    {
-      case E_XMLHASH_STATUS_SAME:
-        break;
-
-      case E_XMLHASH_STATUS_NOT_FOUND:
-        *adds = g_list_prepend (*adds, g_strdup (calobj));
-        e_xmlhash_add (ehash, uid, calobj);
-        break;
-
-      case E_XMLHASH_STATUS_DIFFERENT:
-        *modifies = g_list_prepend (*modifies, g_strdup (calobj));
-        e_xmlhash_add (ehash, uid, calobj);
-        break;
-    }
-
-    g_free (calobj);
-  }
-
-  /* calculate deletions */
-  r.cb = cb;
-  r.deletes = NULL;
-  r.ehash = ehash;
-  e_xmlhash_foreach_key (ehash, calculate_removals, &r);
-
-  *deletes = r.deletes;
-
-  e_xmlhash_write (ehash);
-  e_xmlhash_destroy (ehash);
-  
-  return GNOME_Evolution_Calendar_Success;
-}
-
-// }}}
 // {{{ Receiving iTIPs
 
 static ECalBackendSyncStatus e_cal_backend_3e_receive_object(ECalBackendSync *backend, icalcomponent *icalcomp, icalproperty_method method)
@@ -954,6 +984,110 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects(ECalBackendSync* back
 }
 
 // }}}
+// {{{ Calendar synchronization with external devices
+
+struct _removals_data
+{
+  ECalBackend3e* cb;
+  GList* deletes;
+  EXmlHash* ehash;
+};
+
+/** @todo this will not handle detached recurring instances very vell
+ */
+static void calculate_removals (const char *key, const char *value, gpointer data)
+{
+  struct _removals_data *r = data;
+  ECalBackend3e* cb = r->cb;
+                
+  if (!e_cal_backend_cache_get_component (cb->priv->cache, key, NULL))
+  {
+    ECalComponent *comp;
+
+    comp = e_cal_component_new ();
+    e_cal_component_set_new_vtype (comp, E_CAL_COMPONENT_EVENT);
+    e_cal_component_set_uid (comp, key);
+
+    r->deletes = g_list_prepend (r->deletes, e_cal_component_get_as_string (comp));
+
+    e_xmlhash_remove (r->ehash, key);
+    g_object_unref (comp);
+  }
+}
+
+/** Returns a list of changes made since last check.
+ * @todo fix recurring detached instances
+ */
+static ECalBackendSyncStatus e_cal_backend_3e_get_changes (ECalBackendSync * backend, EDataCal * cal, const char *change_id, GList ** adds, GList ** modifies, GList ** deletes)
+{
+  char* filename;
+  char* path;
+  EXmlHash* ehash;
+  GList* iter;
+  GList* list = NULL;
+  struct _removals_data r;
+  ECalBackendSyncStatus status;
+
+  BACKEND_METHOD_CHECKED();
+  g_return_val_if_fail (change_id != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
+
+  filename = g_strdup_printf ("snapshot-%s.db", change_id);
+  path = g_build_filename (g_get_home_dir (), ".evolution/cache/calendar", priv->calname, filename, NULL);
+  ehash = e_xmlhash_new (path);
+  g_free (filename);
+  g_free (path);
+
+  status = e_cal_backend_3e_get_object_list (backend, NULL, "#t", &list);
+  if (status != GNOME_Evolution_Calendar_Success)
+  {
+    e_xmlhash_destroy(ehash);
+    return status;
+  }
+
+  /* calculate adds and modifies */
+  for (iter = list; iter != NULL; iter = iter->next)
+  {
+    const char *uid;
+    char *calobj;
+
+    e_cal_component_get_uid (iter->data, &uid);
+    calobj = e_cal_component_get_as_string (iter->data);
+
+    /* check what type of change has occurred, if any */
+    switch (e_xmlhash_compare (ehash, uid, calobj))
+    {
+      case E_XMLHASH_STATUS_SAME:
+        break;
+
+      case E_XMLHASH_STATUS_NOT_FOUND:
+        *adds = g_list_prepend (*adds, g_strdup (calobj));
+        e_xmlhash_add (ehash, uid, calobj);
+        break;
+
+      case E_XMLHASH_STATUS_DIFFERENT:
+        *modifies = g_list_prepend (*modifies, g_strdup (calobj));
+        e_xmlhash_add (ehash, uid, calobj);
+        break;
+    }
+
+    g_free (calobj);
+  }
+
+  /* calculate deletions */
+  r.cb = cb;
+  r.deletes = NULL;
+  r.ehash = ehash;
+  e_xmlhash_foreach_key (ehash, calculate_removals, &r);
+
+  *deletes = r.deletes;
+
+  e_xmlhash_write (ehash);
+  e_xmlhash_destroy (ehash);
+  
+  return GNOME_Evolution_Calendar_Success;
+}
+
+// }}}
 // {{{ Garbage
 
 /** Get list of attachemnts.
@@ -976,140 +1110,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_discard_alarm (ECalBackendSync * b
   BACKEND_METHOD_CHECKED();
 
   return GNOME_Evolution_Calendar_UnsupportedMethod;
-}
-
-// }}}
-// {{{ Calendar metadata extraction
-
-/** Returns the capabilities provided by the backend, like whether it supports
- * recurrences or not, for instance
- * @todo figure out what caps are needed
- */
-static ECalBackendSyncStatus e_cal_backend_3e_get_static_capabilities (ECalBackendSync * backend, EDataCal * cal, char **capabilities)
-{
-  BACKEND_METHOD_CHECKED();
-  g_return_val_if_fail (capabilities != NULL, GNOME_Evolution_Calendar_OtherError);
-
-  *capabilities = g_strdup (
-    CAL_STATIC_CAPABILITY_NO_EMAIL_ALARMS ","
-    CAL_STATIC_CAPABILITY_NO_THISANDFUTURE ","
-    CAL_STATIC_CAPABILITY_NO_THISANDPRIOR ","
-    CAL_STATIC_CAPABILITY_NO_CONV_TO_RECUR
-  );
-
-  return GNOME_Evolution_Calendar_Success;
-}
-
-/** Returns whether the calendar is read only or not.
- *
- * The problem with this method is that it is not called as often as we would like to
- * (not by every object manipulation). Therefore, when evolution is running and permission
- * is changed on the server, we cannot reflect this situation by this method.
- */
-static ECalBackendSyncStatus e_cal_backend_3e_is_read_only (ECalBackendSync * backend, EDataCal * cal, gboolean * read_only)
-{
-  BACKEND_METHOD_CHECKED();
-  g_return_val_if_fail (read_only != NULL, GNOME_Evolution_Calendar_OtherError);
-
-  *read_only = !e_cal_backend_3e_calendar_has_perm(cb, "write");
-
-  return GNOME_Evolution_Calendar_Success;
-}
-
-/** Returns the email address of the owner of the calendar.
- *
- * If owner differs from username, ORGANIZER;SENT-BY=xxx will be set by the
- * event-page.c:event_page_fill_component() code.
- */
-static ECalBackendSyncStatus e_cal_backend_3e_get_cal_address (ECalBackendSync * backend, EDataCal * cal, char **address)
-{
-  BACKEND_METHOD_CHECKED();
-  g_return_val_if_fail (address != NULL, GNOME_Evolution_Calendar_OtherError);
-
-  *address = g_strdup (priv->owner);
-
-  return GNOME_Evolution_Calendar_Success;
-}
-
-/** Returns the email address to be used for alarms.
- */
-static ECalBackendSyncStatus e_cal_backend_3e_get_alarm_email_address (ECalBackendSync * backend, EDataCal * cal, char **address)
-{
-  BACKEND_METHOD_CHECKED();
-  g_return_val_if_fail (address != NULL, GNOME_Evolution_Calendar_OtherError);
-
-  *address = g_strdup (priv->username);
-
-  return GNOME_Evolution_Calendar_Success;
-}
-
-/** Returns specific LDAP attributes.
- * @todo huh?
- */
-static ECalBackendSyncStatus e_cal_backend_3e_get_ldap_attribute (ECalBackendSync * backend, EDataCal * cal, char **attribute)
-{
-  BACKEND_METHOD_CHECKED();
-
-  *attribute = NULL;
-
-  return GNOME_Evolution_Calendar_UnsupportedMethod;
-}
-
-/** Returns TRUE if the the passed-in backend is already in a loaded state,
- * otherwise FALSE
- *
- * @todo priv->is_loaded may need to be protected
- */
-static gboolean e_cal_backend_3e_is_loaded (ECalBackend * backend)
-{
-  BACKEND_METHOD_CHECKED_RETVAL(FALSE);
-
-  return priv->is_loaded;
-}
-
-// }}}
-// {{{ Mode switching (online/offline)
-
-/** Returns the current online/offline mode for the backend.
- */
-static CalMode e_cal_backend_3e_get_mode (ECalBackend * backend)
-{
-  BACKEND_METHOD_CHECKED_RETVAL(CAL_MODE_INVALID);
-
-  return priv->mode;
-}
-
-/** Sets the current online/offline mode.
- * @todo handle sync on transitions between online/offline mode
- */
-static void e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
-{
-  BACKEND_METHOD_CHECKED_NORETVAL("mode=%d", mode);
-
-  if (priv->mode != mode)
-  {
-    priv->mode = mode;
-
-    if (mode == CAL_MODE_REMOTE)
-    {
-      /* mode changed to remote */
-      if (priv->is_loaded)
-        e_cal_backend_3e_periodic_sync_enable(cb);
-    }
-    else if (mode == CAL_MODE_LOCAL)
-    {
-      /* mode changed to local */
-      e_cal_backend_3e_periodic_sync_disable(cb);
-    }
-    else
-    {
-      /* some bug */
-      e_cal_backend_notify_mode (backend, GNOME_Evolution_Calendar_CalListener_MODE_NOT_SUPPORTED, cal_mode_to_corba(priv->mode));
-      return;
-    }
-  }
-
-  e_cal_backend_notify_mode (backend, GNOME_Evolution_Calendar_CalListener_MODE_SET, cal_mode_to_corba(priv->mode));
 }
 
 // }}}
