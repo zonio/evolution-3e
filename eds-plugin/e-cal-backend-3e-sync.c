@@ -24,6 +24,8 @@
 #include "e-cal-backend-3e-priv.h"
 #include "dns-txt-search.h"
 
+// {{{ 3E server connection API
+
 /** @addtogroup eds_conn */
 /** @{ */
 
@@ -188,6 +190,9 @@ void e_cal_backend_3e_free_connection(ECalBackend3e* cb)
 
 /** @} */
 
+// }}}
+// {{{ Calendar metadata extraction/manipulation
+
 /** @addtogroup eds_cal */
 /** @{ */
 
@@ -343,10 +348,13 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e* cb)
 
 /** @} */
 
+// }}}
+// {{{ Calendar synchronization
+
 /** @addtogroup eds_sync */
 /** @{ */
 
-/* 3E Cache Wrappers - Used to track state of objects in cache. */
+// {{{ 3E Cache Wrappers - Used to track state of objects in cache.
 
 /** Wrapper for e_cal_backend_cache_put_component().
  *
@@ -574,6 +582,46 @@ gboolean e_cal_backend_3e_cache_put_timezone (ECalBackend3e* cb, ECalBackendCach
   return retval;
 }
 
+// }}}
+// {{{ Last sync timestamp storage
+
+/** Get timestamp of last sync.
+ * 
+ * @param cb 3E calendar backend.
+ * 
+ * @return Timestamp in local time.
+ */
+time_t e_cal_backend_3e_get_sync_timestamp(ECalBackend3e* cb)
+{
+  time_t stamp = 0;
+
+  g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
+  const char* ts = e_cal_backend_cache_get_server_utc_time(cb->priv->cache);
+  g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
+  if (ts)
+  {
+    icaltimetype time = icaltime_from_string(ts);
+    stamp = icaltime_as_timet_with_zone(time, NULL);
+  }
+
+  return stamp;
+}
+
+/** Store timestamp of last sync.
+ * 
+ * @param cb 3E calendar backend.
+ * @param stamp Timestamp in local time.
+ */
+void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e* cb, time_t stamp)
+{
+  g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
+  e_cal_backend_cache_put_server_utc_time(cb->priv->cache, icaltime_as_ical_string(icaltime_from_timet_with_zone(stamp, 0, NULL)));
+  g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
+}
+
+// }}}
+// {{{ Timezones synchronization
+
 /** Get all timezones from the cache.
  * 
  * @param cb 3E calendar backend.
@@ -660,6 +708,9 @@ static gboolean sync_timezones_to_server(ECalBackend3e* cb)
   g_slist_free(timezones);
   return TRUE;
 }
+
+// }}}
+// {{{ Client -> Server synchronization
 
 /** Sync cache changes to the server and unmark them. 
  * 
@@ -774,6 +825,9 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
 
   return TRUE;
 }
+
+// }}}
+// {{{ Server -> Client synchronization
 
 /** Query server for VCALENDAR containing requested components.
  * 
@@ -956,6 +1010,9 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
   return TRUE;
 }
 
+// }}}
+// {{{ Synchronization thread
+
 enum { SYNC_NORMAL, SYNC_NOW, SYNC_PAUSE, SYNC_STOP };
 
 /** Periodic sync callback.
@@ -1002,40 +1059,6 @@ static gpointer sync_thread(ECalBackend3e* cb)
   }
 
   return NULL;
-}
-
-/** Get timestamp of last sync.
- * 
- * @param cb 3E calendar backend.
- * 
- * @return Timestamp in local time.
- */
-time_t e_cal_backend_3e_get_sync_timestamp(ECalBackend3e* cb)
-{
-  time_t stamp = 0;
-
-  g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-  const char* ts = e_cal_backend_cache_get_server_utc_time(cb->priv->cache);
-  g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
-  if (ts)
-  {
-    icaltimetype time = icaltime_from_string(ts);
-    stamp = icaltime_as_timet_with_zone(time, NULL);
-  }
-
-  return stamp;
-}
-
-/** Store timestamp of last sync.
- * 
- * @param cb 3E calendar backend.
- * @param stamp Timestamp in local time.
- */
-void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e* cb, time_t stamp)
-{
-  g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-  e_cal_backend_cache_put_server_utc_time(cb->priv->cache, icaltime_as_ical_string(icaltime_from_timet_with_zone(stamp, 0, NULL)));
-  g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 }
 
 /** Enable periodic sync on this backend.
@@ -1104,4 +1127,8 @@ void e_cal_backend_3e_do_immediate_sync(ECalBackend3e* cb)
     g_atomic_int_set(&cb->priv->sync_request, SYNC_NOW);
 }
 
+// }}}
+
 /* @} */
+
+// }}}

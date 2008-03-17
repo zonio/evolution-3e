@@ -24,6 +24,8 @@
 /** @addtogroup eds_misc */
 /** @{ */
 
+// {{{ Error notification
+
 /** Notify listeners (CUA GUI) of error, pass message from @b GError object.
  * 
  * @param backend Calendar backend object.
@@ -39,6 +41,9 @@ void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GEr
   e_cal_backend_notify_error(backend, error_message);
   g_free(error_message);
 }
+
+// }}}
+// {{{ iCalendar X-* property manipulation
 
 /** Set icalcomponent X-* property.
  * 
@@ -103,6 +108,9 @@ static const char* icomp_x_prop_get(icalcomponent *comp, const char *key)
   return NULL;
 }
 
+// }}}
+// {{{ iCalendar cache state property manipulation
+
 /** Set iCal component's X-EEE-CACHE-STATE property.
  * 
  * @param comp iCal component.
@@ -165,6 +173,22 @@ ECalComponentCacheState e_cal_component_get_cache_state(ECalComponent* comp)
   return icalcomponent_get_cache_state(e_cal_component_get_icalcomponent(comp));
 }
 
+/** Check if iCal component is marked as deleted by the 3E server.
+ * 
+ * @param comp iCal component.
+ * 
+ * @return TRUE if deleted, FALSE otherwise.
+ */
+gboolean icalcomponent_3e_status_is_deleted(icalcomponent* comp)
+{
+  const char* status = icomp_x_prop_get(comp, "X-3E-STATUS");
+
+  return status && !g_ascii_strcasecmp(status, "deleted");
+}
+
+// }}}
+// {{{ TZID extraction
+
 /** Get TZID property value from iCal component.
  * 
  * @param comp iCal component.
@@ -185,18 +209,8 @@ const char* icalcomponent_get_tzid(icalcomponent* comp)
   return NULL;
 }
 
-/** Check if iCal component is marked as deleted by the 3E server.
- * 
- * @param comp iCal component.
- * 
- * @return TRUE if deleted, FALSE otherwise.
- */
-gboolean icalcomponent_3e_status_is_deleted(icalcomponent* comp)
-{
-  const char* status = icomp_x_prop_get(comp, "X-3E-STATUS");
-
-  return status && !g_ascii_strcasecmp(status, "deleted");
-}
+// }}}
+// {{{ iTIP payload/method extraction
 
 /** Get VEVENT from the iTip.
  *
@@ -257,6 +271,9 @@ static const char* strip_mailto(const char *address)
     address += 7;
   return address;
 }
+
+// }}}
+// {{{ iTIP recipients extraction
 
 /** Collect recipients from the iTip (based on the METHOD).
  * 
@@ -336,6 +353,9 @@ out:
     *recipients = to_list;
 }
 
+// }}}
+// {{{ iCalendar component ID comparison (UID@RID)
+
 gboolean e_cal_component_id_compare(ECalComponentId* id1, ECalComponentId* id2)
 {
   if (id1 == NULL || id2 == NULL)
@@ -363,5 +383,7 @@ gboolean e_cal_component_match_id(ECalComponent* comp, ECalComponentId* id)
   e_cal_component_free_id(comp_id);
   return retval;
 }
+
+// }}}
 
 /** @} */
