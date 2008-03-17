@@ -20,6 +20,8 @@
  * along with evolution-3e.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// {{{ Backend Method GLUE Macros
+
 #include "e-cal-backend-3e-priv.h"
 #include <libedataserver/e-xml-hash-utils.h>
 
@@ -55,8 +57,12 @@
 #define e_cal_backend_cache_get_timezone(cache, tzid) e_cal_backend_3e_cache_get_timezone(cb, cache, tzid)
 #define e_cal_backend_cache_put_timezone(cache, tzobj) e_cal_backend_3e_cache_put_timezone(cb, cache, tzobj)
 
+// }}}
+
 /** @addtogroup eds_back */
 /** @{ */
+
+// {{{ Calendar manipulation
 
 /** Open the calendar.
  */
@@ -111,6 +117,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove (ECalBackendSync * backend,
 
   return GNOME_Evolution_Calendar_Success;
 }
+
+// }}}
+// {{{ Objects manipulation
 
 /** Returns an empty object with the default values used for the backend called
  * when creating new object, for example.
@@ -466,6 +475,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object (ECalBackendSync * b
   return GNOME_Evolution_Calendar_Success;
 }
 
+// }}}
+// {{{ Timezone manipulation
+
 /** Returns timezone objects for a given TZID.
  * @todo free timezone data somehow?
  */
@@ -564,6 +576,33 @@ static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone (ECalBackendSync 
   return GNOME_Evolution_Calendar_Success;
 }
 
+/** Returns the default timezone.
+ */
+static icaltimezone * e_cal_backend_3e_internal_get_default_timezone (ECalBackend * backend)
+{
+  BACKEND_METHOD_CHECKED_RETVAL(icaltimezone_get_utc_timezone ());
+
+  return icaltimezone_get_utc_timezone ();
+}
+
+/** Returns a given timezone
+ */
+static icaltimezone * e_cal_backend_3e_internal_get_timezone (ECalBackend * backend, const char *tzid)
+{
+  icaltimezone* zone;
+
+  BACKEND_METHOD_CHECKED_RETVAL(NULL, "tzid=%s", tzid);
+
+  zone = icaltimezone_get_builtin_timezone_from_tzid (tzid);
+  if (!zone)
+    return icaltimezone_get_utc_timezone();
+
+  return zone;
+}
+
+// }}}
+// {{{ Free/busy
+
 /** Convert UTC time to ISO string format.
  */
 static char* gmtime_to_iso(time_t t)
@@ -622,6 +661,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy (ECalBackendSync * b
 
   return GNOME_Evolution_Calendar_Success;
 }
+
+// }}}
+// {{{ Calendar synchronization with external devices
 
 struct _removals_data
 {
@@ -724,15 +766,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_changes (ECalBackendSync * bac
   return GNOME_Evolution_Calendar_Success;
 }
 
-/** Discards an alarm (removes it or marks it as already displayed to the user).
- * @todo implement
- */
-static ECalBackendSyncStatus e_cal_backend_3e_discard_alarm (ECalBackendSync * backend, EDataCal * cal, const char *uid, const char *auid)
-{
-  BACKEND_METHOD_CHECKED();
-
-  return GNOME_Evolution_Calendar_UnsupportedMethod;
-}
+// }}}
+// {{{ Receiving iTIPs
 
 static ECalBackendSyncStatus e_cal_backend_3e_receive_object(ECalBackendSync *backend, icalcomponent *icalcomp, icalproperty_method method)
 {
@@ -859,6 +894,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_objects (ECalBackendSync *
   return status;
 }
 
+// }}}
+// {{{ Sending iTIPs
+
 /** Send a set of meetings in one go, which means, for backends that do support
  * it, sending information about the meeting to all attendees.
  */
@@ -915,8 +953,12 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects(ECalBackendSync* back
   return GNOME_Evolution_Calendar_Success;
 }
 
-/** Gets the list of attachments.
- * @todo implement
+// }}}
+// {{{ Garbage
+
+/** Get list of attachemnts.
+ *
+ * XXX: This backend method is not used at all by evolution.
  */
 static ECalBackendSyncStatus e_cal_backend_3e_get_attachment_list (ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, GSList **list)
 {
@@ -924,6 +966,20 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_attachment_list (ECalBackendSy
 
   return GNOME_Evolution_Calendar_Success;
 }
+
+/** Discards an alarm (removes it or marks it as already displayed to the user).
+ * 
+ * XXX: This method is probably not necessary.
+ */
+static ECalBackendSyncStatus e_cal_backend_3e_discard_alarm (ECalBackendSync * backend, EDataCal * cal, const char *uid, const char *auid)
+{
+  BACKEND_METHOD_CHECKED();
+
+  return GNOME_Evolution_Calendar_UnsupportedMethod;
+}
+
+// }}}
+// {{{ Calendar metadata extraction
 
 /** Returns the capabilities provided by the backend, like whether it supports
  * recurrences or not, for instance
@@ -1011,6 +1067,9 @@ static gboolean e_cal_backend_3e_is_loaded (ECalBackend * backend)
   return priv->is_loaded;
 }
 
+// }}}
+// {{{ Mode switching (online/offline)
+
 /** Returns the current online/offline mode for the backend.
  */
 static CalMode e_cal_backend_3e_get_mode (ECalBackend * backend)
@@ -1053,31 +1112,8 @@ static void e_cal_backend_3e_set_mode (ECalBackend * backend, CalMode mode)
   e_cal_backend_notify_mode (backend, GNOME_Evolution_Calendar_CalListener_MODE_SET, cal_mode_to_corba(priv->mode));
 }
 
-/** Returns the default timezone.
- */
-static icaltimezone * e_cal_backend_3e_internal_get_default_timezone (ECalBackend * backend)
-{
-  BACKEND_METHOD_CHECKED_RETVAL(icaltimezone_get_utc_timezone ());
-
-  return icaltimezone_get_utc_timezone ();
-}
-
-/** Returns a given timezone
- */
-static icaltimezone * e_cal_backend_3e_internal_get_timezone (ECalBackend * backend, const char *tzid)
-{
-  icaltimezone* zone;
-
-  BACKEND_METHOD_CHECKED_RETVAL(NULL, "tzid=%s", tzid);
-
-  zone = icaltimezone_get_builtin_timezone_from_tzid (tzid);
-  if (!zone)
-    return icaltimezone_get_utc_timezone();
-
-  return zone;
-}
-
-/* GObject foo */
+// }}}
+// {{{ GObject foo
 
 G_DEFINE_TYPE(ECalBackend3e, e_cal_backend_3e, E_TYPE_CAL_BACKEND_SYNC)
 
@@ -1174,5 +1210,7 @@ static void e_cal_backend_3e_class_init (ECalBackend3eClass * class)
   backend_class->internal_get_default_timezone = e_cal_backend_3e_internal_get_default_timezone;
   backend_class->internal_get_timezone = e_cal_backend_3e_internal_get_timezone;
 }
+
+// }}}
 
 /** @} */
