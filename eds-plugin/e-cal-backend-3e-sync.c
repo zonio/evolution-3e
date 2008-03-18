@@ -620,6 +620,82 @@ void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e* cb, time_t stamp)
 }
 
 // }}}
+// {{{ iTIP message queue
+
+/** Add message to the beginning of the iTIPs queue.
+ * 
+ * @param cb 3E calendar backend.
+ * @param object iTIP string.
+ * 
+ * @return TRUE on success, FALSE otherwise.
+ */
+gboolean e_cal_backend_3e_push_message(ECalBackend3e* cb, const char* object)
+{
+  g_return_val_if_fail(object != NULL, FALSE);
+
+  return TRUE;
+}
+
+/** Remove given message of the end of the iTIPs queue.
+ * 
+ * @param cb 3E calendar backend.
+ * @param object iTIP string.
+ * 
+ * @return TRUE on success, FALSE otherwise.
+ */
+gboolean e_cal_backend_3e_pop_message(ECalBackend3e* cb, const char* object)
+{
+  g_return_val_if_fail(object != NULL, FALSE);
+
+  return TRUE;
+}
+
+/** Get the oldest message from the queue.
+ * 
+ * @param cb 3E calendar backend.
+ * 
+ * @return iTIP string or NULL if queue is empty.
+ */
+const char* e_cal_backend_3e_get_message(ECalBackend3e* cb)
+{
+  return NULL;
+}
+
+/** Send message.
+ *
+ * @param cb 3E calendar backend.
+ * @param object iTIP string.
+ * @param err Error pointer.
+ * 
+ * @return TRUE on success, FALSE otherwise.
+ */
+gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GError** err)
+{
+  //ATTACH: convert URIs
+  //ATTACH: upload attachemnts
+  //ATTACH: open connection
+  //ATTACH: send iTIP
+  //ATTACH: close connection
+  return TRUE;
+}
+
+/** Send all messages that are in the iTIPs queue.
+ * 
+ * @param cb 3E calendar backend.
+ * 
+ * @return TRUE on success, FALSE otherwise.
+ */
+gboolean e_cal_backend_3e_process_message_queue(ECalBackend3e* cb)
+{
+  //ATTACH:
+  // loop:
+  // - get last message
+  // - send it
+  // - pop it from the queue
+  return TRUE;
+}
+
+// }}}
 // {{{ Timezones synchronization
 
 /** Get all timezones from the cache.
@@ -718,8 +794,6 @@ static gboolean sync_timezones_to_server(ECalBackend3e* cb)
  * 
  * @return TRUE on success.
  *
- * @todo Handle UID/RID.
- * @todo Better server error handling.
  * @todo Conflict resolution.
  */
 gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
@@ -740,6 +814,12 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
   components = e_cal_backend_cache_get_components(cb->priv->cache);
   g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
 
+  //ATTACH: make this loop cancellable (it will become long running due to
+  // attachment downloads, and we want to be able to stop the sync thread
+  // quickly)
+  // use g_atomic_int_get(&cb->priv->sync_request) == SYNC_STOP || SYNC_PAUSE
+  // to decide when the loop or upload should stop (wrap the "should_cancel"
+  // check in a new function)
   for (iter = components; iter; iter = iter->next)
   {
     ECalComponent *comp = E_CAL_COMPONENT (iter->data);
@@ -751,6 +831,10 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
     e_cal_component_set_cache_state(comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
     e_cal_component_set_x_property(comp, "X-3E-DELETED", NULL);
     char* object = e_cal_component_get_as_string(comp);
+
+    //ATTACH: convert attachment URI to the eee:// format
+    //ATTACH: make sure all attachments are uploaded and if not upload them (for
+    // CREATED/MODIFIED comps)
 
     switch (state)
     {
@@ -820,6 +904,9 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
   }
   
   g_list_free(components);
+
+  //ATTACH: upload attachments for iTIPs and send iTips itself (from the message
+  //queue)
 
   e_cal_backend_3e_close_connection(cb);
 
@@ -892,8 +979,13 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
   if (ical == NULL)
     return FALSE;
 
+  //ATTACH: only update the sync stamp if all attachments were downloaded all
+  // components were added to cache (so that sync is restartable)
   e_cal_backend_3e_set_sync_timestamp(cb, time(NULL));
   
+  //ATTACH: make this loop cancellable (it will become long running due to
+  // attachment downloads, and we want to be able to stop the sync thread
+  // quickly)
   for (icomp = icalcomponent_get_first_component(ical, ICAL_ANY_COMPONENT);
        icomp;
        icomp = icalcomponent_get_next_component(ical, ICAL_ANY_COMPONENT))
@@ -947,8 +1039,12 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
           old_object = e_cal_component_get_as_string(comp);
         object = e_cal_component_get_as_string(new_comp);
 
+        //ATTACH: convert attachment URI to the file:// format
+
         if (old_object == NULL)
         {
+          //ATTACH: get attachemnts for a new object
+
           /* not in cache yet */
           g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
           e_cal_backend_cache_put_component(cb->priv->cache, new_comp);
@@ -965,6 +1061,8 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
           }
           else
           {
+            //ATTACH: get attachemnts for a modified object
+
             /* sync with server */
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
             e_cal_backend_cache_put_component(cb->priv->cache, new_comp);

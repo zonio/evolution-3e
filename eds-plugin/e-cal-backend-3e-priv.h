@@ -134,4 +134,19 @@ void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GEr
 gboolean e_cal_component_match_id(ECalComponent* comp, ECalComponentId* id);
 gboolean e_cal_component_id_compare(ECalComponentId* id1, ECalComponentId* id2);
 
+/* attachment and attachment storage API */
+
+ECalComponent* e_cal_backend_3e_convert_attachment_uris_to_local(ECalBackend3e* cb, ECalComponent* comp);
+ECalComponent* e_cal_backend_3e_convert_attachment_uris_to_remote(ECalBackend3e* cb, ECalComponent* comp);
+gboolean e_cal_backend_3e_upload_attachments(ECalBackend3e* cb, ECalComponent* comp, GError** err);
+gboolean e_cal_backend_3e_download_attachments(ECalBackend3e* cb, ECalComponent* comp, GError** err);
+
+/* message queue API */
+
+gboolean e_cal_backend_3e_push_message(ECalBackend3e* cb, const char* object);
+gboolean e_cal_backend_3e_pop_message(ECalBackend3e* cb, const char* object);
+const char* e_cal_backend_3e_get_message(ECalBackend3e* cb);
+gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GError** err);
+gboolean e_cal_backend_3e_process_message_queue(ECalBackend3e* cb);
+
 #endif

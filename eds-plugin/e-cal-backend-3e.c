@@ -947,6 +947,10 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects(ECalBackendSync* back
   icalcomponent_collect_recipients(comp, priv->username, &recipients);
   icalcomponent_free(comp);
 
+  //ATTACH: put message with its recipient list to the iTIP queue, implement
+  // capability to disable file:// -> CID:... conversion in evolution, move
+  // following code to the sync thread
+
   /* connect to the server and send iTip */
   if (!e_cal_backend_3e_calendar_is_online(cb))
     return GNOME_Evolution_Calendar_RepositoryOffline;
