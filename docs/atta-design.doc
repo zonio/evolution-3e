@@ -130,6 +130,42 @@ umoznujem sdilet kalendare:
     ale pokud uz mas takovy pristup k nekomu do kalendare tak te nake
     prihlaseni stejne nezastavi
 
+What needs to be handled:
+
+- storing attachments from the iMIPs received from external sources:
+  - iMIP is received and processed by the itip-formatter.c:update_item()
+  - update_item() converts CID attachments into local store attachments,
+    non-CID attachments are preserved
+  - itip-formatter.c sends iTIP to the eds plugin using
+    e_cal_backend_3e_receive_objects()
+- creating appointments with attachments:
+  - comp-editor.c:get_attachment_list() is used to store attachments
+    from the attachments box to the files and return list of uris that
+    should be added to the VEVENT. These URIs are local.
+- viewing meeting requests with attachments:
+  - comp-editor.c:set_attachment_list() is used to retrieve attachments
+    (this currently works only for file:// ones) and fill in the
+    attachments box
+  - attachment name is determined by getting uri basename and removing
+    'COMPID-' prefix
+- sending iMIPs out (we have disabled this functionality for 3E, it's
+  done by the server):
+  - in all cases except when creating new meeting requests, attachments
+    are not sent out
+  - comp-editor.c:real_send_comp() passes attachment objects in some
+    camel mime internal format to the itip_send_comp(), all ATTACH props
+    are replaced with CID:...
+  - itip_send_comp() calls e_cal_backend_3e_send_objects() that delivers
+    iTIP to the server, which sends it to the recipients (problem is
+    that here we have VEVENT without meaningful ATTACH properties and
+    thus the backend will not be able to determine attachments and
+    upload them to a 3E server)
+  - now it continues as in 'creating appointments ...'
+
+Evolution stores VEVENTs with attachments using local URIs. All
+attachments are stored locally. Creating/accessing attachments from the
+web (http://...) is not implemented.
+
 @endverbatim
 
 */
