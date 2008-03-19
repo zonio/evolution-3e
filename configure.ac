@@ -3,7 +3,7 @@ AC_INIT([evolution-3e], 0.9.3, [3e@zhost.zonio.net], evolution-3e)
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_CONFIG_HEADER([config.h])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([dist-bzip2])
+AM_INIT_AUTOMAKE([dist-bzip2 tar-ustar])
 AM_MAINTAINER_MODE
 
 # Static plugins are uesless

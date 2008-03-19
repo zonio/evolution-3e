@@ -1,1 +1,1 @@
-EXTRA_DIST = 2.12.tar.gz svn.tar.gz
+EXTRA_DIST = 2.12 2.22 svn
