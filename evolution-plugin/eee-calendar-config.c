@@ -435,7 +435,7 @@ void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
 static GtkWidget* add_section(GtkWidget* panel, const char* title)
 {
   GtkWidget *vbox, *hbox, *label;
-  char* markup_title = g_strdup_printf("<b>%s</b>", title);
+  char* markup_title = g_markup_printf_escaped("<b>%s</b>", title);
 
   gtk_box_pack_start(GTK_BOX(panel), label = gtk_label_new(markup_title), FALSE, FALSE, 0);
   g_free(markup_title);
