@@ -36,7 +36,8 @@ PKG_CHECK_MODULES(EDS3E, [
   libedata-cal-1.2
   libedataserver-1.2
   libedataserverui-1.2
-  evolution-data-server-1.2
+  evolution-data-server-1.2 >= 1.12.0
+  evolution-plugin >= 2.12.0
 ])
 
 XDL_COMPILER=xdl-compiler
@@ -52,29 +53,30 @@ AC_SUBST(extensiondir)
 # Get packages for Evolution 3e plugin
 #
 
-PKG_CHECK_EXISTS([evolution-plugin-2.10], [evoversion=2.10], [])
-PKG_CHECK_EXISTS([evolution-plugin], [evoversion=2.12], [])
+evoversion=`$PKG_CONFIG --variable=execversion evolution-shell`
 
-if [[ "$evoversion" = "2.10" ]]; then
-  evoplugpkg=evolution-plugin-2.10
-elif [[ "$evoversion" = "2.12" ]]; then
-  evoplugpkg=evolution-plugin
+if [[ "$evoversion" = "2.12" ]]; then
+  EVO_VERSION=212
+elif [[ "$evoversion" = "2.22" ]]; then
+  EVO_VERSION=222
 else
-  AC_MSG_ERROR([Unsupported evolution version, you need 2.10 or 2.12])
+  AC_MSG_ERROR([Unsupported evolution version, you need 2.12 or 2.22])
 fi
 
 PKG_CHECK_MODULES(EVO3E, [
-  $evoplugpkg
+  evolution-plugin >= 2.12.0
   libglade-2.0
 ])
 
 AC_SUBST(EVO3E_CFLAGS)
 AC_SUBST(EVO3E_LIBS)
 
-plugindir=`$PKG_CONFIG --variable=plugindir $evoplugpkg`
-errordir=`$PKG_CONFIG --variable=errordir $evoplugpkg`
+plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin`
+errordir=`$PKG_CONFIG --variable=errordir evolution-plugin`
 AC_SUBST(plugindir)
 AC_SUBST(errordir)
+
+AC_DEFINE_UNQUOTED(EVOLUTION_VERSION, $EVO_VERSION, [Evolution version code])
 
 #
 # Misc
@@ -105,7 +107,7 @@ cat << EOF
 Plugins configured:
 
   Evolution     = $evoversion
-  EDS           = $evoversion
+  EDS           = $edsversion
 
   plugindir     = $plugindir
   errordir      = $errordir
