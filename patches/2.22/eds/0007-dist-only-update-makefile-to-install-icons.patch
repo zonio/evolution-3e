@@ -1,0 +1,27 @@
+From ad0b0d1086f8f763c64134bf179b21c1fcc4287d Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Sat, 27 Oct 2007 04:25:43 +0200
+Subject: [PATCH] dist-only: update makefile to install icons
+
+---
+ art/Makefile.in |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+diff --git a/art/Makefile.in b/art/Makefile.in
+index e6b81a6..aa13828 100644
+--- a/art/Makefile.in
++++ b/art/Makefile.in
+@@ -342,7 +342,9 @@ images_DATA = \
+ 	category_status_16.png			\
+ 	category_strategies_16.png		\
+ 	category_suppliers_16.png		\
+-	category_time-and-expenses_16.png
++	category_time-and-expenses_16.png	\
++	category_error_16.png			\
++	category_outofsync_16.png
+ 
+ EXTRA_DIST = \
+ 	$(images_DATA)
+-- 
+1.5.4-dirty
+
