@@ -100,7 +100,7 @@ gboolean e_cal_backend_3e_upload_attachments(ECalBackend3e* cb, ECalComponent* c
   g_return_val_if_fail(comp != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
 
-  return NULL;
+  return TRUE;
 }
 
 /** Download all attachments from the 3E server.
@@ -118,7 +118,7 @@ gboolean e_cal_backend_3e_download_attachments(ECalBackend3e* cb, ECalComponent*
   g_return_val_if_fail(comp != NULL, FALSE);
   g_return_val_if_fail(err == NULL || *err == NULL, FALSE);
 
-  return NULL;
+  return TRUE;
 }
 
 /* @} */
