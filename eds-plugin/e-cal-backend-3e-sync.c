@@ -622,6 +622,78 @@ void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e* cb, time_t stamp)
 // }}}
 // {{{ iTIP message queue
 
+static char* get_messages_queue_file(ECalBackend3e* cb)
+{
+  char* filename;
+  char* mangled_uri = g_strdup(e_cal_backend_get_uri(E_CAL_BACKEND(cb)));
+  guint i;
+
+  for (i = 0; i < strlen (mangled_uri); i++)
+    if (mangled_uri[i] == ':' || mangled_uri[i] == '/')
+      mangled_uri[i] = '_';
+
+  filename = g_build_filename(g_get_home_dir(), ".evolution/cache/calendar", mangled_uri, "messages.xml", NULL);
+  g_free(mangled_uri);
+
+  return filename;
+}
+
+static void add_message(const char* item, xmlNode* root)
+{
+  xmlNewChild(root, NULL, BAD_CAST "item", BAD_CAST item);
+}
+
+void e_cal_backend_3e_messages_queue_init(ECalBackend3e* cb)
+{
+  cb->priv->message_queue = g_queue_new();
+}
+
+gboolean e_cal_backend_3e_messages_queue_save(ECalBackend3e* cb)
+{
+  xmlDoc* doc = xmlNewDoc(BAD_CAST "1.0");
+  xmlNode* root = xmlNewNode(NULL, BAD_CAST "queue");
+  xmlDocSetRootElement(doc, root);
+
+  g_queue_foreach(cb->priv->message_queue, (GFunc)add_message, root);
+
+  char* path = get_messages_queue_file(cb);
+  int rs = xmlSaveFormatFile(path, doc, 1);
+  g_free(path);
+
+  xmlFreeDoc(doc);
+
+  return rs != -1;
+}
+
+void e_cal_backend_3e_messages_queue_load(ECalBackend3e* cb)
+{
+  char* path = get_messages_queue_file(cb);
+  xmlDoc* doc = xmlReadFile(path, "UTF-8", XML_PARSE_NOERROR|XML_PARSE_NOWARNING|XML_PARSE_NONET);
+  g_free(path);
+  xmlNode* root = xmlDocGetRootElement(doc);
+
+  e_cal_backend_3e_messages_queue_clear(cb);
+
+  if (root)
+  {
+    xmlNode* item;
+    for (item = root->children; item; item = item->next)
+    {
+      xmlChar* content = xmlNodeGetContent(item);
+      g_queue_push_tail(cb->priv->message_queue, g_strdup((char*)content));
+      xmlFree(content);
+    }
+  }
+
+  xmlFreeDoc(doc);
+}
+
+void e_cal_backend_3e_messages_queue_clear(ECalBackend3e* cb)
+{
+  g_queue_foreach(cb->priv->message_queue, (GFunc)g_free, NULL);
+  g_queue_clear(cb->priv->message_queue);
+}
+
 /** Add message to the beginning of the iTIPs queue.
  * 
  * @param cb 3E calendar backend.
@@ -633,21 +705,22 @@ gboolean e_cal_backend_3e_push_message(ECalBackend3e* cb, const char* object)
 {
   g_return_val_if_fail(object != NULL, FALSE);
 
-  return TRUE;
+  g_queue_push_head(cb->priv->message_queue, g_strdup(object));
+  return e_cal_backend_3e_messages_queue_save(cb);
 }
 
 /** Remove given message of the end of the iTIPs queue.
  * 
  * @param cb 3E calendar backend.
- * @param object iTIP string.
  * 
  * @return TRUE on success, FALSE otherwise.
  */
-gboolean e_cal_backend_3e_pop_message(ECalBackend3e* cb, const char* object)
+gboolean e_cal_backend_3e_pop_message(ECalBackend3e* cb)
 {
-  g_return_val_if_fail(object != NULL, FALSE);
+  char* object = g_queue_pop_tail(cb->priv->message_queue);
+  g_free(object);
 
-  return TRUE;
+  return e_cal_backend_3e_messages_queue_save(cb);
 }
 
 /** Get the oldest message from the queue.
@@ -658,7 +731,7 @@ gboolean e_cal_backend_3e_pop_message(ECalBackend3e* cb, const char* object)
  */
 const char* e_cal_backend_3e_get_message(ECalBackend3e* cb)
 {
-  return NULL;
+  return g_queue_peek_tail(cb->priv->message_queue);
 }
 
 /** Send message.
@@ -671,11 +744,46 @@ const char* e_cal_backend_3e_get_message(ECalBackend3e* cb)
  */
 gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GError** err)
 {
+  icalcomponent* comp;
+  GSList* recipients = NULL, *iter;
+  GError* local_err = NULL;
+ 
+  comp = icalparser_parse_string(object);
+  if (comp == NULL)
+  {
+    g_set_error(err, 0, -1, "Invalid iTIP string. Can't send the message.");
+    return FALSE;
+  }
+
+  icalcomponent_collect_recipients(comp, cb->priv->username, &recipients);
+  icalcomponent_free(comp);
+
   //ATTACH: convert URIs
   //ATTACH: upload attachemnts
-  //ATTACH: open connection
-  //ATTACH: send iTIP
-  //ATTACH: close connection
+
+  if (recipients)
+  {
+    if (!e_cal_backend_3e_open_connection(cb, &local_err))
+    {
+      g_error_free(local_err);
+      return GNOME_Evolution_Calendar_OtherError;
+    }
+
+    ESClient_sendMessage(cb->priv->conn, recipients, object, &local_err);
+
+    g_slist_foreach(recipients, (GFunc)g_free, NULL);
+    g_slist_free(recipients);
+
+    e_cal_backend_3e_close_connection(cb);
+
+    if (local_err)
+    {
+      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't send meeting request.", local_err);
+      g_propagate_error(err, local_err);
+      return FALSE;
+    }
+  }
+
   return TRUE;
 }
 
@@ -687,11 +795,21 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GE
  */
 gboolean e_cal_backend_3e_process_message_queue(ECalBackend3e* cb)
 {
-  //ATTACH:
-  // loop:
-  // - get last message
-  // - send it
-  // - pop it from the queue
+  GError* local_err = NULL;
+  const char* message;
+
+  while ((message = e_cal_backend_3e_get_message(cb)) != NULL)
+  {
+    e_cal_backend_3e_send_message(cb, message, &local_err);
+    if (local_err)
+    {
+      g_warning("send_message failed. (%s)", local_err->message);
+      g_clear_error(&local_err);
+    }
+
+    e_cal_backend_3e_pop_message(cb);
+  }
+
   return TRUE;
 }
 
@@ -905,10 +1023,10 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
   
   g_list_free(components);
 
-  //ATTACH: upload attachments for iTIPs and send iTips itself (from the message
-  //queue)
-
   e_cal_backend_3e_close_connection(cb);
+
+  // send itips
+  e_cal_backend_3e_process_message_queue(cb);
 
   return TRUE;
 }

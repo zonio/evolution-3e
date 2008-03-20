@@ -1,0 +1,29 @@
+From 9f7bcc38fb8448ce7581ac2553e21c0efb771c11 Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Thu, 20 Mar 2008 20:48:18 +0100
+Subject: [PATCH] add CAL_STATIC_CAPABILITY_NO_SEND_IMIP calendar capability
+
+CAL_STATIC_CAPABILITY_NO_SEND_IMIP
+
+  Don't send iMIPs via Camel. Assume that backend will send it.
+  Don't convert ATTACH properties to the CID:... before passing iTIP to
+  itip_send_comp() in real_send_comp().
+---
+ calendar/libecal/e-cal-util.h |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/calendar/libecal/e-cal-util.h b/calendar/libecal/e-cal-util.h
+index 0be3bd4..31df3a1 100644
+--- a/calendar/libecal/e-cal-util.h
++++ b/calendar/libecal/e-cal-util.h
+@@ -127,6 +127,7 @@ gboolean e_cal_util_event_dates_match (icalcomponent *icalcomp1, icalcomponent *
+ #define CAL_STATIC_CAPABILITY_NO_ORGANIZER		 "no-organizer"
+ #define CAL_STATIC_CAPABILITY_DELEGATE_TO_MANY		 "delegate-to-many"
+ #define CAL_STATIC_CAPABILITY_HAS_UNACCEPTED_MEETING     "has-unaccepted-meeting"
++#define CAL_STATIC_CAPABILITY_NO_SEND_IMIP		  "no-send-imip"
+ 
+ /* Recurrent events. Management for instances */
+ icalcomponent *e_cal_util_construct_instance (icalcomponent *icalcomp,
+-- 
+1.5.4-dirty
+

@@ -90,6 +90,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
       return GNOME_Evolution_Calendar_OtherError;
     }
 
+    e_cal_backend_3e_messages_queue_load(cb);
+
     priv->is_loaded = TRUE;
   }
 
@@ -134,7 +136,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_static_capabilities (ECalBacke
     CAL_STATIC_CAPABILITY_NO_EMAIL_ALARMS ","
     CAL_STATIC_CAPABILITY_NO_THISANDFUTURE ","
     CAL_STATIC_CAPABILITY_NO_THISANDPRIOR ","
-    CAL_STATIC_CAPABILITY_NO_CONV_TO_RECUR
+    CAL_STATIC_CAPABILITY_NO_CONV_TO_RECUR ","
+    CAL_STATIC_CAPABILITY_NO_SEND_IMIP
   );
 
   return GNOME_Evolution_Calendar_Success;
@@ -947,32 +950,9 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects(ECalBackendSync* back
   icalcomponent_collect_recipients(comp, priv->username, &recipients);
   icalcomponent_free(comp);
 
-  //ATTACH: put message with its recipient list to the iTIP queue, implement
-  // capability to disable file:// -> CID:... conversion in evolution, move
-  // following code to the sync thread
+  e_cal_backend_3e_push_message(E_CAL_BACKEND_3E(backend), calobj);
 
-  /* connect to the server and send iTip */
-  if (!e_cal_backend_3e_calendar_is_online(cb))
-    return GNOME_Evolution_Calendar_RepositoryOffline;
-
-  if (!e_cal_backend_3e_open_connection(cb, &local_err))
-  {
-    g_error_free(local_err);
-    return GNOME_Evolution_Calendar_OtherError;
-  }
-
-  if (recipients)
-  {
-    ESClient_sendMessage(priv->conn, recipients, calobj, &local_err);
-    if (local_err)
-    {
-      g_slist_free(recipients);
-      g_slist_foreach(recipients, (GFunc)g_free, NULL);
-      e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't send iTIPs.", local_err);
-      g_error_free(local_err);
-      return GNOME_Evolution_Calendar_OtherError;
-    }
-  }
+  e_cal_backend_3e_do_immediate_sync(cb);
 
   /* this tells evolution that it should not send emails (iMIPs) by itself */
   for (iter = recipients; iter; iter = iter->next)
@@ -1129,6 +1109,8 @@ static void e_cal_backend_3e_init (ECalBackend3e* cb)
   g_static_rec_mutex_init(&cb->priv->conn_mutex);
   cb->priv->sync_mutex = g_mutex_new();
 
+  e_cal_backend_3e_messages_queue_init(cb);
+
   e_cal_backend_sync_set_lock (E_CAL_BACKEND_SYNC (cb), TRUE);
 }
 
@@ -1138,6 +1120,8 @@ static void e_cal_backend_3e_finalize (GObject* backend)
 
   e_cal_backend_3e_periodic_sync_stop(cb);
   e_cal_backend_3e_free_connection(cb);
+  e_cal_backend_3e_messages_queue_clear(cb);
+  g_queue_free(priv->message_queue);
 
   g_static_rw_lock_free(&priv->cache_lock);
   g_static_rec_mutex_free(&priv->conn_mutex);
