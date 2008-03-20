@@ -85,7 +85,7 @@ AC_DEFINE_UNQUOTED(EVOLUTION_VERSION, $EVO_VERSION, [Evolution version code])
 SOEXT='.so'
 AC_SUBST(SOEXT)
 
-CFLAGS="$CFLAGS -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable"
+CFLAGS="$CFLAGS -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -DHANDLE_LIBICAL_MEMORY=1"
 
 #
 # Output
