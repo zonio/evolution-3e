@@ -1,16 +1,29 @@
-From fa8e49658333991b11c48cd25fb2992cad94df47 Mon Sep 17 00:00:00 2001
-From: Ondrej Jirman <ondrej.jirman@zonio.net>
-Date: Tue, 13 Mar 2007 01:55:53 +0100
-Subject: [PATCH] extend plugin system to add support for events on component activation
+add component.activated shell event
 
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+
+calendar/ChangeLog:
+
+2008-04-02  Ondrej Jirman  <megous@megous.com>
+
+	** Fix for bug #525238
+
+	* e-shell-window.c: (switch_view):
+	* es-event.c:
+	* es-event.h:
+	Add new "component.activated" event. Event is emmitted whenever
+	component is activated. ESEventTargetComponent contains a name
+	of the component being activated.
 ---
- shell/e-shell-window.c |   14 ++++++++++++++
+
+ shell/e-shell-window.c |   10 ++++++++++
  shell/es-event.c       |   11 +++++++++++
- shell/es-event.h       |   10 +++++++++-
- 3 files changed, 34 insertions(+), 1 deletions(-)
+ shell/es-event.h       |   11 ++++++++++-
+ 3 files changed, 31 insertions(+), 1 deletions(-)
+
 
 diff --git a/shell/e-shell-window.c b/shell/e-shell-window.c
-index 788aaf2..42653ae 100644
+index 788aaf2..e2c9878 100644
 --- a/shell/e-shell-window.c
 +++ b/shell/e-shell-window.c
 @@ -36,6 +36,7 @@
@@ -21,35 +34,24 @@ index 788aaf2..42653ae 100644
  
  #include <gtk/gtkbutton.h>
  #include <gtk/gtkhbox.h>
-@@ -322,6 +323,7 @@ switch_view (EShellWindow *window, ComponentView *component_view)
- 							       ECR_FIELD_ID,
- 							       component_view->component_id);
- 	char *title;
-+	ESEvent *ese;
- 
- 	if (component_view->sidebar_widget == NULL) {
- 		init_view (window, component_view);
-@@ -356,6 +358,18 @@ switch_view (EShellWindow *window, ComponentView *component_view)
+@@ -356,6 +357,15 @@ switch_view (EShellWindow *window, ComponentView *component_view)
  
  	g_object_unref (gconf_client);
  
-+	/** @Event: Shell component activated/changed
++	/** @Event: Shell component activated or switched to.
 +	 * @Id: component.activated
 +	 * @Target: ESEventTargetComponent
 +	 * 
 +	 * This event is emitted whenever the shell successfully activates component
-+   * view.
-+	 *
++	 * view.
 +	 */
-+	ese = es_event_peek();
-+  printf("event: component.activated = %s\n", component_view->component_id);
-+	e_event_emit((EEvent *)ese, "component.activated", (EEventTarget *)es_event_target_new_component(ese, component_view->component_id));
++	e_event_emit((EEvent *) es_event_peek (), "component.activated", (EEventTarget *) es_event_target_new_component (es_event_peek (), component_view->component_id));
 +
  	g_signal_emit (window, signals[COMPONENT_CHANGED], 0);
  }
  
 diff --git a/shell/es-event.c b/shell/es-event.c
-index 5d4c536..e48c1a5 100644
+index 5d4c536..14934cf 100644
 --- a/shell/es-event.c
 +++ b/shell/es-event.c
 @@ -152,6 +152,16 @@ es_event_target_new_upgrade(ESEvent *eme, int major, int minor, int revision)
@@ -61,7 +63,7 @@ index 5d4c536..e48c1a5 100644
 +{
 +	ESEventTargetComponent *t = e_event_target_new(&eme->event, ES_EVENT_TARGET_COMPONENT, sizeof(*t));
 +
-+	t->name = g_strdup(name);
++	t->name = name;
 +
 +	return t;
 +}
@@ -78,7 +80,7 @@ index 5d4c536..e48c1a5 100644
  };
  
 diff --git a/shell/es-event.h b/shell/es-event.h
-index 518fd44..1172ec3 100644
+index 518fd44..4f26395 100644
 --- a/shell/es-event.h
 +++ b/shell/es-event.h
 @@ -41,7 +41,8 @@ typedef struct _ESEventClass ESEventClass;
@@ -112,6 +114,11 @@ index 518fd44..1172ec3 100644
  typedef struct _EEventItem ESEventItem;
  
  /* The object */
--- 
-1.5.4-dirty
-
+@@ -94,6 +102,7 @@ ESEvent *es_event_peek(void);
+ ESEventTargetState *es_event_target_new_state(ESEvent *emp, int state);
+ ESEventTargetShell *es_event_target_new_shell(ESEvent *eme, struct _EShell *shell);
+ ESEventTargetUpgrade *es_event_target_new_upgrade(ESEvent *emp, int major, int minor, int revision);
++ESEventTargetComponent *es_event_target_new_component(ESEvent *eme, const char* name);
+ 
+ /* ********************************************************************** */
+ 

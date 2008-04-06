@@ -1,19 +1,29 @@
-From 94c9f13f8f795d1bdc1e4442278c466b11976b7d Mon Sep 17 00:00:00 2001
-From: Ondrej Jirman <megous@megous.com>
-Date: Sat, 24 Feb 2007 17:21:42 +0100
-Subject: [PATCH] install e-cal-popup.h includes
+install e-cal-popup.h includes
 
-This is required by some external evolution plugins.
+From: Ondrej Jirman <megous@megous.com>
+
+calendar/ChangeLog:
+
+2008-04-06  Ondrej Jirman  <megous@megous.com>
+
+	** Fix for bug #525234
+
+	* gui/Makefile.am:
+	* gui/dialogs/Makefile.am:
+	Install more include files that are useful to the out of tree evolution
+	plugins.
 ---
+
  calendar/gui/Makefile.am         |    4 +++-
  calendar/gui/dialogs/Makefile.am |    6 ++++++
  2 files changed, 9 insertions(+), 1 deletions(-)
 
+
 diff --git a/calendar/gui/Makefile.am b/calendar/gui/Makefile.am
-index f45b9b6..2b7cfe2 100644
+index 423541f..a690811 100644
 --- a/calendar/gui/Makefile.am
 +++ b/calendar/gui/Makefile.am
-@@ -49,7 +49,9 @@ component_LTLIBRARIES = libevolution-calendar.la
+@@ -33,7 +33,9 @@ component_LTLIBRARIES = libevolution-calendar.la
  ecalendarincludedir = $(privincludedir)/calendar/gui
  
  ecalendarinclude_HEADERS =	\
@@ -41,6 +51,3 @@ index 2ade11e..6dd8a4c 100644
  noinst_LTLIBRARIES = libcal-dialogs.la
  
  libcal_dialogs_la_LIBADD =					\
--- 
-1.5.4-dirty
-

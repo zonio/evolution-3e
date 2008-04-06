@@ -1,18 +1,42 @@
-From d30f56aad7f33987db3be22c9c932dae75fbc9da Mon Sep 17 00:00:00 2001
-From: Ondrej Jirman <ondrej.jirman@zonio.net>
-Date: Sat, 27 Oct 2007 04:22:23 +0200
-Subject: [PATCH] add support for error/outofsync icons/messages on events in day view
+add support for error/outofsync icons/messages on events in day view
 
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+
+ChangeLog:
+
+2008-04-06  Ondrej Jirman  <megous@megous.com>
+
+	** Fix for bug #not yet submitted
+
+	* art/Makefile.am: Install images listed below.
+	* art/category_error_16.png: Added.
+	* art/category_outofsync_16.png: Added.
+	* libedataserver/e-categories.c: Add new categories 'error' and
+	'outofsync'.
+
+calendar/ChangeLog:
+
+2008-04-06  Ondrej Jirman  <megous@megous.com>
+
+	** Fix for bug #not yet submitted
+
+	* libecal/e-cal-component.h:
+	* libecal/e-cal-component.c:
+	(e_cal_component_get_categories_list), (e_cal_component_get_x_property),
+	(e_cal_component_set_x_property): Add categories to the list based on
+	X-EVOLUTION-STATUS and X-EVOLUTION-ERROR properties.
 ---
+
  art/Makefile.am                    |    4 +-
- art/category_error_16.png          |  Bin 0 -> 202 bytes
- art/category_outofsync_16.png      |  Bin 0 -> 209 bytes
- calendar/libecal/e-cal-component.c |   98 +++++++++++++++++++++++++++++++++++-
+ art/category_error_16.png          |  Bin
+ art/category_outofsync_16.png      |  Bin
+ calendar/libecal/e-cal-component.c |   92 ++++++++++++++++++++++++++++++++++++
  calendar/libecal/e-cal-component.h |    3 +
  libedataserver/e-categories.c      |    4 ++
- 6 files changed, 107 insertions(+), 2 deletions(-)
+ 6 files changed, 101 insertions(+), 2 deletions(-)
  create mode 100644 art/category_error_16.png
  create mode 100644 art/category_outofsync_16.png
+
 
 diff --git a/art/Makefile.am b/art/Makefile.am
 index 4bc6dac..a7aeaad 100644
@@ -56,37 +80,38 @@ literal 0
 HcmV?d00001
 
 diff --git a/calendar/libecal/e-cal-component.c b/calendar/libecal/e-cal-component.c
-index 4593936..7710932 100644
+index 4593936..f0d0a92 100644
 --- a/calendar/libecal/e-cal-component.c
 +++ b/calendar/libecal/e-cal-component.c
 @@ -1748,6 +1748,7 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
  	const char *p;
  	const char *cat_start;
  	char *str;
-+  const char* prop;
++	const char* prop;
  
  	g_return_if_fail (comp != NULL);
  	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
-@@ -1756,8 +1757,17 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+@@ -1756,8 +1757,18 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
  	priv = comp->priv;
  	g_return_if_fail (priv->icalcomp != NULL);
  
-+  *categ_list = NULL;
++	*categ_list = NULL;
 +
-+  /*XXX: a little bit hacky, but it is the simplest solution anyway */
-+  e_cal_component_get_x_property (comp, "X-EVOLUTION-STATUS", &prop);
-+  if (prop)
-+    *categ_list = g_slist_prepend (*categ_list, g_strdup("outofsync"));
-+  e_cal_component_get_x_property (comp, "X-EVOLUTION-ERROR", &prop);
-+  if (prop)
-+    *categ_list = g_slist_prepend (*categ_list, g_strdup("error"));
++	/*XXX: a little bit hacky, but it is the simplest solution anyway */
++	e_cal_component_get_x_property (comp, "X-EVOLUTION-STATUS", &prop);
++	if (prop)
++		*categ_list = g_slist_prepend (*categ_list, g_strdup("outofsync"));
++
++	e_cal_component_get_x_property (comp, "X-EVOLUTION-ERROR", &prop);
++	if (prop)
++		*categ_list = g_slist_prepend (*categ_list, g_strdup("error"));
 +
  	if (!priv->categories) {
 -		*categ_list = NULL;
  		return;
  	}
  
-@@ -4697,6 +4707,92 @@ e_cal_component_set_location (ECalComponent *comp, const char *location)
+@@ -4697,6 +4708,85 @@ e_cal_component_set_location (ECalComponent *comp, const char *location)
  	}
  }
  
@@ -102,7 +127,7 @@ index 4593936..7710932 100644
 +e_cal_component_get_x_property (ECalComponent *comp, const char* name, const char **value)
 +{
 +	ECalComponentPrivate *priv;
-+  icalproperty *iter;
++	icalproperty *iter;
 +
 +	g_return_if_fail (comp != NULL);
 +	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
@@ -112,19 +137,16 @@ index 4593936..7710932 100644
 +	priv = comp->priv;
 +	g_return_if_fail (priv->icalcomp != NULL);
 +
-+  *value = NULL;
-+  for (iter = icalcomponent_get_first_property(priv->icalcomp, ICAL_X_PROPERTY);
-+       iter;
-+       iter = icalcomponent_get_next_property(priv->icalcomp, ICAL_X_PROPERTY))
-+  {
-+    const char *str = icalproperty_get_x_name (iter);
++	*value = NULL;
++	for (iter = icalcomponent_get_first_property(priv->icalcomp, ICAL_X_PROPERTY); iter;
++		iter = icalcomponent_get_next_property(priv->icalcomp, ICAL_X_PROPERTY)) {
++		const char *str = icalproperty_get_x_name (iter);
 +
-+		if (str && !strcmp (str, name))
-+    {
-+      *value = icalproperty_get_value_as_string (iter);
-+      return;
-+    }
-+  }
++		if (str && !strcmp (str, name)) {
++			*value = icalproperty_get_value_as_string (iter);
++			return;
++		}
++	}
 +}
 +
 +/**
@@ -139,7 +161,7 @@ index 4593936..7710932 100644
 +e_cal_component_set_x_property (ECalComponent *comp, const char* name, const char *value)
 +{
 +	ECalComponentPrivate *priv;
-+  icalproperty *iter;
++	icalproperty *iter;
 +
 +	g_return_if_fail (comp != NULL);
 +	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
@@ -149,31 +171,27 @@ index 4593936..7710932 100644
 +	g_return_if_fail (priv->icalcomp != NULL);
 +
 +again:
-+  for (iter = icalcomponent_get_first_property(priv->icalcomp, ICAL_X_PROPERTY);
-+       iter;
-+       iter = icalcomponent_get_next_property(priv->icalcomp, ICAL_X_PROPERTY))
-+  {
-+    const char *str = icalproperty_get_x_name (iter);
++	for (iter = icalcomponent_get_first_property(priv->icalcomp, ICAL_X_PROPERTY); iter;
++		iter = icalcomponent_get_next_property(priv->icalcomp, ICAL_X_PROPERTY)) {
++		const char *str = icalproperty_get_x_name (iter);
 +
-+    if (str && !strcmp (str, name))
-+    {
-+      icalcomponent_remove_property(priv->icalcomp, iter);
-+      icalproperty_free(iter);
-+      goto again;
-+    }
-+  }
++		if (str && !strcmp (str, name)) {
++			icalcomponent_remove_property(priv->icalcomp, iter);
++			icalproperty_free(iter);
++			goto again;
++		}
++	}
 +
-+  if (value)
-+  {
-+    /* XXX: commas are bad (libical does not escape them) */
-+    char** v = g_strsplit(value, ",", -1);
-+    char* e_value = g_strjoinv("", v);
-+    g_strfreev(v);
-+    iter = icalproperty_new_x(e_value);
-+    g_free(e_value);
-+    icalproperty_set_x_name(iter, name);
-+    icalcomponent_add_property(priv->icalcomp, iter);
-+  }
++	if (value) {
++		/* XXX: commas are bad (libical does not escape them) */
++		char** v = g_strsplit(value, ",", -1);
++		char* e_value = g_strjoinv("", v);
++		g_strfreev(v);
++		iter = icalproperty_new_x(e_value);
++		g_free(e_value);
++		icalproperty_set_x_name(iter, name);
++		icalcomponent_add_property(priv->icalcomp, iter);
++	}
 +}
 +
  
@@ -194,20 +212,17 @@ index 382976f..4d08cc5 100644
  void e_cal_component_get_attachment_list (ECalComponent *comp, GSList **attachment_list);
  void e_cal_component_set_attachment_list (ECalComponent *comp, GSList *attachment_list);
 diff --git a/libedataserver/e-categories.c b/libedataserver/e-categories.c
-index c190416..89cd94e 100644
+index c190416..ca74837 100644
 --- a/libedataserver/e-categories.c
 +++ b/libedataserver/e-categories.c
 @@ -399,6 +399,10 @@ initialize_categories (void)
  
  	g_atexit (finalize_categories);
  
-+  /*XXX: always add our categories */
-+  e_categories_add ( "error", NULL, g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_error_16.png", NULL), FALSE);
-+  e_categories_add ( "outofsync", NULL, g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_outofsync_16.png", NULL), FALSE);
++	/*XXX: always add our categories */
++	e_categories_add ("error", NULL, g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_error_16.png", NULL), FALSE);
++	e_categories_add ("outofsync", NULL, g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_outofsync_16.png", NULL), FALSE);
 +
  	n_added = load_categories ();
  	if (n_added > 0) {
  		g_debug ("Loaded %d categories", n_added);
--- 
-1.5.4-dirty
-

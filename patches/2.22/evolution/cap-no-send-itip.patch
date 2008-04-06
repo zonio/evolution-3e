@@ -1,17 +1,25 @@
-From 45d6dc184862adba678743097f8889d8dc08ba7a Mon Sep 17 00:00:00 2001
+add CAL_STATIC_CAPABILITY_NO_SEND_IMIP calendar capability
+
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
-Date: Thu, 20 Mar 2008 20:48:14 +0100
-Subject: [PATCH] add CAL_STATIC_CAPABILITY_NO_SEND_IMIP calendar capability
 
-CAL_STATIC_CAPABILITY_NO_SEND_IMIP
+calendar/ChangeLog:
 
-  Don't send iMIPs via Camel. Assume that backend will send it.
-  Don't convert ATTACH properties to the CID:... before passing iTIP to
-  itip_send_comp() in real_send_comp().
+2008-04-06  Ondrej Jirman  <megous@megous.com>
+
+	** Fix for bug #525233
+
+	* gui/dialogs/comp-editor.c:
+	* gui/itip-utils.c:
+	Add new capability CAL_STATIC_CAPABILITY_NO_SEND_IMIP to disable sending
+	of iMIPs and conversion of attachment URLs to 'CID:...' by evolution.
+	This is used by calendar backends that want to send iTIPs and upload
+	attachments to a calendar server.
 ---
+
  calendar/gui/dialogs/comp-editor.c |    2 +-
  calendar/gui/itip-utils.c          |    2 +-
  2 files changed, 2 insertions(+), 2 deletions(-)
+
 
 diff --git a/calendar/gui/dialogs/comp-editor.c b/calendar/gui/dialogs/comp-editor.c
 index 17b2409..28278df 100644
@@ -27,10 +35,10 @@ index 17b2409..28278df 100644
  					NULL, NULL, users)) {
  			g_object_unref (send_comp);
 diff --git a/calendar/gui/itip-utils.c b/calendar/gui/itip-utils.c
-index f12874b..f8be07b 100644
+index 173817f..b23fc71 100644
 --- a/calendar/gui/itip-utils.c
 +++ b/calendar/gui/itip-utils.c
-@@ -1264,7 +1264,7 @@ itip_send_comp (ECalComponentItipMethod method, ECalComponent *send_comp,
+@@ -1254,7 +1254,7 @@ itip_send_comp (ECalComponentItipMethod method, ECalComponent *send_comp,
  	/* Recipients */
  	to_list = comp_to_list (method, comp, users, FALSE);
  	if (method != E_CAL_COMPONENT_METHOD_PUBLISH) {
@@ -39,6 +47,3 @@ index f12874b..f8be07b 100644
  			/* We sent them all via the server */
  			retval = TRUE;
  			goto cleanup;
--- 
-1.5.4-dirty
-

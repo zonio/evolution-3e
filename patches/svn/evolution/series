@@ -1,0 +1,7 @@
+# This series applies on GIT commit 9e819fb56783d0567ce2ae1a1142b9eb78a6cd40
+component-activation-event.patch
+disable-source-update-flag.patch
+install-more-includes.patch
+alarm-group-auth.patch
+cap-no-send-itip.patch
+show-error-message-in-event.patch
