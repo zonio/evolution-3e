@@ -58,6 +58,7 @@ struct _ECalBackend3ePrivate
   /** @{ */
   CalMode mode;                  /**< Calendar mode (CAL_MODE_REMOTE, CAL_MODE_LOCAL). */
   gboolean is_loaded;            /**< Calendar is in loaded state. (connection set up, calinfo loaded) */
+  char* cache_path;
   ECalBackendCache *cache;       /**< Calendar cache object. */
   GStaticRWLock cache_lock;      /**< RW mutex for backend cache object. */
   icaltimezone *default_zone;    /**< Temporary store for this session's default timezone. */
@@ -126,6 +127,7 @@ void icalcomponent_set_cache_state(icalcomponent* comp, int state);
 int icalcomponent_get_cache_state(icalcomponent* comp);
 
 /* misc */
+const char* e_cal_backend_3e_get_cache_path(ECalBackend3e* cb);
 const char* icalcomponent_get_tzid(icalcomponent* comp);
 gboolean icalcomponent_3e_status_is_deleted(icalcomponent* comp);
 icalproperty_method icalcomponent_get_itip_method(icalcomponent* comp);

@@ -43,6 +43,27 @@ void e_cal_backend_notify_gerror_error(ECalBackend * backend, char *message, GEr
 }
 
 // }}}
+// {{{ Cache path
+
+const char* e_cal_backend_3e_get_cache_path(ECalBackend3e* cb)
+{
+  if (cb->priv->cache_path == NULL)
+  {
+    char* mangled_uri = g_strdup(e_cal_backend_get_uri(E_CAL_BACKEND(cb)));
+    guint i;
+
+    for (i = 0; i < strlen (mangled_uri); i++)
+      if (mangled_uri[i] == ':' || mangled_uri[i] == '/')
+        mangled_uri[i] = '_';
+
+    cb->priv->cache_path = g_build_filename(g_get_home_dir(), ".evolution/cache/calendar", mangled_uri, NULL);
+    g_free(mangled_uri);
+  }
+
+  return cb->priv->cache_path;
+}
+
+// }}}
 // {{{ iCalendar X-* property manipulation
 
 /** Set icalcomponent X-* property.

@@ -1143,6 +1143,7 @@ static void e_cal_backend_3e_finalize (GObject* backend)
     g_object_unref (priv->cache);
     priv->cache = NULL;
   }
+  g_free(priv->cache_path);
 
   if (priv->default_zone)
   {
