@@ -119,6 +119,7 @@ void e_cal_backend_3e_periodic_sync_enable(ECalBackend3e* cb);
 void e_cal_backend_3e_periodic_sync_disable(ECalBackend3e* cb);
 void e_cal_backend_3e_periodic_sync_stop(ECalBackend3e* cb);
 void e_cal_backend_3e_do_immediate_sync(ECalBackend3e* cb);
+gboolean e_cal_backend_3e_sync_should_stop(ECalBackend3e* cb);
 
 /* component cache state */
 void e_cal_component_set_cache_state(ECalComponent* comp, ECalComponentCacheState state);

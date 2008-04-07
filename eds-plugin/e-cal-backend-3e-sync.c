@@ -1297,6 +1297,19 @@ void e_cal_backend_3e_periodic_sync_disable(ECalBackend3e* cb)
   g_mutex_unlock(cb->priv->sync_mutex);
 }
 
+/** Check if whatever sync thread is doing should be cancelled.
+ * 
+ * @param cb 3E calendar backend.
+ * 
+ * @return TRUE if action should be cancelled.
+ */
+gboolean e_cal_backend_3e_sync_should_stop(ECalBackend3e* cb)
+{
+  int status = g_atomic_int_get(&cb->priv->sync_request);
+
+  return status == SYNC_STOP || status == SYNC_PAUSE;
+}
+
 /** Stop synchronization thread. This function will return after completion of
  * current sync.
  * 
