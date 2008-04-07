@@ -634,7 +634,15 @@ static void add_message(const char* item, xmlNode* root)
 
 void e_cal_backend_3e_messages_queue_init(ECalBackend3e* cb)
 {
+  cb->priv->message_queue_mutex = g_mutex_new();
   cb->priv->message_queue = g_queue_new();
+}
+
+void e_cal_backend_3e_messages_queue_free(ECalBackend3e* cb)
+{
+  e_cal_backend_3e_messages_queue_clear(cb);
+  g_queue_free(cb->priv->message_queue);
+  g_mutex_free(cb->priv->message_queue_mutex);
 }
 
 gboolean e_cal_backend_3e_messages_queue_save(ECalBackend3e* cb)
@@ -643,11 +651,15 @@ gboolean e_cal_backend_3e_messages_queue_save(ECalBackend3e* cb)
   xmlNode* root = xmlNewNode(NULL, BAD_CAST "queue");
   xmlDocSetRootElement(doc, root);
 
+  g_mutex_lock(cb->priv->message_queue_mutex);
+
   g_queue_foreach(cb->priv->message_queue, (GFunc)add_message, root);
 
   char* path = get_messages_queue_file(cb);
   int rs = xmlSaveFormatFile(path, doc, 1);
   g_free(path);
+
+  g_mutex_unlock(cb->priv->message_queue_mutex);
 
   xmlFreeDoc(doc);
 
@@ -661,6 +673,8 @@ void e_cal_backend_3e_messages_queue_load(ECalBackend3e* cb)
   g_free(path);
   xmlNode* root = xmlDocGetRootElement(doc);
 
+  g_mutex_lock(cb->priv->message_queue_mutex);
+
   e_cal_backend_3e_messages_queue_clear(cb);
 
   if (root)
@@ -668,11 +682,16 @@ void e_cal_backend_3e_messages_queue_load(ECalBackend3e* cb)
     xmlNode* item;
     for (item = root->children; item; item = item->next)
     {
+      if (item->type != XML_ELEMENT_NODE)
+        continue;
+
       xmlChar* content = xmlNodeGetContent(item);
       g_queue_push_tail(cb->priv->message_queue, g_strdup((char*)content));
       xmlFree(content);
     }
   }
+
+  g_mutex_unlock(cb->priv->message_queue_mutex);
 
   xmlFreeDoc(doc);
 }
@@ -694,7 +713,10 @@ gboolean e_cal_backend_3e_push_message(ECalBackend3e* cb, const char* object)
 {
   g_return_val_if_fail(object != NULL, FALSE);
 
+  g_mutex_lock(cb->priv->message_queue_mutex);
   g_queue_push_head(cb->priv->message_queue, g_strdup(object));
+  g_mutex_unlock(cb->priv->message_queue_mutex);
+
   return e_cal_backend_3e_messages_queue_save(cb);
 }
 
@@ -706,8 +728,9 @@ gboolean e_cal_backend_3e_push_message(ECalBackend3e* cb, const char* object)
  */
 gboolean e_cal_backend_3e_pop_message(ECalBackend3e* cb)
 {
-  char* object = g_queue_pop_tail(cb->priv->message_queue);
-  g_free(object);
+  g_mutex_lock(cb->priv->message_queue_mutex);
+  g_free(g_queue_pop_tail(cb->priv->message_queue));
+  g_mutex_unlock(cb->priv->message_queue_mutex);
 
   return e_cal_backend_3e_messages_queue_save(cb);
 }
@@ -720,7 +743,13 @@ gboolean e_cal_backend_3e_pop_message(ECalBackend3e* cb)
  */
 const char* e_cal_backend_3e_get_message(ECalBackend3e* cb)
 {
-  return g_queue_peek_tail(cb->priv->message_queue);
+  const char* msg;
+
+  g_mutex_lock(cb->priv->message_queue_mutex);
+  msg = g_queue_peek_tail(cb->priv->message_queue);
+  g_mutex_unlock(cb->priv->message_queue_mutex);
+
+  return msg;
 }
 
 /** Send message.

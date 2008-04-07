@@ -64,6 +64,7 @@ struct _ECalBackend3ePrivate
   icaltimezone *default_zone;    /**< Temporary store for this session's default timezone. */
   gboolean sync_immediately;     /**< If TRUE, e_cal_backend_3e_sync_cache_to_server() is run after cache mod operations. */
   GQueue* message_queue;         /**< iTIP messages queue. */
+  GMutex* message_queue_mutex;   /**< Protects messages queue. */
   /** @} */
 
   /** @addtogroup eds_sync */
@@ -148,6 +149,7 @@ gboolean e_cal_backend_3e_download_attachments(ECalBackend3e* cb, ECalComponent*
 /* message queue API */
 
 void e_cal_backend_3e_messages_queue_init(ECalBackend3e* cb);
+void e_cal_backend_3e_messages_queue_free(ECalBackend3e* cb);
 gboolean e_cal_backend_3e_messages_queue_save(ECalBackend3e* cb);
 void e_cal_backend_3e_messages_queue_load(ECalBackend3e* cb);
 void e_cal_backend_3e_messages_queue_clear(ECalBackend3e* cb);

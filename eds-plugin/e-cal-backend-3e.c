@@ -1120,8 +1120,7 @@ static void e_cal_backend_3e_finalize (GObject* backend)
 
   e_cal_backend_3e_periodic_sync_stop(cb);
   e_cal_backend_3e_free_connection(cb);
-  e_cal_backend_3e_messages_queue_clear(cb);
-  g_queue_free(priv->message_queue);
+  e_cal_backend_3e_messages_queue_free(cb);
 
   g_static_rw_lock_free(&priv->cache_lock);
   g_static_rec_mutex_free(&priv->conn_mutex);
