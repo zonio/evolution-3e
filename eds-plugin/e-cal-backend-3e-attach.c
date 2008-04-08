@@ -539,11 +539,11 @@ gboolean e_cal_backend_3e_convert_attachment_uris_to_remote_icalcomp(ECalBackend
   GSList* iter;
   gboolean retval = TRUE;
   icalproperty* prop;
-  ECalComponent* ecomp = e_cal_component_new();
-
-  e_cal_component_set_icalcomponent(ecomp, comp);
 
   g_return_val_if_fail(comp != NULL, FALSE);
+
+  ECalComponent* ecomp = e_cal_component_new();
+  e_cal_component_set_icalcomponent(ecomp, icalcalendar_new_clone(comp));
 
   for (prop = icalcomponent_get_first_property(comp, ICAL_ATTACH_PROPERTY); prop; 
        prop = icalcomponent_get_next_property(comp, ICAL_ATTACH_PROPERTY))

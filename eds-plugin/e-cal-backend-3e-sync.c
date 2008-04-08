@@ -1188,7 +1188,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
         char* object;
         ECalComponent* new_comp = e_cal_component_new();
 
-        e_cal_component_set_icalcomponent(new_comp, icomp);
+        e_cal_component_set_icalcomponent(new_comp, icalcomponent_new_clone(icomp));
         e_cal_component_set_cache_state(new_comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
         e_cal_backend_3e_convert_attachment_uris_to_local(cb, new_comp);
         if (comp)
