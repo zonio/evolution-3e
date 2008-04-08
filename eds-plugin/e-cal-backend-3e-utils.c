@@ -253,10 +253,10 @@ icalcomponent* icalcomponent_get_itip_payload(icalcomponent* comp)
   {
     icalcomponent *vevent = icalcomponent_get_first_component(comp, ICAL_VEVENT_COMPONENT);
     if (vevent)
-      ret = icalcomponent_new_clone(vevent);
+      ret = vevent;
   }
   else if (icalcomponent_isa(comp) == ICAL_VEVENT_COMPONENT)
-    ret = icalcomponent_new_clone(comp);
+    ret = comp;
 
   return ret;
 }
@@ -321,7 +321,7 @@ void icalcomponent_collect_recipients(icalcomponent* icomp, const char* sender, 
     goto out;
 
   ecomp = e_cal_component_new();
-  e_cal_component_set_icalcomponent(ecomp, payload);
+  e_cal_component_set_icalcomponent(ecomp, icalcomponent_new_clone(payload));
   e_cal_component_get_attendee_list(ecomp, &attendees);
   e_cal_component_get_organizer(ecomp, &organizer);
   if (organizer.value == NULL)
