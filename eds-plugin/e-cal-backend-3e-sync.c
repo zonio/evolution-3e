@@ -961,13 +961,12 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
 
   for (iter = components; iter && !e_cal_backend_3e_sync_should_stop(cb); iter = iter->next)
   {
-    ECalComponent *comp = E_CAL_COMPONENT (iter->data);
+    ECalComponent *comp = E_CAL_COMPONENT(iter->data);
     ECalComponent *remote_comp;
     ECalComponentId* id = e_cal_component_get_id(comp);
     ECalComponentCacheState state = e_cal_component_get_cache_state(comp);
     /* remove client properties before sending component to the server */
     e_cal_component_set_x_property(comp, "X-EVOLUTION-STATUS", NULL);
-    e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", NULL);
     e_cal_component_set_cache_state(comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
     e_cal_component_set_x_property(comp, "X-3E-DELETED", NULL);
     remote_comp = e_cal_component_clone(comp);
@@ -982,17 +981,8 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
     {
       if (!e_cal_backend_3e_upload_attachments(cb, remote_comp, &local_err))
       {
-        e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", "Attachemnts upload failed.");
+        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E attachemnts sync failure", local_err);
         g_clear_error(&local_err);
-
-        char* new_object = e_cal_component_get_as_string(comp);
-        e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), object, new_object);
-        g_free(new_object);
-
-        g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-        e_cal_backend_cache_put_component(cb->priv->cache, comp);
-        g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
-
         goto next;
       }
     }
@@ -1004,8 +994,9 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
         ESClient_addObject(cb->priv->conn, cb->priv->calspec, remote_object, &local_err);
         if (local_err)
         {
-          e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", local_err->message);
+          e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
           g_clear_error(&local_err);
+          break;
         }
 
         char* new_object = e_cal_component_get_as_string(comp);
@@ -1023,8 +1014,9 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
         ESClient_updateObject(cb->priv->conn, cb->priv->calspec, remote_object, &local_err);
         if (local_err)
         {
-          e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", local_err->message);
+          e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
           g_clear_error(&local_err);
+          break;
         }
 
         char* new_object = e_cal_component_get_as_string(comp);
@@ -1044,6 +1036,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
         g_free(oid);
         if (local_err)
         {
+          e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
           g_clear_error(&local_err);
           break;
         }
