@@ -766,6 +766,7 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GE
   GSList* recipients = NULL, *iter;
   GError* local_err = NULL;
   ECalComponent* ecomp;
+  char* remote_object = NULL;
  
   comp = icalparser_parse_string(object);
   if (comp == NULL)
@@ -775,10 +776,13 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GE
   }
 
   icalcomponent_collect_recipients(comp, cb->priv->username, &recipients);
+  icalcomponent* comp_payload = icalcomponent_get_itip_payload(comp);
+  e_cal_backend_3e_convert_attachment_uris_to_remote_icalcomp(cb, comp_payload);
+  ecomp = e_cal_component_new();
+  e_cal_component_set_icalcomponent(ecomp, icalcomponent_new_clone(comp_payload));
+  remote_object = icalcomponent_as_ical_string(comp);
   icalcomponent_free(comp);
 
-  ecomp = e_cal_component_new_from_string(object);
-  e_cal_backend_3e_convert_attachment_uris_to_remote(cb, ecomp);
   if (!e_cal_backend_3e_upload_attachments(cb, ecomp, &local_err))
   {
     //XXX: handle errors
@@ -796,7 +800,7 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GE
       return GNOME_Evolution_Calendar_OtherError;
     }
 
-    ESClient_sendMessage(cb->priv->conn, recipients, object, &local_err);
+    ESClient_sendMessage(cb->priv->conn, recipients, remote_object, &local_err);
 
     g_slist_foreach(recipients, (GFunc)g_free, NULL);
     g_slist_free(recipients);

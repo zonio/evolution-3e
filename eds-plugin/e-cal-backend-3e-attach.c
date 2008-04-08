@@ -525,6 +525,61 @@ gboolean e_cal_backend_3e_convert_attachment_uris_to_remote(ECalBackend3e* cb, E
   return retval;
 }
 
+/** Convert attachment URIs from the file:// format to the eee:// format.
+ * 
+ * @param cb 3E calendar backend.
+ * @param comp ECalComponent object.
+ * 
+ * @return FALSE if any one of the file:// URIs could not be converted.
+ */
+gboolean e_cal_backend_3e_convert_attachment_uris_to_remote_icalcomp(ECalBackend3e* cb, icalcomponent* comp)
+{
+  GSList* old_attachments = NULL;
+  GSList* new_attachments = NULL;
+  GSList* iter;
+  gboolean retval = TRUE;
+  icalproperty* prop;
+  ECalComponent* ecomp = e_cal_component_new();
+
+  e_cal_component_set_icalcomponent(ecomp, comp);
+
+  g_return_val_if_fail(comp != NULL, FALSE);
+
+  for (prop = icalcomponent_get_first_property(comp, ICAL_ATTACH_PROPERTY); prop; 
+       prop = icalcomponent_get_next_property(comp, ICAL_ATTACH_PROPERTY))
+  {
+    icalattach* att = icalproperty_get_attach(prop);
+		if (icalattach_get_is_url(att))
+    {
+      char* new_url = NULL;
+      char* new_buf = NULL;
+			const char* data = icalattach_get_url(att);
+			int buf_size = strlen(data);
+			char* buf = g_malloc0(buf_size + 1);
+			icalvalue_decode_ical_string(data, buf, buf_size);
+
+      if (g_str_has_prefix(buf, "file://"))
+      {
+        new_url = convert_attachment_to_remote(cb, ecomp, buf);
+        if (new_url)
+        {
+          buf_size = 2 * strlen(new_url);
+          new_buf = g_malloc0(buf_size);
+          icalvalue_encode_ical_string(new_url, new_buf, buf_size);
+          icalproperty_set_attach(prop, icalattach_new_from_url(new_buf));
+          g_free(new_buf);
+        }
+      }
+
+      g_free(buf);
+		}
+  }
+
+  g_object_unref(ecomp);
+
+  return retval;
+}
+
 /** Upload all attachments to the 3E server.
  *
  * This method must cancel uploads and return FALSE if sync thread shutdown is requested.

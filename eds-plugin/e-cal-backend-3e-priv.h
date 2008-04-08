@@ -144,6 +144,7 @@ gboolean e_cal_component_id_compare(ECalComponentId* id1, ECalComponentId* id2);
 
 gboolean e_cal_backend_3e_convert_attachment_uris_to_local(ECalBackend3e* cb, ECalComponent* comp);
 gboolean e_cal_backend_3e_convert_attachment_uris_to_remote(ECalBackend3e* cb, ECalComponent* comp);
+gboolean e_cal_backend_3e_convert_attachment_uris_to_remote_icalcomp(ECalBackend3e* cb, icalcomponent* comp);
 gboolean e_cal_backend_3e_upload_attachments(ECalBackend3e* cb, ECalComponent* comp, GError** err);
 gboolean e_cal_backend_3e_download_attachments(ECalBackend3e* cb, ECalComponent* comp, GError** err);
 void e_cal_backend_3e_attachment_store_free(ECalBackend3e* cb);
