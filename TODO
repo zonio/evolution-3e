@@ -7,8 +7,11 @@ Evolution Plugin
 
 EDS Plugin
 ~~~~~~~~~~
-- attachments
-- alarms
+- attachments:
+  - check locking requirements
+
+- conflict resolution when same event is modified multiple times
+  in a shared calendar (that cache thing)
 
 Evolution/EDS
 ~~~~~~~~~~~~~
