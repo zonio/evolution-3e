@@ -65,6 +65,7 @@ struct _ECalBackend3ePrivate
   gboolean sync_immediately;     /**< If TRUE, e_cal_backend_3e_sync_cache_to_server() is run after cache mod operations. */
   GQueue* message_queue;         /**< iTIP messages queue. */
   GMutex* message_queue_mutex;   /**< Protects messages queue. */
+  GSList* attachments;
   /** @} */
 
   /** @addtogroup eds_sync */
@@ -141,10 +142,13 @@ gboolean e_cal_component_id_compare(ECalComponentId* id1, ECalComponentId* id2);
 
 /* attachment and attachment storage API */
 
-ECalComponent* e_cal_backend_3e_convert_attachment_uris_to_local(ECalBackend3e* cb, ECalComponent* comp);
-ECalComponent* e_cal_backend_3e_convert_attachment_uris_to_remote(ECalBackend3e* cb, ECalComponent* comp);
+gboolean e_cal_backend_3e_convert_attachment_uris_to_local(ECalBackend3e* cb, ECalComponent* comp);
+gboolean e_cal_backend_3e_convert_attachment_uris_to_remote(ECalBackend3e* cb, ECalComponent* comp);
 gboolean e_cal_backend_3e_upload_attachments(ECalBackend3e* cb, ECalComponent* comp, GError** err);
 gboolean e_cal_backend_3e_download_attachments(ECalBackend3e* cb, ECalComponent* comp, GError** err);
+void e_cal_backend_3e_attachment_store_free(ECalBackend3e* cb);
+void e_cal_backend_3e_attachment_store_load(ECalBackend3e* cb);
+gboolean e_cal_backend_3e_attachment_store_save(ECalBackend3e* cb);
 
 /* message queue API */
 

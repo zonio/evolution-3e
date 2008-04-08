@@ -765,6 +765,7 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GE
   icalcomponent* comp;
   GSList* recipients = NULL, *iter;
   GError* local_err = NULL;
+  ECalComponent* ecomp;
  
   comp = icalparser_parse_string(object);
   if (comp == NULL)
@@ -776,8 +777,16 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e* cb, const char* object, GE
   icalcomponent_collect_recipients(comp, cb->priv->username, &recipients);
   icalcomponent_free(comp);
 
-  //ATTACH: convert URIs
-  //ATTACH: upload attachemnts
+  ecomp = e_cal_component_new_from_string(object);
+  e_cal_backend_3e_convert_attachment_uris_to_remote(cb, ecomp);
+  if (!e_cal_backend_3e_upload_attachments(cb, ecomp, &local_err))
+  {
+    //XXX: handle errors
+    g_object_unref(ecomp);
+    g_clear_error(&local_err);
+    return FALSE;
+  }
+  g_object_unref(ecomp);
 
   if (recipients)
   {
@@ -950,15 +959,10 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
   components = e_cal_backend_cache_get_components(cb->priv->cache);
   g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
 
-  //ATTACH: make this loop cancellable (it will become long running due to
-  // attachment downloads, and we want to be able to stop the sync thread
-  // quickly)
-  // use g_atomic_int_get(&cb->priv->sync_request) == SYNC_STOP || SYNC_PAUSE
-  // to decide when the loop or upload should stop (wrap the "should_cancel"
-  // check in a new function)
-  for (iter = components; iter; iter = iter->next)
+  for (iter = components; iter && !e_cal_backend_3e_sync_should_stop(cb); iter = iter->next)
   {
     ECalComponent *comp = E_CAL_COMPONENT (iter->data);
+    ECalComponent *remote_comp;
     ECalComponentId* id = e_cal_component_get_id(comp);
     ECalComponentCacheState state = e_cal_component_get_cache_state(comp);
     /* remove client properties before sending component to the server */
@@ -966,17 +970,38 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
     e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", NULL);
     e_cal_component_set_cache_state(comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
     e_cal_component_set_x_property(comp, "X-3E-DELETED", NULL);
+    remote_comp = e_cal_component_clone(comp);
+    gboolean attachments_converted = e_cal_backend_3e_convert_attachment_uris_to_remote(cb, remote_comp);
+    char* remote_object = e_cal_component_get_as_string(remote_comp);
     char* object = e_cal_component_get_as_string(comp);
 
-    //ATTACH: convert attachment URI to the eee:// format
-    //ATTACH: make sure all attachments are uploaded and if not upload them (for
-    // CREATED/MODIFIED comps)
+    if (!attachments_converted)
+      goto next;
+
+    if (state == E_CAL_COMPONENT_CACHE_STATE_CREATED || state == E_CAL_COMPONENT_CACHE_STATE_MODIFIED)
+    {
+      if (!e_cal_backend_3e_upload_attachments(cb, remote_comp, &local_err))
+      {
+        e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", "Attachemnts upload failed.");
+        g_clear_error(&local_err);
+
+        char* new_object = e_cal_component_get_as_string(comp);
+        e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), object, new_object);
+        g_free(new_object);
+
+        g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
+        e_cal_backend_cache_put_component(cb->priv->cache, comp);
+        g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
+
+        goto next;
+      }
+    }
 
     switch (state)
     {
       case E_CAL_COMPONENT_CACHE_STATE_CREATED:
       {
-        ESClient_addObject(cb->priv->conn, cb->priv->calspec, object, &local_err);
+        ESClient_addObject(cb->priv->conn, cb->priv->calspec, remote_object, &local_err);
         if (local_err)
         {
           e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", local_err->message);
@@ -995,7 +1020,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
 
       case E_CAL_COMPONENT_CACHE_STATE_MODIFIED:
       {
-        ESClient_updateObject(cb->priv->conn, cb->priv->calspec, object, &local_err);
+        ESClient_updateObject(cb->priv->conn, cb->priv->calspec, remote_object, &local_err);
         if (local_err)
         {
           e_cal_component_set_x_property(comp, "X-EVOLUTION-ERROR", local_err->message);
@@ -1034,9 +1059,12 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e* cb)
         break;
     }
 
+  next:
     g_object_unref(comp);
+    g_object_unref(remote_comp);
     e_cal_component_free_id(id);
     g_free(object);
+    g_free(remote_object);
   }
   
   g_list_free(components);
@@ -1101,6 +1129,7 @@ static icalcomponent* get_server_objects(ECalBackend3e* cb, const char* query)
 gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
 {
   GError* local_err = NULL;
+  gboolean update_sync = TRUE;
   icalcomponent* ical;
   icalcomponent* icomp;
   char filter[128];
@@ -1115,13 +1144,6 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
   if (ical == NULL)
     return FALSE;
 
-  //ATTACH: only update the sync stamp if all attachments were downloaded all
-  // components were added to cache (so that sync is restartable)
-  e_cal_backend_3e_set_sync_timestamp(cb, time(NULL));
-  
-  //ATTACH: make this loop cancellable (it will become long running due to
-  // attachment downloads, and we want to be able to stop the sync thread
-  // quickly)
   for (icomp = icalcomponent_get_first_component(ical, ICAL_ANY_COMPONENT);
        icomp;
        icomp = icalcomponent_get_next_component(ical, ICAL_ANY_COMPONENT))
@@ -1171,22 +1193,28 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
 
         e_cal_component_set_icalcomponent(new_comp, icomp);
         e_cal_component_set_cache_state(new_comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
+        e_cal_backend_3e_convert_attachment_uris_to_local(cb, new_comp);
         if (comp)
           old_object = e_cal_component_get_as_string(comp);
         object = e_cal_component_get_as_string(new_comp);
 
-        //ATTACH: convert attachment URI to the file:// format
-
         if (old_object == NULL)
         {
-          //ATTACH: get attachemnts for a new object
+          if (e_cal_backend_3e_download_attachments(cb, new_comp, &local_err))
+          {
+            /* not in cache yet */
+            g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
+            e_cal_backend_cache_put_component(cb->priv->cache, new_comp);
+            g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 
-          /* not in cache yet */
-          g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-          e_cal_backend_cache_put_component(cb->priv->cache, new_comp);
-          g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
-
-          e_cal_backend_notify_object_created(E_CAL_BACKEND(cb), object);
+            e_cal_backend_notify_object_created(E_CAL_BACKEND(cb), object);
+          }
+          else
+          {
+            e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't download attachment.", local_err);
+            g_clear_error(&local_err);
+            update_sync = FALSE;
+          }
         }
         else if (strcmp(old_object, object))
         {
@@ -1197,14 +1225,21 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
           }
           else
           {
-            //ATTACH: get attachemnts for a modified object
+            if (e_cal_backend_3e_download_attachments(cb, new_comp, &local_err))
+            {
+              /* sync with server */
+              g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
+              e_cal_backend_cache_put_component(cb->priv->cache, new_comp);
+              g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 
-            /* sync with server */
-            g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-            e_cal_backend_cache_put_component(cb->priv->cache, new_comp);
-            g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
-
-            e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), old_object, object);
+              e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), old_object, object);
+            }
+            else
+            {
+              e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't download attachment.", local_err);
+              g_clear_error(&local_err);
+              update_sync = FALSE;
+            }
           }
         }
 
@@ -1240,6 +1275,9 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e* cb)
       g_warning("Unsupported component kind (%d) found on the 3E server.", kind);
   }
 
+  if (update_sync)
+    e_cal_backend_3e_set_sync_timestamp(cb, time(NULL));
+  
   icalcomponent_free(ical);
   return TRUE;
 }

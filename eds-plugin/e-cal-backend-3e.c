@@ -24,6 +24,7 @@
 
 #include "e-cal-backend-3e-priv.h"
 #include <libedataserver/e-xml-hash-utils.h>
+#include <gio/gio.h>
 
 //#define T(fmt, args...) g_print("TRACE[%p]: %s(backend=%p " fmt ")\n", g_thread_self(), G_STRFUNC, backend, ## args)
 #define T(fmt, args...)
@@ -91,6 +92,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open (ECalBackendSync * backend, E
     }
 
     e_cal_backend_3e_messages_queue_load(cb);
+    e_cal_backend_3e_attachment_store_load(cb);
 
     priv->is_loaded = TRUE;
   }
@@ -802,6 +804,45 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy (ECalBackendSync * b
 // }}}
 // {{{ Receiving iTIPs
 
+static void fetch_attachments(ECalBackend3e* cb, ECalComponent* comp)
+{
+  GFile *source, *target, *target_store;
+  char *source_filename, *target_filename;
+  const char *uid;
+  GSList *attach_list = NULL, *new_attach_list = NULL;
+  GSList *iter;
+
+  target_store = g_file_new_for_path(e_cal_backend_3e_get_cache_path(cb));
+
+  e_cal_component_get_attachment_list (comp, &attach_list);
+  e_cal_component_get_uid (comp, &uid);
+
+  for (iter = attach_list; iter; iter = iter->next)
+  {
+    char* orig_uri = iter->data;
+
+    source = g_file_new_for_uri(orig_uri);
+    source_filename = g_file_get_basename(source);
+    target_filename = g_strdup_printf("%s-%s", uid, source_filename);
+    target = g_file_get_child(target_store, target_filename);
+    g_free(source_filename);
+    g_free(target_filename);
+
+    if (g_file_copy(source, target, G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, NULL))
+      new_attach_list = g_slist_append (new_attach_list, g_file_get_uri(target));
+
+    g_object_unref(source);
+    g_object_unref(target);
+  }
+
+  e_cal_component_set_attachment_list (comp, new_attach_list);
+
+  g_slist_foreach(new_attach_list, (GFunc)g_free, NULL);
+  g_slist_free(new_attach_list);
+  g_slist_free(attach_list);
+  g_object_unref(target_store);
+}
+
 static ECalBackendSyncStatus e_cal_backend_3e_receive_object(ECalBackendSync *backend, icalcomponent *icalcomp, icalproperty_method method)
 {
   ECalBackendSyncStatus status = GNOME_Evolution_Calendar_Success;
@@ -818,6 +859,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_object(ECalBackendSync *ba
   current = icaltime_from_timet (time (NULL), 0);
   e_cal_component_set_created (new_comp, &current);
   e_cal_component_set_last_modified (new_comp, &current);
+  if (e_cal_component_has_attachments (new_comp))
+    fetch_attachments(cb, new_comp);
 
   new_id = e_cal_component_get_id (new_comp);
   cache_comp = e_cal_backend_cache_get_component(priv->cache, new_id->uid, new_id->rid);
@@ -1074,7 +1117,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_changes (ECalBackendSync * bac
 // }}}
 // {{{ Garbage
 
-/** Get list of attachemnts.
+/** Get list of attachments.
  *
  * XXX: This backend method is not used at all by evolution.
  */
@@ -1121,6 +1164,7 @@ static void e_cal_backend_3e_finalize (GObject* backend)
   e_cal_backend_3e_periodic_sync_stop(cb);
   e_cal_backend_3e_free_connection(cb);
   e_cal_backend_3e_messages_queue_free(cb);
+  e_cal_backend_3e_attachment_store_free(cb);
 
   g_static_rw_lock_free(&priv->cache_lock);
   g_static_rec_mutex_free(&priv->conn_mutex);
