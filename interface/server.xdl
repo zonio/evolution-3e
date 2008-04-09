@@ -1,23 +1,4 @@
-/* 
- * Author: Ondrej Jirman <ondrej.jirman@zonio.net>
- *
- * Copyright 2007-2008 Zonio, s.r.o.
- * 
- * This file is part of evolution-3e.
- *
- * Libxr is free software: you can redistribute it and/or modify it under the
- * terms of the GNU Lesser General Public License as published by the Free
- * Software Foundation, either version 2 of the License, or (at your option) any
- * later version.
- *
- * Libxr is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
- * A PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more
- * details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with libxr.  If not, see <http://www.gnu.org/licenses/>.
- */
+/* Generated XDL */
 
 namespace ES;
 
@@ -63,26 +44,20 @@ struct User
     array<Attribute>         attrs;
 }
 
-struct Message
-{
-    int                      id;
-    string                   sender;
-    string                   date;
-    string                   content;
-}
-
 servlet Client
 {
     boolean                  addObject                (string          calspec,
                                                        string          object);
-    boolean                  auth                     (string          username,
+    boolean                  authenticate             (string          username,
                                                        string          password);
     boolean                  changePassword           (string          new_password);
+    boolean                  createCalendar           (string          calname);
     boolean                  createUser               (string          username,
                                                        string          password);
     boolean                  deleteCalendar           (string          calname);
     boolean                  deleteObject             (string          calspec,
-                                                       string          uid);
+                                                       string          oid);
+    boolean                  deleteUser               (string          username);
     string                   freeBusy                 (string          attendee,
                                                        string          from_date,
                                                        string          to_date,
@@ -92,10 +67,8 @@ servlet Client
     array<Calendar>          getSharedCalendars       (string          query);
     array<Attribute>         getUserAttributes        (string          username);
     array<User>              getUsers                 (string          query);
-    boolean                  newCalendar              (string          calname);
     string                   queryObjects             (string          calspec,
                                                        string          query);
-    boolean                  removeUser               (string          username);
     boolean                  sendMessage              (array<string>   recipients,
                                                        string          message);
     boolean                  setCalendarAttribute     (string          calspec,
@@ -114,3 +87,17 @@ servlet Client
     boolean                  updateObject             (string          calspec,
                                                        string          object);
 }
+
+/*
+servlet Server
+{
+    boolean                  deliverMessage           (string          sender,
+                                                       array<string>   recipients,
+                                                       string          message);
+    string                   freeBusy                 (string          organizer,
+                                                       string          attendee,
+                                                       string          from_date,
+                                                       string          to_date,
+                                                       string          default_timezone);
+}
+*/

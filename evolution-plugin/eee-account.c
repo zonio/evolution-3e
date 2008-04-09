@@ -398,7 +398,7 @@ gboolean eee_account_create_new_calendar(EeeAccount* self, char** calname)
   while (1)
   {
     *calname = generate_calname();
-    ESClient_newCalendar(self->priv->conn, *calname, &err);
+    ESClient_createCalendar(self->priv->conn, *calname, &err);
     if (err == NULL || err->code != ES_XMLRPC_ERROR_CALENDAR_EXISTS)
       break;
 
@@ -573,7 +573,7 @@ gboolean eee_account_auth(EeeAccount* self)
         goto err;
     }
 
-    rs = ESClient_auth(self->priv->conn, self->name, password, &err);
+    rs = ESClient_authenticate(self->priv->conn, self->name, password, &err);
     g_free(password);
     password = NULL;
     if (!err && rs == TRUE)

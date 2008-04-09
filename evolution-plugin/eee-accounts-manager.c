@@ -289,7 +289,7 @@ static void eee_accounts_manager_sync_phase1(EeeAccountsManager* self)
       continue;
     }
 
-    /* if auth fails, account will be automatically disabled for this session */
+    /* if authenticate fails, account will be automatically disabled for this session */
     if (!eee_account_auth(account))
     {
       eee_account_set_state(account, EEE_ACCOUNT_STATE_DISABLED);

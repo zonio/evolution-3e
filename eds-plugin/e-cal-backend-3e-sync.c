@@ -128,7 +128,7 @@ gboolean e_cal_backend_3e_open_connection(ECalBackend3e* cb, GError** err)
   if (!xr_client_open(cb->priv->conn, cb->priv->server_uri, err))
     goto err;
 
-  ESClient_auth(cb->priv->conn, cb->priv->username, cb->priv->password, &local_err);
+  ESClient_authenticate(cb->priv->conn, cb->priv->username, cb->priv->password, &local_err);
   if (local_err)
   {
     g_propagate_error(err, local_err);
