@@ -1,8 +1,9 @@
-0.10.0 - 2008-04-??
+0.10.0 - 2008-04-10
 ~~~~~~~~~~~~~~~~~~~
 New features:
-  - Offline meeting requests.
-  - Implemented attachments.
+  - Appointment/meeting request attachments support.
+  - Meeting requests can be made in offline mode.
+  - Several protocol methods were renamed.
 
 0.9.4 - 2008-03-19
 ~~~~~~~~~~~~~~~~~~

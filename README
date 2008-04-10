@@ -17,6 +17,7 @@ Features:
   - Subscribe or unsubscribe from shared calendars
   - Free/busy information retrieval
   - Meeting scheduling (with "act on behalf of" feature for shared calendars)
+  - Appointment and meeting request attachments support
   
   and more...
 
@@ -24,15 +25,15 @@ For more information see http://www.zonio.net/3e or join our mailing list on
 http://zhost.zonio.net/mailman/listinfo/3e-list.
 
 
-Quick Installation Instructions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Build Instructions
+~~~~~~~~~~~~~~~~~~
 
 3E calendar plugin requires a few small patches to evolution and
 evolution-data-server (EDS). These will be integrated upstream in the future. As
 of now you still need to rebuild evolution and EDS with patches from patches/
 directory.
 
-Get and build libxr-0.9.92 or newer.
+Get and build libxr-0.9.94 or newer.
 
 Build and install 3E plugin itself:
 
@@ -81,11 +82,11 @@ evolution.
   Run ./m3es-client and type in following commands:
 
     connect 'https://localhost:4444/RPC2'
-    auth 'root' 'qwe'
+    authenticate 'root' 'qwe'
     createUser 'you@your-domain.net' 'qwe'
     sudo 'you@your-domain.net'
     setUserAttribute 'realname' 'Your Name' 'public'
-    newCalendar 'personal'
+    createCalendar 'personal'
     setCalendarAttribute 'personal' 'title' 'Personal' 'public'
     setCalendarAttribute 'personal' 'color' 'aabcbc' 'public'
     disconnect
