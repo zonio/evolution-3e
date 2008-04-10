@@ -821,7 +821,7 @@ static void fetch_attachments(ECalBackend3e* cb, ECalComponent* comp)
   {
     char* orig_uri = iter->data;
 
-    source = g_file_new_for_uri(orig_uri);
+    source = g_file_new_for_path(orig_uri);
     source_filename = g_file_get_basename(source);
     target_filename = g_strdup_printf("%s-%s", uid, source_filename);
     target = g_file_get_child(target_store, target_filename);
