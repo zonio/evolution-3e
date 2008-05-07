@@ -5,11 +5,6 @@ This is documentation for @b evolution-3e plugins.
 
 @section toc Table of Contents
 
-- @ref edsevo
-- @ref evosched
-- @ref squashed_itip
-- @ref eeesched
-- @ref attadesign
 - EDS Plugin API
   - @ref eds_cal
   - @ref eds_conn
