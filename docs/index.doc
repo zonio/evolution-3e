@@ -9,6 +9,7 @@ This is documentation for @b evolution-3e plugins.
   - @ref eds_cal
   - @ref eds_conn
   - @ref eds_sync
+  - @ref eds_attach
   - @ref eds_misc
   - @ref eds_back
 - Evolution Plugin API
@@ -51,6 +52,10 @@ EDS backend methods may then call e_cal_backend_3e_do_immediate_sync() to
 write changes to the server whenever necessary.
 
 The cache is protected by RW lock.
+
+@defgroup eds_attach EDS Attachments API
+
+Methods for uploading/downloading and keeping track of attachments.
 
 @defgroup eds_misc EDS Misc API
 
