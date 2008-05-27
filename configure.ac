@@ -1,5 +1,5 @@
 AC_PREREQ(2.57)
-AC_INIT([evolution-3e], 0.10.0, [3e-list@zonio.net], evolution-3e)
+AC_INIT([evolution-3e], 0.10.1, [3e-list@zonio.net], evolution-3e)
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_CONFIG_HEADER([config.h])
 AC_CANONICAL_SYSTEM

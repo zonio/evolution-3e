@@ -1,3 +1,9 @@
+0.10.1 - 2008-05-27
+~~~~~~~~~~~~~~~~~~~
+
+  - Various small cleanups and documentation updates
+  - x86_64 fixes
+
 0.10.0 - 2008-04-10
 ~~~~~~~~~~~~~~~~~~~
 New features:
