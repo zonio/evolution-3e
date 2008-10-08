@@ -1,0 +1,53 @@
+diff --git a/calendar/gui/e-cal-config.h b/calendar/gui/e-cal-config.h
+index 015a3f0..4bbd675 100644
+--- a/calendar/gui/e-cal-config.h
++++ b/calendar/gui/e-cal-config.h
+@@ -58,6 +58,7 @@ struct _ECalConfigTargetSource {
+ 
+ 	struct _ESource *source;
+         ECalSourceType source_type;
++	gboolean disable_source_update;
+ };
+ 
+ struct _ECalConfigTargetPrefs {
+implement flag that calendar properties plugin can use to disable sync
+
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+
+calendar/ChangeLog:
+
+2008-04-06  Ondrej Jirman  <megous@megous.com>
+
+	** Fix for bug #not yet submitted
+
+	* gui/dialogs/calendar-setup.c: (eccp_commit):
+	* gui/e-cal-config.h:
+
+	Implement ECalConfigTargetSource flag that calendar plugin can use to
+	disable ESourceList sync. This is useful if plugin wants to do its own
+	ESourceList sync.
+---
+
+ calendar/gui/dialogs/calendar-setup.c |    4 ++++
+ calendar/gui/e-cal-config.h           |    1 +
+ 2 files changed, 5 insertions(+), 0 deletions(-)
+
+
+diff --git a/calendar/gui/dialogs/calendar-setup.c b/calendar/gui/dialogs/calendar-setup.c
+index ffc3757..71783e1 100644
+--- a/calendar/gui/dialogs/calendar-setup.c
++++ b/calendar/gui/dialogs/calendar-setup.c
+@@ -75,9 +75,13 @@ eccp_check_complete (EConfig *ec, const char *pageid, void *data)
+ static void
+ eccp_commit (EConfig *ec, GSList *items, void *data)
+ {
++	ECalConfigTargetSource* target = (ECalConfigTargetSource*)ec->target;
+ 	CalendarSourceDialog *sdialog = data;
+ 	xmlNodePtr xml;
+ 
++	if (target->disable_source_update)
++		return;
++
+ 	if (sdialog->original_source) {
+ 		const gchar *color_spec;
+ 
