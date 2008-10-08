@@ -21,7 +21,7 @@ diff --git a/calendar/gui/e-calendar-view.c b/calendar/gui/e-calendar-view.c
 index 3e05333..01ce1a9 100644
 --- a/calendar/gui/e-calendar-view.c
 +++ b/calendar/gui/e-calendar-view.c
-@@ -2196,6 +2196,20 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
+@@ -2202,6 +2202,20 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
  
  	gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
  	g_free (tmp);

@@ -1,3 +1,16 @@
+diff --git a/calendar/gui/itip-utils.c b/calendar/gui/itip-utils.c
+index 9398bcf..e164e4e 100644
+--- a/calendar/gui/itip-utils.c
++++ b/calendar/gui/itip-utils.c
+@@ -1166,7 +1166,7 @@ itip_send_comp (ECalComponentItipMethod method, ECalComponent *send_comp,
+ 	/* Recipients */
+ 	destinations = comp_to_list (method, comp, users, FALSE);
+ 	if (method != E_CAL_COMPONENT_METHOD_PUBLISH) {
+-		if (destinations == NULL) {
++		if (destinations == NULL || e_cal_get_static_capability (client, CAL_STATIC_CAPABILITY_NO_SEND_IMIP)) {
+ 			/* We sent them all via the server */
+ 			retval = TRUE;
+ 			goto cleanup;
 add CAL_STATIC_CAPABILITY_NO_SEND_IMIP calendar capability
 
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
@@ -25,7 +38,7 @@ diff --git a/calendar/gui/dialogs/comp-editor.c b/calendar/gui/dialogs/comp-edit
 index a5b2232..399d5e5 100644
 --- a/calendar/gui/dialogs/comp-editor.c
 +++ b/calendar/gui/dialogs/comp-editor.c
-@@ -2613,7 +2613,7 @@ real_send_comp (CompEditor *editor, ECalComponentItipMethod method)
+@@ -3038,7 +3038,7 @@ real_send_comp (CompEditor *editor, ECalComponentItipMethod method)
  			set_attendees_for_delegation (send_comp, address, method);
  	}
  
@@ -34,16 +47,3 @@ index a5b2232..399d5e5 100644
  		if (itip_send_comp (method, send_comp, priv->client,
  					NULL, NULL, users)) {
  			g_object_unref (send_comp);
-diff --git a/calendar/gui/itip-utils.c b/calendar/gui/itip-utils.c
-index 9398bcf..e164e4e 100644
---- a/calendar/gui/itip-utils.c
-+++ b/calendar/gui/itip-utils.c
-@@ -1194,7 +1194,7 @@ itip_send_comp (ECalComponentItipMethod method, ECalComponent *send_comp,
- 	/* Recipients */
- 	destinations = comp_to_list (method, comp, users, FALSE);
- 	if (method != E_CAL_COMPONENT_METHOD_PUBLISH) {
--		if (destinations == NULL) {
-+		if (destinations == NULL || e_cal_get_static_capability (client, CAL_STATIC_CAPABILITY_NO_SEND_IMIP)) {
- 			/* We sent them all via the server */
- 			retval = TRUE;
- 			goto cleanup;

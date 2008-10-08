@@ -83,7 +83,7 @@ diff --git a/calendar/libecal/e-cal-component.c b/calendar/libecal/e-cal-compone
 index e7ccb0a..9490929 100644
 --- a/calendar/libecal/e-cal-component.c
 +++ b/calendar/libecal/e-cal-component.c
-@@ -1748,6 +1748,7 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+@@ -1756,6 +1756,7 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
  	const char *p;
  	const char *cat_start;
  	char *str;
@@ -91,7 +91,7 @@ index e7ccb0a..9490929 100644
  
  	g_return_if_fail (comp != NULL);
  	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
-@@ -1756,8 +1757,18 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+@@ -1764,8 +1765,18 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
  	priv = comp->priv;
  	g_return_if_fail (priv->icalcomp != NULL);
  
@@ -111,7 +111,7 @@ index e7ccb0a..9490929 100644
  		return;
  	}
  
-@@ -4697,6 +4708,85 @@ e_cal_component_set_location (ECalComponent *comp, const char *location)
+@@ -4708,6 +4719,85 @@ e_cal_component_set_location (ECalComponent *comp, const char *location)
  	}
  }
  
@@ -197,25 +197,11 @@ index e7ccb0a..9490929 100644
  
  
  /**
-diff --git a/calendar/libecal/e-cal-component.h b/calendar/libecal/e-cal-component.h
-index 382976f..4d08cc5 100644
---- a/calendar/libecal/e-cal-component.h
-+++ b/calendar/libecal/e-cal-component.h
-@@ -330,6 +330,9 @@ gboolean e_cal_component_has_attendees (ECalComponent *comp);
- void e_cal_component_get_location (ECalComponent *comp, const char **location);
- void e_cal_component_set_location (ECalComponent *comp, const char *location);
- 
-+void e_cal_component_get_x_property (ECalComponent *comp, const char* name, const char **value);
-+void e_cal_component_set_x_property (ECalComponent *comp, const char* name, const char *value);
-+
- /* Attachment handling */
- void e_cal_component_get_attachment_list (ECalComponent *comp, GSList **attachment_list);
- void e_cal_component_set_attachment_list (ECalComponent *comp, GSList *attachment_list);
 diff --git a/libedataserver/e-categories.c b/libedataserver/e-categories.c
 index c190416..ca74837 100644
 --- a/libedataserver/e-categories.c
 +++ b/libedataserver/e-categories.c
-@@ -399,6 +399,10 @@ initialize_categories (void)
+@@ -456,6 +456,10 @@ initialize_categories (void)
  
  	g_atexit (finalize_categories);
  
@@ -226,3 +212,17 @@ index c190416..ca74837 100644
  	n_added = load_categories ();
  	if (n_added > 0) {
  		g_debug ("Loaded %d categories", n_added);
+diff --git a/calendar/libecal/e-cal-component.h b/calendar/libecal/e-cal-component.h
+index 382976f..4d08cc5 100644
+--- a/calendar/libecal/e-cal-component.h
++++ b/calendar/libecal/e-cal-component.h
+@@ -328,6 +328,9 @@ gboolean e_cal_component_has_attendees (ECalComponent *comp);
+ void e_cal_component_get_location (ECalComponent *comp, const char **location);
+ void e_cal_component_set_location (ECalComponent *comp, const char *location);
+ 
++void e_cal_component_get_x_property (ECalComponent *comp, const char* name, const char **value);
++void e_cal_component_set_x_property (ECalComponent *comp, const char* name, const char *value);
++
+ /* Attachment handling */
+ void e_cal_component_get_attachment_list (ECalComponent *comp, GSList **attachment_list);
+ void e_cal_component_set_attachment_list (ECalComponent *comp, GSList *attachment_list);

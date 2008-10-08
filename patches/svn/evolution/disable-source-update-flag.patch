@@ -1,3 +1,15 @@
+diff --git a/calendar/gui/e-cal-config.h b/calendar/gui/e-cal-config.h
+index 015a3f0..4bbd675 100644
+--- a/calendar/gui/e-cal-config.h
++++ b/calendar/gui/e-cal-config.h
+@@ -58,6 +58,7 @@ struct _ECalConfigTargetSource {
+ 
+ 	struct _ESource *source;
+         ECalSourceType source_type;
++	gboolean disable_source_update;
+ };
+ 
+ struct _ECalConfigTargetPrefs {
 implement flag that calendar properties plugin can use to disable sync
 
 From: Ondrej Jirman <ondrej.jirman@zonio.net>
@@ -25,7 +37,7 @@ diff --git a/calendar/gui/dialogs/calendar-setup.c b/calendar/gui/dialogs/calend
 index ffc3757..71783e1 100644
 --- a/calendar/gui/dialogs/calendar-setup.c
 +++ b/calendar/gui/dialogs/calendar-setup.c
-@@ -77,9 +77,13 @@ eccp_check_complete (EConfig *ec, const char *pageid, void *data)
+@@ -75,9 +75,13 @@ eccp_check_complete (EConfig *ec, const char *pageid, void *data)
  static void
  eccp_commit (EConfig *ec, GSList *items, void *data)
  {
@@ -39,15 +51,3 @@ index ffc3757..71783e1 100644
  	if (sdialog->original_source) {
  		const gchar *color_spec;
  
-diff --git a/calendar/gui/e-cal-config.h b/calendar/gui/e-cal-config.h
-index 015a3f0..4bbd675 100644
---- a/calendar/gui/e-cal-config.h
-+++ b/calendar/gui/e-cal-config.h
-@@ -56,6 +56,7 @@ struct _ECalConfigTargetSource {
- 
- 	struct _ESource *source;
-         ECalSourceType source_type;
-+	gboolean disable_source_update;
- };
- 
- struct _ECalConfigTargetPrefs {
