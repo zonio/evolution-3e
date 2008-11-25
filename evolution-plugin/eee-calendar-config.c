@@ -414,7 +414,7 @@ static gint activation_cb(gpointer data)
 
 void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *target)
 {
-  if (strstr(target->name, "OAFIID:GNOME_Evolution_Calendar_Component") == NULL)
+  if (strstr(target->id, "OAFIID:GNOME_Evolution_Calendar_Component") == NULL)
     return;
 
   g_idle_add(activation_cb, NULL);  
