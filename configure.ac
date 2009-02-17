@@ -1,5 +1,5 @@
 AC_PREREQ(2.57)
-AC_INIT([evolution-3e], 0.10.1, [3e-list@zonio.net], evolution-3e)
+AC_INIT([evolution-3e], 1.0.0, [3e-list@zonio.net], evolution-3e)
 AC_CONFIG_SRCDIR([Makefile.am])
 AM_CONFIG_HEADER([config.h])
 AC_CANONICAL_SYSTEM
@@ -21,7 +21,7 @@ AC_HEADER_STDC
 # libxr is required
 #
 
-PKG_CHECK_MODULES(LIBXR, [libxr >= 0.9.94])
+PKG_CHECK_MODULES(LIBXR, [libxr >= 1.0.0])
 AC_SUBST(LIBXR_CFLAGS)
 AC_SUBST(LIBXR_LIBS)
 
