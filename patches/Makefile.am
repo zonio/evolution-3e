@@ -1,1 +1,0 @@
-EXTRA_DIST = 2.12 2.22 svn

@@ -1,9 +1,0 @@
-# This series applies on GIT commit a194921849521f034595e7e3594869c60e37ac7e
-group-auth.patch
-ecal-dont-cache-ro-flag.patch
-sync-and-error-notify.patch
-cap-no-send-itip.patch
-ecal-credentials-fix.patch
-eee-attach-store.patch
-orbit-fix.patch
-dist-patch.patch
