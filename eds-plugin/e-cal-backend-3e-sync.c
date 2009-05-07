@@ -318,7 +318,7 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e* cb)
     return FALSE;
   }
 
-  cals = ESClient_getCalendars(cb->priv->conn, &local_err);
+  cals = ESClient_getCalendars(cb->priv->conn, "", &local_err);
   if (local_err)
   {
     g_error_free(local_err);

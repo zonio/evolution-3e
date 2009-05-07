@@ -62,7 +62,7 @@ servlet Client
                                                        string          from_date,
                                                        string          to_date,
                                                        string          default_timezone);
-    array<Calendar>          getCalendars             ();
+    array<Calendar>          getCalendars             (string          query);
     array<Permission>        getPermissions           (string          calname);
     array<Calendar>          getSharedCalendars       (string          query);
     array<Attribute>         getUserAttributes        (string          username);
