@@ -123,18 +123,7 @@ void e_source_set_3e_properties_with_attrs(ESource* source, const char* calname,
   const char* title = eee_find_attribute_value(attrs, "title");
   const char* color_string = eee_find_attribute_value(attrs, "color");
   guint32 color = 0;
-	char cs32[8]; //32bit color represented as string e.g. #1188ff
-
-  if (color_string)
-		//conversion 48bit color string to 32bit color string
-		sscanf(color_string, "%c%c%c%c%c%c%c%c%c%c%c",	//we have string #1234567890ab, but ab is not useful
-				&(cs32[0]), &(cs32[1]), &(cs32[2]),	//#12 is useful (we copy also # for further use with e_source_set_color_spec)
-				&(cs32[7]), &(cs32[7]),	//34 is unuseful
-			 	&(cs32[3]), &(cs32[4]),
-				&(cs32[7]), &(cs32[7]),
-				&(cs32[5]), &(cs32[6]));
-		cs32[7] = '\0';
-    sscanf(cs32 + 1, "%x", &color);	//we don't want to read #
+  sscanf(color_string + 1, "%X", &color);	//we don't want to read #
   e_source_set_3e_properties(source, calname, owner, account, perm, title, color);
 }
 

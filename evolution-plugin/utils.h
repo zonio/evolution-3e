@@ -22,6 +22,8 @@
 #ifndef __3E_UTILS_H__
 #define __3E_UTILS_H__
 
+#define COLOR_COMPONENT_SIZE 1	//bytes
+
 #include <libedataserver/e-source-list.h>
 #include "eee-account.h"
 #include "eee-accounts-manager.h"

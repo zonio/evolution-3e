@@ -229,7 +229,7 @@ static void on_subs_button_subscribe_clicked(GtkButton* button, struct subscribe
     goto err1;
 
   color = g_random_int_range(0x100000, 0x1000000);
-  color_string = g_strdup_printf("%06x", color);
+  color_string = g_strdup_printf("#%06X", color);
 
   eee_account_set_calendar_attribute(ctx->account, owner, name, "title", title, FALSE);
   eee_account_set_calendar_attribute(ctx->account, owner, name, "color", color_string, FALSE);
