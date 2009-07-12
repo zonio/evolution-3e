@@ -24,6 +24,7 @@
 #endif
 
 #include <libedataserverui/e-source-selector.h>
+#include <libgnomeui/libgnomeui.h>
 #include <calendar/gui/e-cal-config.h>
 #include <calendar/gui/e-cal-popup.h>
 #include <shell/es-event.h>
@@ -184,6 +185,20 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
   ESource* source = target->source;
   ESourceGroup *group = e_source_peek_group(source);
   const char* color = e_source_peek_color_spec(source);
+	GdkColor parsed_color;
+	char converted_color[COLOR_COMPONENT_SIZE * 3 * 2 + 2];	//3 components, 2 hex chars in byte, 2 additional chars (# and \0)
+	if (!gdk_color_parse(color, &parsed_color)) {
+		g_warning("EEE: Unable to convert color \"%s\" from Evolution.", color);
+		parsed_color.red = -1;
+		parsed_color.green = 0;
+		parsed_color.blue = 0;
+	}
+	parsed_color.red >>= (2 - COLOR_COMPONENT_SIZE) * 8;	//GdkColor comonent is 2 byte integer, there are 8 bits in byte
+	parsed_color.green >>= (2 - COLOR_COMPONENT_SIZE) * 8;
+	parsed_color.blue >>= (2 - COLOR_COMPONENT_SIZE) * 8;
+	snprintf(converted_color, COLOR_COMPONENT_SIZE * 3 * 2 + 2, "#%0*X%0*X%0*X",
+			COLOR_COMPONENT_SIZE * 2, parsed_color.red, COLOR_COMPONENT_SIZE * 2, parsed_color.green, COLOR_COMPONENT_SIZE * 2, parsed_color.blue);
+	converted_color[COLOR_COMPONENT_SIZE * 3 * 2 + 1] = '\0';
 
   //g_debug("** EEE ** Properties Dialog Commit Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
 
@@ -200,7 +215,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
       return;
 
     if (eee_account_create_new_calendar(account, &calname))
-      eee_account_update_calendar_settings(account, account->name, calname, e_source_peek_name(source), color);
+      eee_account_update_calendar_settings(account, account->name, calname, e_source_peek_name(source), converted_color);
     eee_account_disconnect(account);
 
     e_source_set_3e_properties(source, calname, account->name, account, "write", NULL, 0); // title and color are already set
@@ -215,7 +230,7 @@ void eee_calendar_properties_commit(EPlugin* epl, ECalConfigTargetSource* target
 
     const char* calname = e_source_get_property(source, "eee-calname");
     const char* owner = e_source_get_property(source, "eee-owner");
-    eee_account_update_calendar_settings(account, owner, calname, e_source_peek_name(source), color);
+    eee_account_update_calendar_settings(account, owner, calname, e_source_peek_name(source), converted_color);
     eee_account_disconnect(account);
   }
 
@@ -513,4 +528,80 @@ void eee_account_properties_commit(EPlugin *epl, EConfigHookItemFactoryData *dat
 {
   EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
   const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+}
+
+gboolean wizard_eee_account_activated = TRUE;
+
+void wizard_chb_status_changed(GtkToggleButton* button, const char* name)
+{
+  if (gtk_toggle_button_get_active(button))
+    wizard_eee_account_activated = TRUE;
+  else
+    wizard_eee_account_activated = FALSE;
+	g_debug("**EEE**: Checkbox state changed.");
+}
+
+GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *data)
+{
+	//TODO: Add DNS lookup if there is 3E server for defined domain
+	//and don't show this page if not so.
+  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+  GtkWidget *page, *panel, *section, *checkbutton_status, *label;
+
+  if (data->old)
+    return data->old;
+  
+	page = gnome_druid_page_standard_new_with_vals("3E account settings", NULL, NULL);
+  // toplevel vbox contains frames that group 3E account settings into various
+  // groups
+  panel = gtk_vbox_new(FALSE, 12);
+  gtk_container_set_border_width(GTK_CONTAINER(panel), 12);
+
+  // Status group
+  section = add_section(panel, "Account Status");
+  char* note = g_strdup_printf("If you have 3E account for this e-mail address, you can turn it on/off here.");
+  label = (GtkWidget*)gtk_object_new(GTK_TYPE_LABEL, 
+    "label", note, 
+    "use-markup", TRUE,
+    "justify", GTK_JUSTIFY_LEFT, 
+    "xaling", 0, 
+    "yalign", 0.5, 
+    NULL); 
+  g_free(note);
+  gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
+  checkbutton_status = gtk_check_button_new_with_label("3E Account Enabled");
+  gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
+
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), !eee_accounts_manager_account_is_disabled(mgr(), name));
+  g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(wizard_chb_status_changed), (gpointer)name);
+
+	gtk_container_add((GtkContainer *) GNOME_DRUID_PAGE_STANDARD(page)->vbox, panel);
+
+  gtk_widget_show_all(panel);
+	
+	gnome_druid_append_page(GNOME_DRUID(data->parent), GNOME_DRUID_PAGE(page));
+	g_object_set_data((GObject *)data->parent, "restore", GINT_TO_POINTER(FALSE));
+
+  return GTK_WIDGET(page);
+}
+
+gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
+{
+//  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+//  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+//	g_debug("**EEE**: Wizard check: E-mail: %s", name);
+  return TRUE;
+}
+
+void eee_account_wizard_commit(EPlugin *epl, EConfigHookItemFactoryData *data)
+{
+  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+	if (wizard_eee_account_activated == TRUE) 
+		eee_accounts_manager_enable_account(mgr(), name);
+	else
+    eee_accounts_manager_disable_account(mgr(), name);
+  eee_accounts_manager_restart_sync(mgr());
+	g_debug("**EEE**: Wizard commit for e-mail '%s'.", name);
 }
