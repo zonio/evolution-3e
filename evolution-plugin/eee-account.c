@@ -27,6 +27,9 @@
 #include "utils.h"
 #include "eee-account.h"
 
+#define CALENDAR_SOURCES "/apps/evolution/calendar/sources"
+#define EEE_KEY "/apps/evolution/calendar/eee/"
+
 struct _EeeAccountPriv
 {
   xr_client_conn* conn;
@@ -545,6 +548,7 @@ gboolean eee_account_auth(EeeAccount* self)
 {
   GError* err = NULL;
   guint32 flags = E_PASSWORDS_REMEMBER_FOREVER|E_PASSWORDS_SECRET;
+	GConfClient* gconf;
   gboolean remember = TRUE;
   char *fail_msg = ""; 
   char *password;
@@ -564,10 +568,16 @@ gboolean eee_account_auth(EeeAccount* self)
   {
     if (password == NULL)
     {
+			gconf = gconf_client_get_default();
+			char *path = g_strdup_printf(EEE_KEY "accounts/%s/remember_password", self->name);
+			remember = gconf_client_get_bool(gconf, path, NULL);
       char* prompt = g_strdup_printf("%sEnter password for your 3E calendar account: %s.", fail_msg, self->name);
       // key must have uri format or unpatched evolution segfaults in
       // ep_get_password_keyring()
       password = e_passwords_ask_password(prompt, EEE_PASSWORD_COMPONENT, key, prompt, flags, &remember, NULL);
+			gconf_client_set_bool(gconf, path, remember, NULL);
+			g_free(path);
+			g_object_unref(gconf);
       g_free(prompt);
       if (password == NULL)
         goto err;
