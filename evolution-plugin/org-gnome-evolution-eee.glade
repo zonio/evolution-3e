@@ -26,7 +26,7 @@
               <widget class="GtkLabel" id="label">
                 <property name="visible">True</property>
                 <property name="xalign">0</property>
-                <property name="label" translatable="yes">Search:</property>
+                <property name="label" translatable="yes">Filter:</property>
               </widget>
               <packing>
                 <property name="top_attach">1</property>
