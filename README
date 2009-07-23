@@ -30,7 +30,7 @@ Build Instructions
 
 3E calendar plugin requires a few small patches to evolution and
 evolution-data-server (EDS). These will be integrated upstream in the future. As
-of now you still need to rebuild evolution and EDS with patches from patches/
+of now you still need to rebuild Evolution and EDS with patches from patches/
 directory.
 
 Get and build libxr-0.9.94 or newer.

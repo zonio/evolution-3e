@@ -288,7 +288,7 @@ gboolean eee_account_search_shared_calendars(EeeAccount* self, const char* query
   {
     char* escaped_query = qp_escape_string(query_string);
     query = g_strdup_printf(
-      "match_username_like(*%1$s*)"
+      "match_username_like(%1$s)"
       " OR match_user_attribute('realname', %1$s)"
       " OR match_calendar_name(%1$s)"
       " OR match_calendar_attribute('title', %1$s)",
