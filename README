@@ -28,6 +28,8 @@ http://zhost.zonio.net/mailman/listinfo/3e-list.
 Build Instructions
 ~~~~~~~~~~~~~~~~~~
 
+Detailed instructions can be found at http://wiki.zonio.net/.
+
 3E calendar plugin requires a few small patches to evolution and
 evolution-data-server (EDS). These will be integrated upstream in the future. As
 of now you still need to rebuild Evolution and EDS with patches from patches/
@@ -60,40 +62,39 @@ evolution.
 
 2) Get 3E server
 
-  Get 3E server from http://www.zonio.net/3e/releases/m3es-static.tar.gz and
-  start it:
+  Get 3E server from https://3e.zonio.net/releases/3e-server/.
 
-    ./m3es \
-      --bind=*:4444 \
-      --cert=server.pem \
-      --threads=10 \
-      --storage=storage.xml \
-      --daemon \
-      --pid=server.pid
+  Edit the 3e server config file /etc/3e/server.conf:
 
-  or
+    listen = *:4444
+	threads = 10
+	user = nobody
+    group = nobody
+	daemonize = 1
+    pidfile = /var/run/3e-server.pid
+    certificate = /etc/3e/server.pem
 
-    ./run-server.sh
+  Run the server using following command:
+
+    /etc/init.d/3e-server start
 
 3) Create your user account on the server
 
-  You can do this by editing storage.xml or using 3E command line client.
+  You can do this using 3E command line client.
 
-  Run ./m3es-client and type in following commands:
+  Run 3e-client:
 
-    connect 'https://localhost:4444/RPC2'
-    authenticate 'root' 'qwe'
-    createUser 'you@your-domain.net' 'qwe'
-    sudo 'you@your-domain.net'
-    setUserAttribute 'realname' 'Your Name' 'public'
-    createCalendar 'personal'
-    setCalendarAttribute 'personal' 'title' 'Personal' 'public'
-    setCalendarAttribute 'personal' 'color' 'aabcbc' 'public'
-    disconnect
-    quit
+    3e-client -u root -p qwe
 
-  or edit and run ./create-account.sh.
+  Type in the following commands:
 
-4) Start evolution
+    create_user 'you@your-domain.net' 'qwe'
+    modify_user 'you@your-domain.net' realname 'Your Name'
+    create_calendar 'you@your-domain.net:personal'
+    modify_calendar ''you@your-domain.net:personal' title 'Personal'
+    modify_calendar 'you@your-domain.net:personal' color 'aabcbc'
+    exit
+
+4) Start Evolution
 
   You should be now able to see your 'Personal' calendar in a calendar list.
