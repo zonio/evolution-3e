@@ -279,6 +279,37 @@ GSList* eee_account_peek_calendars(EeeAccount* self)
   return self->priv->cals;
 }
 
+/* creates a query to match the users whose realname matches parameter realname */
+static char* create_users_query (EeeAccount* self, const char* realname)
+{
+  if (realname == NULL || !eee_account_auth(self))
+    return NULL;
+  char* query = g_strdup_printf ("match_user_attribute_like('realname', %s)", realname);
+  GError* err = NULL;
+  GSList* users = ESClient_getUsers(self->priv->conn, query, &err);
+  g_free(query);
+  if (err)
+  {
+    g_warning("** EEE ** Failed to get user list for account '%s'. (%d:%s)", self->name, err->code, err->message);
+    g_clear_error(&err);
+    return NULL;
+  }
+  GString* result = g_string_new("");
+  GSList* iter;
+  for (iter = users; iter; iter = iter->next)
+  {
+    ESUser* user = iter->data;
+	if (iter != users)
+	  g_string_append (result, " OR ");
+	g_string_append_printf (result, "match_username('%s')", user->username);
+  }
+  g_slist_foreach(users, (GFunc)ESUser_free, NULL);
+  g_slist_free(users);
+  if (strcmp("",result->str) == 0)
+    return NULL;
+  return g_string_free(result, FALSE);
+}
+
 gboolean eee_account_search_shared_calendars(EeeAccount* self, const char* query_string, GSList** cals)
 {
   char* query = NULL;
@@ -286,14 +317,17 @@ gboolean eee_account_search_shared_calendars(EeeAccount* self, const char* query
 
   if (query_string != NULL && query_string[0] != '\0')
   {
-    char* escaped_query = qp_escape_string(query_string);
+    char* query_string_like = g_strdup_printf("*%s*", query_string);
+	char* escaped_query = qp_escape_string(query_string_like);
+	char* users_query = create_users_query (self, escaped_query);
+	users_query = users_query ? g_strdup_printf("%s OR ",users_query) : "";
     query = g_strdup_printf(
-      "match_username_like(%1$s)"
-      " OR match_user_attribute('realname', %1$s)"
-      " OR match_calendar_name(%1$s)"
-      " OR match_calendar_attribute('title', %1$s)",
-      escaped_query);
+      "%2$smatch_username_like(%1$s)"
+      " OR match_calendar_name_like(%1$s)"
+      " OR match_calendar_attribute_like('title', %1$s)",
+      escaped_query, users_query);
     g_free(escaped_query);
+    g_free(query_string_like);
   }
 
   retval = eee_account_get_shared_calendars(self, query ? query : "", cals);
@@ -507,9 +541,11 @@ gboolean eee_account_load_users(EeeAccount* self, char* prefix, GSList* exclude_
   }
   else
   {
-    char* escaped_prefix = qp_escape_string(prefix);
-    char* query = g_strdup_printf("match_username_like(*%s*)", escaped_prefix);
+    char* prefix_like = g_strdup_printf("*%s*", prefix);
+    char* escaped_prefix = qp_escape_string(prefix_like);
+    char* query = g_strdup_printf("match_username_like(%s)", escaped_prefix);
     g_free(escaped_prefix);
+	g_free(prefix_like);
     users = ESClient_getUsers(self->priv->conn, query, &err);
     g_free(query);
   }
