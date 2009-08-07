@@ -112,7 +112,7 @@ static gboolean remove_acl(xr_client_conn* conn, const char* calname)
   GError* err = NULL;
   GSList* iter;
 
-  GSList* perms = ESClient_getPermissions(conn, calname, &err);
+  GSList* perms = ESClient_getUserPermissions(conn, calname, &err);
   if (err)
   {
     g_warning("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -122,7 +122,7 @@ static gboolean remove_acl(xr_client_conn* conn, const char* calname)
   for (iter = perms; iter; iter = iter->next)
   {
     ESPermission* perm = iter->data;
-    ESClient_setPermission(conn, calname, perm->user, "none", &err);
+    ESClient_setUserPermission(conn, calname, perm->user, "none", &err);
     if (err)
     {
       g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -143,7 +143,7 @@ static gboolean remove_acl(xr_client_conn* conn, const char* calname)
 static gboolean add_wildcard(xr_client_conn* conn, const char* calname)
 {
   GError* err = NULL;
-  ESClient_setPermission(conn, calname, "*", "read", &err);
+  ESClient_setUserPermission(conn, calname, "*", "read", &err);
   if (err)
   {
     g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -160,7 +160,7 @@ static gboolean update_acl(xr_client_conn* conn, const char* calname, GSList* ne
   GSList* iter2;
   gboolean retval = TRUE;
 
-  GSList* perms = ESClient_getPermissions(conn, calname, &err);
+  GSList* perms = ESClient_getUserPermissions(conn, calname, &err);
   if (err)
   {
     g_warning("** EEE ** Failed to store settings for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -184,7 +184,7 @@ static gboolean update_acl(xr_client_conn* conn, const char* calname, GSList* ne
         /* perm is already set, check if it differs */
         if (strcmp(perm->perm, new_perm->perm))
         {
-          ESClient_setPermission(conn, calname, new_perm->user, new_perm->perm, &err);
+          ESClient_setUserPermission(conn, calname, new_perm->user, new_perm->perm, &err);
           if (err)
           {
             g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -201,7 +201,7 @@ static gboolean update_acl(xr_client_conn* conn, const char* calname, GSList* ne
     /* if existing perm was not found in new perms, unset it */
     if (not_found)
     {
-      ESClient_setPermission(conn, calname, perm->user, "none", &err);
+      ESClient_setUserPermission(conn, calname, perm->user, "none", &err);
       if (err)
       {
         g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -216,7 +216,7 @@ static gboolean update_acl(xr_client_conn* conn, const char* calname, GSList* ne
   {
     ESPermission* perm = iter->data;
 
-    ESClient_setPermission(conn, calname, perm->user, perm->perm, &err);
+    ESClient_setUserPermission(conn, calname, perm->user, perm->perm, &err);
     if (err)
     {
       g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);

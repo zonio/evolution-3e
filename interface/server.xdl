@@ -63,7 +63,7 @@ servlet Client
                                                        string          to_date,
                                                        string          default_timezone);
     array<Calendar>          getCalendars             (string          query);
-    array<Permission>        getPermissions           (string          calname);
+    array<Permission>        getUserPermissions       (string          calname);
     array<Calendar>          getSharedCalendars       (string          query);
     array<Attribute>         getUserAttributes        (string          username);
     array<User>              getUsers                 (string          query);
@@ -75,7 +75,7 @@ servlet Client
                                                        string          name,
                                                        string          value,
                                                        boolean         is_public);
-    boolean                  setPermission            (string          calname,
+    boolean                  setUserPermission        (string          calname,
                                                        string          for_username,
                                                        string          perm);
     boolean                  setUserAttribute         (string          name,

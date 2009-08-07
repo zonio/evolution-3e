@@ -227,7 +227,7 @@ static gboolean load_state(struct acl_context* ctx)
   if (!eee_account_auth(ctx->account))
     return FALSE;
 
-  perms = ESClient_getPermissions(conn, calname, &err);
+  perms = ESClient_getUserPermissions(conn, calname, &err);
   if (err)
   {
     g_warning("** EEE ** Can't get permissions. (%d:%s)", err->code, err->message);
