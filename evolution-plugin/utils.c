@@ -122,6 +122,7 @@ void e_source_set_3e_properties_with_attrs(ESource* source, const char* calname,
 {
   const char* title = eee_find_attribute_value(attrs, "title");
   const char* color_string = eee_find_attribute_value(attrs, "color");
+	if (color_string == NULL) color_string = "#FF0000";
   guint32 color = 0;
   sscanf(color_string + 1, "%X", &color);	//we don't want to read #
   e_source_set_3e_properties(source, calname, owner, account, perm, title, color);
