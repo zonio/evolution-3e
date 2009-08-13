@@ -1,12 +1,19 @@
-1.0 - 2009-02-16
+1.0 - 2009-08-13
 ~~~~~~~~~~~~~~~~~~
-  - Public release 
-  - Fix some bugs in libical
-  - Add new patches to current version
+Public release! 
+
+New features:
+  - Added support for Evolution 2.26
+
+Bugfixes:
+  - Fixed type-ahead search in subscribe
+  - Store/read calendar colors to/from server
+  - Remember password checkbox status is now remembered
+  - Does not communicate with server when email account is disabled 
 
 0.10.1 - 2008-05-27
 ~~~~~~~~~~~~~~~~~~~
-
+Bugfixes:
   - Various small cleanups and documentation updates
   - x86_64 fixes
 
