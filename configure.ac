@@ -63,8 +63,10 @@ elif [[ "$evoversion" = "2.24" ]]; then
   EVO_VERSION=224
 elif [[ "$evoversion" = "2.26" ]]; then 
   EVO_VERSION=226  
+elif [[ "$evoversion" = "2.28" ]]; then 
+  EVO_VERSION=228  
 else
-  AC_MSG_ERROR([Unsupported evolution version, you need 2.12 or 2.22 or 2.24 or 2.26])
+  AC_MSG_ERROR([Unsupported evolution version, you need 2.12, 2.22, 2.24, 2.26 or 2.28.])
 fi
 
 PKG_CHECK_MODULES(EVO3E, [
