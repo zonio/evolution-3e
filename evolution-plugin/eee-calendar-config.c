@@ -289,6 +289,11 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
 {
   ECalPopupTargetSource* target = (ECalPopupTargetSource*)ep->target;
   ESource* source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+
+  if (e_error_run((GtkWindow *)gtk_widget_get_toplevel(ep->target->widget),
+      "calendar:prompt-delete-calendar", e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)
+    return;
+
   ESourceGroup* group = e_source_peek_group(source);
   char* calname = (char*)e_source_get_property(source, "eee-calname");
   EeeAccount* account;
