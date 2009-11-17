@@ -21,6 +21,10 @@
 
 #include <glib.h>
 #include <string.h>
+#include <libintl.h>
+
+#define _(String) gettext(String)
+
 #include "utils.h"
 
 char* qp_escape_string(const char* s)
@@ -106,14 +110,14 @@ void e_source_set_3e_properties(ESource* source, const char* calname, const char
 
 ESource* e_source_new_3e(const char* calname, const char* owner, EeeAccount* account, const char* perm, const char* title, guint32 color)
 {
-  ESource* source = e_source_new("[No Title]", "");
+  ESource* source = e_source_new(_("[No Title]"), "");
   e_source_set_3e_properties(source, calname, owner, account, perm, title, color);
   return source;
 }
 
 ESource* e_source_new_3e_with_attrs(const char* calname, const char* owner, EeeAccount* account, const char* perm, GSList* attrs)
 {
-  ESource* source = e_source_new("[No Title]", "");
+  ESource* source = e_source_new(_("[No Title]"), "");
   e_source_set_3e_properties_with_attrs(source, calname, owner, account, perm, attrs);
   return source;
 }

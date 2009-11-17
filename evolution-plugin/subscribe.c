@@ -22,8 +22,11 @@
 #include <string.h>
 #include <gtk/gtk.h>
 #include <glade/glade.h>
-#include "utils.h"
+#include <libintl.h>
 
+#define _(String) gettext(String)
+
+#include "utils.h"
 #include "subscribe.h"
 #include "eee-calendar-config.h"
 
@@ -288,10 +291,10 @@ void subscribe_gui_create(EeeAccountsManager* mgr)
   // add columns to the tree view
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "xalign", 0.0, NULL);
-  col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Calendar Name", renderer, "text", SUB_TITLE_COLUMN, NULL);
+  col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Calendar Name"), renderer, "text", SUB_TITLE_COLUMN, NULL);
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "xalign", 0.0, NULL);
-  col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Permission", renderer, "text", SUB_PERM_COLUMN, NULL);
+  col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Permission"), renderer, "text", SUB_PERM_COLUMN, NULL);
   // setup the selection handler
   c->selection = gtk_tree_view_get_selection(c->tview);
   gtk_tree_selection_set_mode(c->selection, GTK_SELECTION_SINGLE);

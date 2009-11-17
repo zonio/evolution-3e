@@ -23,6 +23,9 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <glade/glade.h>
+#include <libintl.h>
+
+#define _(String) gettext(String)
 
 #include "acl.h"
 #include "eee-calendar-config.h"
@@ -529,8 +532,8 @@ void acl_gui_create(EeeAccountsManager* mgr, EeeAccount* account, ESource* sourc
   // add columns to the tree view
   renderer = gtk_cell_renderer_text_new();
   g_object_set(renderer, "xalign", 0.0, NULL);
-  col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Username", renderer, "text", ACL_USERNAME_COLUMN, NULL);
-  col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Real Name", renderer, "text", ACL_REALNAME_COLUMN, NULL);
+  col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Username"), renderer, "text", ACL_USERNAME_COLUMN, NULL);
+  col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Real Name"), renderer, "text", ACL_REALNAME_COLUMN, NULL);
   //column = gtk_tree_view_get_column(c->tview, col_id);
   renderer = gtk_cell_renderer_combo_new();
   g_signal_connect(renderer, "editing-started", G_CALLBACK(editing_started), c);
@@ -547,7 +550,7 @@ void acl_gui_create(EeeAccountsManager* mgr, EeeAccount* account, ESource* sourc
   g_object_set(renderer, "has-entry", FALSE, NULL);
   g_object_set(renderer, "sensitive", TRUE, NULL);
   g_object_set(renderer, "xalign", 0.0, NULL);
-  gtk_tree_view_insert_column_with_attributes(c->tview, -1, "Permission", renderer, "text", ACL_PERM_COLUMN, NULL);
+  gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Permission"), renderer, "text", ACL_PERM_COLUMN, NULL);
   g_signal_connect(c->tview, "button-press-event", G_CALLBACK(on_tview_clicked), c);
 
   glade_xml_signal_connect_data(c->xml, "on_rb_perm_private_toggled", G_CALLBACK(on_rb_perm_toggled), c);
