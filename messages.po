@@ -1,0 +1,64 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2009-12-17 19:21+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: evolution-plugin/acl.c:536
+msgid "Username"
+msgstr ""
+
+#: evolution-plugin/acl.c:537
+msgid "Real Name"
+msgstr ""
+
+#: evolution-plugin/acl.c:554 evolution-plugin/subscribe.c:297
+msgid "Permission"
+msgstr ""
+
+#: evolution-plugin/eee-calendar-config.c:125
+msgid ""
+"Evolution is in offline mode. You cannot create or modify calendars now.\n"
+"Please switch to online mode for such operations."
+msgstr ""
+
+#: evolution-plugin/eee-calendar-config.c:145
+msgid "You cannot create calendars for this 3E account."
+msgstr ""
+
+#: evolution-plugin/eee-calendar-config.c:497
+msgid "Account Status"
+msgstr ""
+
+#: evolution-plugin/eee-calendar-config.c:498
+#, c-format
+msgid "If you have 3E account <i>%s</i>, you can turn it on/off here."
+msgstr ""
+
+#: evolution-plugin/eee-calendar-config.c:508
+msgid "3E Account Enabled"
+msgstr ""
+
+#: evolution-plugin/eee-calendar-config.c:516
+msgid "3E Account Settings"
+msgstr ""
+
+#: evolution-plugin/subscribe.c:294
+msgid "Calendar Name"
+msgstr ""
+
+#: evolution-plugin/utils.c:113 evolution-plugin/utils.c:120
+msgid "[No Title]"
+msgstr ""
