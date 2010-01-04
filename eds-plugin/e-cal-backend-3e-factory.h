@@ -1,8 +1,8 @@
-/* 
+/*
  * Author: Ondrej Jirman <ondrej.jirman@zonio.net>
  *
  * Copyright 2007-2008 Zonio, s.r.o.
- * 
+ *
  * This file is part of evolution-3e.
  *
  * Libxr is free software: you can redistribute it and/or modify it under the
@@ -27,9 +27,9 @@
 
 G_BEGIN_DECLS
 
-void                 eds_module_initialize (GTypeModule *module);
-void                 eds_module_shutdown   (void);
-void                 eds_module_list_types (const GType **types, int *num_types);
+void                 eds_module_initialize(GTypeModule *module);
+void                 eds_module_shutdown(void);
+void                 eds_module_list_types(const GType * *types, int *num_types);
 
 G_END_DECLS
 

@@ -1,8 +1,8 @@
-/* 
+/*
  * Author: Ondrej Jirman <ondrej.jirman@zonio.net>
  *
  * Copyright 2007-2008 Zonio, s.r.o.
- * 
+ *
  * This file is part of evolution-3e.
  *
  * Libxr is free software: you can redistribute it and/or modify it under the
@@ -42,28 +42,28 @@ typedef struct _EeeAccountPriv EeeAccountPriv;
 
 struct _EeeAccount
 {
-  GObject parent;
+    GObject parent;
 
-  char* name;           /**< Account name (usually e-mail address). Used to login
+    char *name;         /**< Account name (usually e-mail address). Used to login
                              to the 3E server. */
-  char* server;         /**< 3E server hostname:port. */
-  int state;            /**< Account state. */
+    char *server;       /**< 3E server hostname:port. */
+    int state;          /**< Account state. */
 
-  EeeAccountPriv* priv;
+    EeeAccountPriv *priv;
 };
 
 struct _EeeAccountClass
 {
-  GObjectClass parent_class;
+    GObjectClass parent_class;
 };
 
 enum _EeeAccountState
 {
-  EEE_ACCOUNT_STATE_ONLINE,    /* everything ok */
-  EEE_ACCOUNT_STATE_NOTAVAIL,  /* account temporarily not available, will try 
+    EEE_ACCOUNT_STATE_ONLINE,  /* everything ok */
+    EEE_ACCOUNT_STATE_NOTAVAIL, /* account temporarily not available, will try
                                   contact later, still show cals in the list
                                   in auto-offline mode */
-  EEE_ACCOUNT_STATE_DISABLED   /* account disabled (either by user or automatically
+    EEE_ACCOUNT_STATE_DISABLED /* account disabled (either by user or automatically
                                   after unsuccessfull login) */
 };
 
@@ -72,66 +72,66 @@ G_BEGIN_DECLS
 GType eee_account_get_type() G_GNUC_CONST;
 
 
-EeeAccount*       eee_account_new                 (const char* name);
-EeeAccount*       eee_account_new_copy            (EeeAccount* ref);
-void              eee_account_copy                (EeeAccount* self, 
-                                                   EeeAccount* ref);
-void              eee_account_set_state           (EeeAccount* self,
-                                                   int state);
-void              eee_account_dump                (EeeAccount* self);
+EeeAccount *eee_account_new(const char *name);
+EeeAccount *eee_account_new_copy(EeeAccount *ref);
+void              eee_account_copy(EeeAccount *self,
+                                   EeeAccount *ref);
+void              eee_account_set_state(EeeAccount *self,
+                                        int state);
+void              eee_account_dump(EeeAccount *self);
 
 /* communication functions */
 
-gboolean          eee_account_auth                (EeeAccount* self);
-xr_client_conn*   eee_account_connect             (EeeAccount* self);
-void              eee_account_disconnect          (EeeAccount* self);
-gboolean          eee_account_find_server         (EeeAccount* self);
-gboolean          eee_account_load_calendars      (EeeAccount* self, GSList** cals);
-GSList*           eee_account_peek_calendars      (EeeAccount* self);
-gboolean          eee_account_load_users          (EeeAccount* self,
-                                                   char* prefix, 
-                                                   GSList* exclude_users, 
-                                                   GtkListStore* model);
+gboolean          eee_account_auth(EeeAccount *self);
+xr_client_conn *eee_account_connect(EeeAccount *self);
+void              eee_account_disconnect(EeeAccount *self);
+gboolean          eee_account_find_server(EeeAccount *self);
+gboolean          eee_account_load_calendars(EeeAccount *self, GSList * *cals);
+GSList *eee_account_peek_calendars(EeeAccount *self);
+gboolean          eee_account_load_users(EeeAccount *self,
+                                         char *prefix,
+                                         GSList *exclude_users,
+                                         GtkListStore *model);
 
-gboolean          eee_account_calendar_acl_set_private  (EeeAccount* self, 
-                                                         const char* calname);
-gboolean          eee_account_calendar_acl_set_public   (EeeAccount* self,
-                                                         const char* calname);
-gboolean          eee_account_calendar_acl_set_shared   (EeeAccount* self, 
-                                                         const char* calname, 
-                                                         GSList* new_perms);
-gboolean          eee_account_get_user_attributes       (EeeAccount* self, 
-                                                         const char* username, 
-                                                         GSList** attrs);
-void              eee_account_free_attributes_list      (GSList* l);
-gboolean          eee_account_set_calendar_attribute    (EeeAccount* self, 
-                                                         const char* owner, 
-                                                         const char* calname, 
-                                                         const char* name, 
-                                                         const char* value, 
-                                                         gboolean is_public);
-gboolean          eee_account_update_calendar_settings  (EeeAccount* self, 
-                                                         const char* owner, 
-                                                         const char* calname, 
-                                                         const char* title, 
-                                                         const char* color);
-gboolean          eee_account_create_new_calendar       (EeeAccount* self, 
-                                                         char** calname);
-gboolean          eee_account_unsubscribe_calendar      (EeeAccount* self, 
-                                                         const char* owner, 
-                                                         const char* calname);
-gboolean          eee_account_subscribe_calendar        (EeeAccount* self, 
-                                                         const char* owner, 
-                                                         const char* calname);
-gboolean          eee_account_delete_calendar           (EeeAccount* self, 
-                                                         const char* calname);
-gboolean          eee_account_search_shared_calendars   (EeeAccount* self, 
-                                                         const char* query, 
-                                                         GSList** cals);
-gboolean          eee_account_get_shared_calendars      (EeeAccount* self, 
-                                                         const char* query, 
-                                                         GSList** cals);
-void              eee_account_free_calendars_list       (GSList* l);
+gboolean          eee_account_calendar_acl_set_private(EeeAccount *self,
+                                                       const char *calname);
+gboolean          eee_account_calendar_acl_set_public(EeeAccount *self,
+                                                      const char *calname);
+gboolean          eee_account_calendar_acl_set_shared(EeeAccount *self,
+                                                      const char *calname,
+                                                      GSList *new_perms);
+gboolean          eee_account_get_user_attributes(EeeAccount *self,
+                                                  const char *username,
+                                                  GSList * *attrs);
+void              eee_account_free_attributes_list(GSList *l);
+gboolean          eee_account_set_calendar_attribute(EeeAccount *self,
+                                                     const char *owner,
+                                                     const char *calname,
+                                                     const char *name,
+                                                     const char *value,
+                                                     gboolean is_public);
+gboolean          eee_account_update_calendar_settings(EeeAccount *self,
+                                                       const char *owner,
+                                                       const char *calname,
+                                                       const char *title,
+                                                       const char *color);
+gboolean          eee_account_create_new_calendar(EeeAccount *self,
+                                                  char * *calname);
+gboolean          eee_account_unsubscribe_calendar(EeeAccount *self,
+                                                   const char *owner,
+                                                   const char *calname);
+gboolean          eee_account_subscribe_calendar(EeeAccount *self,
+                                                 const char *owner,
+                                                 const char *calname);
+gboolean          eee_account_delete_calendar(EeeAccount *self,
+                                              const char *calname);
+gboolean          eee_account_search_shared_calendars(EeeAccount *self,
+                                                      const char *query,
+                                                      GSList * *cals);
+gboolean          eee_account_get_shared_calendars(EeeAccount *self,
+                                                   const char *query,
+                                                   GSList * *cals);
+void              eee_account_free_calendars_list(GSList *l);
 
 G_END_DECLS
 

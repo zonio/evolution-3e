@@ -1,8 +1,8 @@
-/* 
+/*
  * Author: Ondrej Jirman <ondrej.jirman@zonio.net>
  *
  * Copyright 2007-2008 Zonio, s.r.o.
- * 
+ *
  * This file is part of evolution-3e.
  *
  * Libxr is free software: you can redistribute it and/or modify it under the
@@ -24,7 +24,7 @@
 
 #include "eee-accounts-manager.h"
 
-void acl_gui_create(EeeAccountsManager* mgr, EeeAccount* account, ESource* source);
+void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *source);
 void acl_gui_destroy();
 
 #endif

@@ -1,8 +1,8 @@
-/* 
+/*
  * Author: Ondrej Jirman <ondrej.jirman@zonio.net>
  *
  * Copyright 2007-2008 Zonio, s.r.o.
- * 
+ *
  * This file is part of evolution-3e.
  *
  * Libxr is free software: you can redistribute it and/or modify it under the
@@ -30,7 +30,7 @@
  *
  * @return Array of strings. Free it using g_strfreev().
  */
-char** get_txt_records(const char *name);
+char * *get_txt_records(const char *name);
 
 /** Get 3E server hostname if possible.
  *
@@ -38,6 +38,6 @@ char** get_txt_records(const char *name);
  *
  * @return hostname:port or NULL.
  */
-char* get_eee_server_hostname(const char* email);
+char *get_eee_server_hostname(const char *email);
 
 #endif
