@@ -1,0 +1,117 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2010-02-22 11:51+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../evolution-plugin/acl.c:580
+msgid "Username"
+msgstr ""
+
+#: ../evolution-plugin/acl.c:581
+msgid "Real Name"
+msgstr ""
+
+#: ../evolution-plugin/acl.c:598 ../evolution-plugin/subscribe.c:323
+msgid "Permission"
+msgstr ""
+
+#: ../evolution-plugin/eee-calendar-config.c:136
+msgid ""
+"Evolution is in offline mode. You cannot create or modify calendars now.\n"
+"Please switch to online mode for such operations."
+msgstr ""
+
+#: ../evolution-plugin/eee-calendar-config.c:158
+msgid "You cannot create calendars for this 3E account."
+msgstr ""
+
+#. Status group
+#: ../evolution-plugin/eee-calendar-config.c:560
+msgid "Account Status"
+msgstr ""
+
+#: ../evolution-plugin/eee-calendar-config.c:561
+#, c-format
+msgid "If you have 3E account <i>%s</i>, you can turn it on/off here."
+msgstr ""
+
+#: ../evolution-plugin/eee-calendar-config.c:571
+msgid "3E Account Enabled"
+msgstr ""
+
+#: ../evolution-plugin/eee-calendar-config.c:579
+msgid "3E Account Settings"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:1
+msgid "<b>Allowed Users</b>"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:2
+msgid "<b>Permissions</b>"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:3
+msgid "Account:"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:4
+msgid "Calendar ACL Setup..."
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:5
+msgid "Filter:"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:6
+msgid "Private Calendar"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:7
+msgid "Public Calendar - Read-only access to everyone."
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:8
+msgid "Shared Calendar - Allow access to selected users."
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:9
+msgid "Subscribe To Calendar"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:10
+msgid "gtk-add"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:11
+msgid "gtk-apply"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:12
+msgid "gtk-cancel"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:13
+msgid "gtk-close"
+msgstr ""
+
+#: ../evolution-plugin/subscribe.c:320
+msgid "Calendar Name"
+msgstr ""
+
+#: ../evolution-plugin/utils.c:126 ../evolution-plugin/utils.c:134
+msgid "[No Title]"
+msgstr ""
