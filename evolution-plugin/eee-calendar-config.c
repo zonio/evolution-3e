@@ -155,7 +155,7 @@ GtkWidget *eee_calendar_properties_factory(EPlugin *epl, EConfigHookItemFactoryD
         {
             row++;
             msg = g_markup_printf_escaped("<span weight=\"bold\" foreground=\"#ff0000\">%s</span>",
-                                          _("You cannot create calendars for this 3E account."));
+                                          _("You cannot create calendars for this 3e account."));
             label = gtk_label_new("");
             gtk_label_set_markup(GTK_LABEL(label), msg);
             g_free(msg);
@@ -379,14 +379,14 @@ static EPopupItem popup_items_shared_cal[] = {
 
 static EPopupItem popup_items_user_cal[] = {
     { E_POPUP_BAR,	"12.eee.00",  NULL,               NULL,              NULL, NULL,                 0, 0                                                    },
-    { E_POPUP_ITEM, "12.eee.02",  "Configure ACL...", on_permissions_cb, NULL, "stock_shared-by-me", 0, E_CAL_POPUP_SOURCE_PRIMARY                           },
+    { E_POPUP_ITEM, "12.eee.02",  "Setup Permissions...", on_permissions_cb, NULL, "stock_shared-by-me", 0, E_CAL_POPUP_SOURCE_PRIMARY                           },
     { E_POPUP_BAR,	"12.eee.04",  NULL,               NULL,              NULL, NULL,                 0, 0                                                    },
     { E_POPUP_ITEM, "20.delete",  "_Delete",          on_delete_cb,      NULL, "edit-delete",        0, E_CAL_POPUP_SOURCE_USER | E_CAL_POPUP_SOURCE_PRIMARY },
 };
 
 static EPopupItem popup_items_cal_offline[] = {
     { E_POPUP_BAR,	"12.eee.00",     NULL,               NULL,				NULL, NULL,                      0, 0      },
-    { E_POPUP_ITEM, "12.eee.02",     "Configure ACL...", on_permissions_cb, NULL, "stock_shared-by-me",      0, 0xffff },
+    { E_POPUP_ITEM, "12.eee.02",     "Setup Permissions...", on_permissions_cb, NULL, "stock_shared-by-me",      0, 0xffff },
     { E_POPUP_ITEM, "12.eee.03",     "Unsubscribe",      on_unsubscribe_cb, NULL, "remove",                  0, 0xffff },
     { E_POPUP_BAR,	"12.eee.04",     NULL,               NULL,				NULL, NULL,                      0, 0      },
     { E_POPUP_ITEM, "20.delete",     "_Delete",          on_delete_cb,		NULL, "edit-delete",             0, 0xffff },
@@ -557,8 +557,8 @@ GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
     gtk_container_set_border_width(GTK_CONTAINER(panel), 12);
 
     // Status group
-    section = add_section(panel, _("Account Status"));
-    char *note = g_strdup_printf(_("If you have 3E account <i>%s</i>, you can turn it on/off here."), name);
+    section = add_section(panel, _("3e Account Status"));
+    char *note = g_strdup_printf(_("If you have 3e account <i>%s</i>, you can turn it on/off here."), name);
     label = (GtkWidget *)gtk_object_new(GTK_TYPE_LABEL,
                                         "label", note,
                                         "use-markup", TRUE,
@@ -568,7 +568,7 @@ GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
                                         NULL);
     g_free(note);
     gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
-    checkbutton_status = gtk_check_button_new_with_label(_("3E Account Enabled"));
+    checkbutton_status = gtk_check_button_new_with_label(_("Enable 3e Account"));
     gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
 
     //XXX: update button based on live account status
@@ -576,7 +576,7 @@ GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
     g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(status_changed), (gpointer)name); // <<< this should be ok
 
     gtk_widget_show_all(panel);
-    gtk_notebook_insert_page(GTK_NOTEBOOK(data->parent), panel, gtk_label_new(_("3E Account Settings")), 4);
+    gtk_notebook_insert_page(GTK_NOTEBOOK(data->parent), panel, gtk_label_new(_("3e Settings")), 4);
 
     return panel;
 }

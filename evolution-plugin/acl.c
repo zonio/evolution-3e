@@ -401,7 +401,7 @@ static void add_user(const char *user, struct acl_context *ctx)
             gtk_list_store_set(ctx->acl_model, &iter2,
                                ACL_USERNAME_COLUMN, user,
                                ACL_REALNAME_COLUMN, realname,
-                               ACL_PERM_COLUMN, "read",
+                               ACL_PERM_COLUMN, _("read only"),
                                -1);
 
             gtk_list_store_remove(ctx->users_model, &iter);
@@ -586,9 +586,9 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
     GtkTreeIter iter;
     GtkListStore *perm_model = gtk_list_store_new(1, G_TYPE_STRING);
     gtk_list_store_append(perm_model, &iter);
-    gtk_list_store_set(perm_model, &iter, 0, "read", -1);
+    gtk_list_store_set(perm_model, &iter, 0, _("read only"), -1);
     gtk_list_store_append(perm_model, &iter);
-    gtk_list_store_set(perm_model, &iter, 0, "write", -1);
+    gtk_list_store_set(perm_model, &iter, 0, _("read & write"), -1);
     g_object_set(renderer, "model", perm_model, NULL);
     g_object_set(renderer, "text-column", 0, NULL);
     g_object_set(renderer, "editable", TRUE, NULL);

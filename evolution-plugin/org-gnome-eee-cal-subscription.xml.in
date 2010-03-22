@@ -2,7 +2,8 @@
 
   <commands>
     <cmd name="EeeCalSubscription" label="Subscribe to 3E calendar..."
-      tip="Subscribe to other user's 3E calendar."/>
+      tip="Subscribe to other user's 3E calendar."
+      translatable="yes" />
   </commands>
 
   <menu>
