@@ -6,6 +6,15 @@ AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE([dist-bzip2 tar-ustar])
 AM_MAINTAINER_MODE
 
+IT_PROG_INTLTOOL([0.35.5])
+AM_GLIB_GNU_GETTEXT
+GETTEXT_PACKAGE=evolution-3e-plugin
+AC_SUBST(GETTEXT_PACKAGE)
+AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [Package name for gettext])
+localedir='$(prefix)/$(DATADIRNAME)/locale'
+AC_SUBST(localedir)
+
+
 # Static plugins are uesless
 AM_DISABLE_STATIC
 
