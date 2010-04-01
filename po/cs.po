@@ -11,7 +11,7 @@ msgstr ""
 "Last-Translator: Pavel Tuma <pavel.tuma@zonio.net>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: ../evolution-plugin/acl.c:580
