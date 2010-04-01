@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-04-01 17:58+0200\n"
+"POT-Creation-Date: 2010-04-01 19:05+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -36,52 +36,52 @@ msgstr ""
 msgid "Permission"
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:138
+#: ../evolution-plugin/eee-calendar-config.c:141
 msgid ""
 "Evolution is in offline mode. You cannot create or modify calendars now.\n"
 "Please switch to online mode for such operations."
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:160
+#: ../evolution-plugin/eee-calendar-config.c:163
 msgid "You cannot create calendars for this 3e account."
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:377
-#: ../evolution-plugin/eee-calendar-config.c:392
+#: ../evolution-plugin/eee-calendar-config.c:380
+#: ../evolution-plugin/eee-calendar-config.c:395
 msgid "Unsubscribe"
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:379
-#: ../evolution-plugin/eee-calendar-config.c:386
-#: ../evolution-plugin/eee-calendar-config.c:394
+#: ../evolution-plugin/eee-calendar-config.c:382
+#: ../evolution-plugin/eee-calendar-config.c:389
+#: ../evolution-plugin/eee-calendar-config.c:397
 msgid "_Delete"
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:384
-#: ../evolution-plugin/eee-calendar-config.c:391
+#: ../evolution-plugin/eee-calendar-config.c:387
+#: ../evolution-plugin/eee-calendar-config.c:394
 msgid "Setup Permissions..."
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:396
-#: ../evolution-plugin/eee-calendar-config.c:398
+#: ../evolution-plugin/eee-calendar-config.c:399
+#: ../evolution-plugin/eee-calendar-config.c:401
 msgid "_Properties..."
 msgstr ""
 
 #. Status group
-#: ../evolution-plugin/eee-calendar-config.c:562
+#: ../evolution-plugin/eee-calendar-config.c:565
 msgid "3e Account Status"
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:563
+#: ../evolution-plugin/eee-calendar-config.c:566
 #, c-format
 msgid "If you have 3e account <i>%s</i>, you can turn it on/off here."
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:573
+#: ../evolution-plugin/eee-calendar-config.c:576
 msgid "Enable 3e Account"
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:581
+#: ../evolution-plugin/eee-calendar-config.c:584
 msgid "3e Settings"
 msgstr ""
 

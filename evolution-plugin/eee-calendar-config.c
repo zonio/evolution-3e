@@ -66,6 +66,9 @@ int e_plugin_lib_enable(EPluginLib *ep, int enable)
     }
     g_debug("** EEE ** Starting 3E Evolution Plugin %s", PACKAGE_VERSION);
     g_debug("** EEE ** Please report bugs to <%s>", PACKAGE_BUGREPORT);
+    bindtextdomain(GETTEXT_PACKAGE, PROGRAMNAME_LOCALEDIR);
+    bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+    textdomain(GETTEXT_PACKAGE);
     return 0;
 }
 
