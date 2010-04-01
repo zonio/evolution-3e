@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-03-22 20:29+0100\n"
+"POT-Creation-Date: 2010-04-01 17:58+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -36,31 +36,52 @@ msgstr ""
 msgid "Permission"
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:136
+#: ../evolution-plugin/eee-calendar-config.c:138
 msgid ""
 "Evolution is in offline mode. You cannot create or modify calendars now.\n"
 "Please switch to online mode for such operations."
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:158
+#: ../evolution-plugin/eee-calendar-config.c:160
 msgid "You cannot create calendars for this 3e account."
 msgstr ""
 
+#: ../evolution-plugin/eee-calendar-config.c:377
+#: ../evolution-plugin/eee-calendar-config.c:392
+msgid "Unsubscribe"
+msgstr ""
+
+#: ../evolution-plugin/eee-calendar-config.c:379
+#: ../evolution-plugin/eee-calendar-config.c:386
+#: ../evolution-plugin/eee-calendar-config.c:394
+msgid "_Delete"
+msgstr ""
+
+#: ../evolution-plugin/eee-calendar-config.c:384
+#: ../evolution-plugin/eee-calendar-config.c:391
+msgid "Setup Permissions..."
+msgstr ""
+
+#: ../evolution-plugin/eee-calendar-config.c:396
+#: ../evolution-plugin/eee-calendar-config.c:398
+msgid "_Properties..."
+msgstr ""
+
 #. Status group
-#: ../evolution-plugin/eee-calendar-config.c:560
+#: ../evolution-plugin/eee-calendar-config.c:562
 msgid "3e Account Status"
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:561
+#: ../evolution-plugin/eee-calendar-config.c:563
 #, c-format
 msgid "If you have 3e account <i>%s</i>, you can turn it on/off here."
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:571
+#: ../evolution-plugin/eee-calendar-config.c:573
 msgid "Enable 3e Account"
 msgstr ""
 
-#: ../evolution-plugin/eee-calendar-config.c:579
+#: ../evolution-plugin/eee-calendar-config.c:581
 msgid "3e Settings"
 msgstr ""
 
@@ -106,4 +127,12 @@ msgstr ""
 
 #: ../evolution-plugin/utils.c:126 ../evolution-plugin/utils.c:134
 msgid "[No Title]"
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-eee-cal-subscription.xml.in.h:1
+msgid "Subscribe to 3E calendar..."
+msgstr ""
+
+#: ../evolution-plugin/org-gnome-eee-cal-subscription.xml.in.h:2
+msgid "Subscribe to other user's 3E calendar."
 msgstr ""

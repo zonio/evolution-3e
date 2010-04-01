@@ -11,8 +11,12 @@ AM_GLIB_GNU_GETTEXT
 GETTEXT_PACKAGE=evolution-3e-plugin
 AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [Package name for gettext])
-localedir='$(prefix)/$(DATADIRNAME)/locale'
-AC_SUBST(localedir)
+
+PROGRAMNAME_LOCALEDIR=[${datadir}/locale]
+AC_SUBST(PROGRAMNAME_LOCALEDIR)
+
+# localedir='$(prefix)/$(DATADIRNAME)/locale'
+# AC_SUBST(localedir)
 
 
 # Static plugins are uesless
@@ -109,6 +113,7 @@ CFLAGS="$CFLAGS -Wall -Wextra -Wno-unused-parameter -Wno-unused-variable -DHANDL
 AC_OUTPUT([
   Makefile
   docs/Makefile
+  po/Makefile.in
   interface/Makefile
   eds-plugin/Makefile
   evolution-plugin/Makefile

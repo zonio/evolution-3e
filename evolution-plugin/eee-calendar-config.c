@@ -33,6 +33,8 @@
 #include <libintl.h>
 
 #define _(String) gettext(String)
+#define gettext_noop(String) String
+#define N_(String) gettext_noop (String)
 
 #include "eee-accounts-manager.h"
 #include "eee-calendar-config.h"
@@ -371,29 +373,29 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
 }
 
 static EPopupItem popup_items_shared_cal[] = {
-    { E_POPUP_BAR,	"12.eee.00",  NULL,          NULL,				NULL, NULL,          0, 0                          },
-    { E_POPUP_ITEM, "12.eee.03",  "Unsubscribe", on_unsubscribe_cb, NULL, "remove",      0, E_CAL_POPUP_SOURCE_PRIMARY },
-    { E_POPUP_BAR,	"12.eee.04",  NULL,          NULL,				NULL, NULL,          0, 0                          },
-    { E_POPUP_ITEM, "20.delete",  "_Delete",     on_delete_cb,		NULL, "edit-delete", 0, 0xffff                     },
+    { E_POPUP_BAR,	"12.eee.00",  NULL,                       NULL,				NULL, NULL,          0, 0                          },
+    { E_POPUP_ITEM, "12.eee.03",  N_("Unsubscribe"), on_unsubscribe_cb, NULL, "remove",      0, E_CAL_POPUP_SOURCE_PRIMARY },
+    { E_POPUP_BAR,	"12.eee.04",  NULL,          NULL,		  NULL, NULL,          0, 0                          },
+    { E_POPUP_ITEM, "20.delete",  N_("_Delete"),     on_delete_cb,		NULL, "edit-delete", 0, 0xffff                     },
 };
 
 static EPopupItem popup_items_user_cal[] = {
-    { E_POPUP_BAR,	"12.eee.00",  NULL,               NULL,              NULL, NULL,                 0, 0                                                    },
-    { E_POPUP_ITEM, "12.eee.02",  "Setup Permissions...", on_permissions_cb, NULL, "stock_shared-by-me", 0, E_CAL_POPUP_SOURCE_PRIMARY                           },
-    { E_POPUP_BAR,	"12.eee.04",  NULL,               NULL,              NULL, NULL,                 0, 0                                                    },
-    { E_POPUP_ITEM, "20.delete",  "_Delete",          on_delete_cb,      NULL, "edit-delete",        0, E_CAL_POPUP_SOURCE_USER | E_CAL_POPUP_SOURCE_PRIMARY },
+    { E_POPUP_BAR,	"12.eee.00",  NULL,                                NULL,              NULL, NULL,                 0, 0                                                    },
+    { E_POPUP_ITEM, "12.eee.02",  N_("Setup Permissions..."), on_permissions_cb, NULL, "stock_shared-by-me", 0, E_CAL_POPUP_SOURCE_PRIMARY                           },
+    { E_POPUP_BAR,	"12.eee.04",  NULL,               NULL,            NULL, NULL,                 0, 0                                                    },
+    { E_POPUP_ITEM, "20.delete",  N_("_Delete"),              on_delete_cb,      NULL, "edit-delete",        0, E_CAL_POPUP_SOURCE_USER | E_CAL_POPUP_SOURCE_PRIMARY },
 };
 
 static EPopupItem popup_items_cal_offline[] = {
     { E_POPUP_BAR,	"12.eee.00",     NULL,               NULL,				NULL, NULL,                      0, 0      },
-    { E_POPUP_ITEM, "12.eee.02",     "Setup Permissions...", on_permissions_cb, NULL, "stock_shared-by-me",      0, 0xffff },
-    { E_POPUP_ITEM, "12.eee.03",     "Unsubscribe",      on_unsubscribe_cb, NULL, "remove",                  0, 0xffff },
+    { E_POPUP_ITEM, "12.eee.02",     N_("Setup Permissions..."), on_permissions_cb, NULL, "stock_shared-by-me",      0, 0xffff },
+    { E_POPUP_ITEM, "12.eee.03",     N_("Unsubscribe"),      on_unsubscribe_cb, NULL, "remove",                  0, 0xffff },
     { E_POPUP_BAR,	"12.eee.04",     NULL,               NULL,				NULL, NULL,                      0, 0      },
-    { E_POPUP_ITEM, "20.delete",     "_Delete",          on_delete_cb,		NULL, "edit-delete",             0, 0xffff },
+    { E_POPUP_ITEM, "20.delete",     N_("_Delete"),          on_delete_cb,		NULL, "edit-delete",             0, 0xffff },
 #if EVOLUTION_VERSION < 222
-    { E_POPUP_ITEM, "30.properties", "_Properties...",   NULL,				NULL, "stock_folder-properties", 0, 0xffff },
+    { E_POPUP_ITEM, "30.properties", N_("_Properties..."),   NULL,				NULL, "stock_folder-properties", 0, 0xffff },
 #else
-    { E_POPUP_ITEM, "99.properties", "_Properties...",   NULL,				NULL, "document-properties",     0, 0xffff },
+    { E_POPUP_ITEM, "99.properties", N_("_Properties..."),   NULL,				NULL, "document-properties",     0, 0xffff },
 #endif
 };
 

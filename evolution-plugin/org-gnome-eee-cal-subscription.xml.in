@@ -1,9 +1,8 @@
 <Root>
 
   <commands>
-    <cmd name="EeeCalSubscription" label="Subscribe to 3E calendar..."
-      tip="Subscribe to other user's 3E calendar."
-      translatable="yes" />
+    <cmd name="EeeCalSubscription" _label="Subscribe to 3E calendar..."
+      _tip="Subscribe to other user's 3E calendar." />
   </commands>
 
   <menu>

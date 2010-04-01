@@ -2,6 +2,7 @@ AM_CFLAGS = \
   $(EVO3E_CFLAGS) \
   -DPLUGINDIR=\""$(plugindir)"\" \
   $(LIBXR_CFLAGS) \
+  -DPROGRAMNAME_LOCALEDIR=\"${PROGRAMNAME_LOCALEDIR}\" \
   -I$(top_srcdir)
 
 plugin_DATA = \
@@ -39,8 +40,4 @@ liborg_gnome_evolution_eee_la_LIBADD = \
 liborg_gnome_evolution_eee_la_LDFLAGS = \
   -module -avoid-version
 
-EXTRA_DIST = \
-  org-gnome-evolution-eee.eplug.in \
-  org-gnome-evolution-eee.glade \
-  org-gnome-eee-cal-subscription.xml.in \
-  org-gnome-evolution-eee.error
+
