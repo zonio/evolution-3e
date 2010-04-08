@@ -1073,13 +1073,14 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
                 // ignore the error if component doesn't exist anymore
                 if (local_err->code == ES_XMLRPC_ERROR_UNKNOWN_COMPONENT)
                 {
-                    g_error_free(local_err);
-                    local_err = NULL;
+                    g_clear_error(&local_err);
+                }
+                else 
+                {
+                    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
+                    g_clear_error(&local_err);
                     break;
                 }
-                e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
-                g_clear_error(&local_err);
-                break;
             }
 
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
