@@ -1074,6 +1074,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
                 if (local_err->code == ES_XMLRPC_ERROR_UNKNOWN_COMPONENT)
                 {
                     g_clear_error(&local_err);
+                    local_err = NULL;
                 }
                 else 
                 {
