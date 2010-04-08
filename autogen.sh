@@ -6,7 +6,8 @@ test -z "$srcdir" && srcdir=.
 ORIGDIR=`pwd`
 cd $srcdir
 
-autoreconf -v --force --install || exit 1
+intltoolize --force || exit 1
+autoreconf -v --install || exit 1
 cd $ORIGDIR || exit $?
 
 $srcdir/configure --enable-maintainer-mode "$@"
