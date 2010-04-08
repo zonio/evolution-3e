@@ -132,7 +132,7 @@ static gboolean remove_acl(xr_client_conn *conn, const char *calname)
 
     for (iter = perms; iter; iter = iter->next)
     {
-        ESPermission *perm = iter->data;
+        ESUserPermission *perm = iter->data;
         ESClient_setUserPermission(conn, calname, perm->user, "none", &err);
         if (err)
         {
@@ -144,7 +144,7 @@ static gboolean remove_acl(xr_client_conn *conn, const char *calname)
     return TRUE;
 
 err1:
-    g_slist_foreach(perms, (GFunc)ESPermission_free, NULL);
+    g_slist_foreach(perms, (GFunc)ESUserPermission_free, NULL);
     g_slist_free(perms);
 err0:
     g_clear_error(&err);
@@ -184,13 +184,13 @@ static gboolean update_acl(xr_client_conn *conn, const char *calname, GSList *ne
     /* for each existing perm */
     for (iter = perms; iter; iter = iter->next)
     {
-        ESPermission *perm = iter->data;
+        ESUserPermission *perm = iter->data;
         gboolean not_found = TRUE;
 
         /* find matching new perm */
         for (iter2 = new_perms; iter2; iter2 = iter2->next)
         {
-            ESPermission *new_perm = iter2->data;
+            ESUserPermission *new_perm = iter2->data;
 
             if (!strcmp(perm->user, new_perm->user))
             {
@@ -227,7 +227,7 @@ static gboolean update_acl(xr_client_conn *conn, const char *calname, GSList *ne
     /* set remaining new perms */
     for (iter = new_perms; iter; iter = iter->next)
     {
-        ESPermission *perm = iter->data;
+        ESUserPermission *perm = iter->data;
 
         ESClient_setUserPermission(conn, calname, perm->user, perm->perm, &err);
         if (err)
@@ -323,14 +323,14 @@ static char *create_users_query(EeeAccount *self, const char *realname)
     GSList *iter;
     for (iter = users; iter; iter = iter->next)
     {
-        ESUser *user = iter->data;
+        ESUserInfo *user = iter->data;
         if (iter != users)
         {
             g_string_append(result, " OR ");
         }
         g_string_append_printf(result, "match_username('%s')", user->username);
     }
-    g_slist_foreach(users, (GFunc)ESUser_free, NULL);
+    g_slist_foreach(users, (GFunc)ESUserInfo_free, NULL);
     g_slist_free(users);
     if (strcmp("", result->str) == 0)
     {
@@ -389,7 +389,7 @@ void eee_account_free_calendars_list(GSList *l)
     {
         return;
     }
-    g_slist_foreach(l, (GFunc)ESCalendar_free, NULL);
+    g_slist_foreach(l, (GFunc)ESCalendarInfo_free, NULL);
     g_slist_free(l);
 }
 
@@ -606,7 +606,7 @@ gboolean eee_account_load_users(EeeAccount *self, char *prefix, GSList *exclude_
 
     for (iter = users; iter; iter = iter->next)
     {
-        ESUser *user = iter->data;
+        ESUserInfo *user = iter->data;
         const char *realname = eee_find_attribute_value(user->attrs, "realname");
 
         if (!strcmp(self->name, user->username))
@@ -626,7 +626,7 @@ gboolean eee_account_load_users(EeeAccount *self, char *prefix, GSList *exclude_
                            -1);
     }
 
-    g_slist_foreach(users, (GFunc)ESUser_free, NULL);
+    g_slist_foreach(users, (GFunc)ESUserInfo_free, NULL);
     g_slist_free(users);
 
     return TRUE;
@@ -807,7 +807,7 @@ static void eee_account_finalize(GObject *object)
     {
         xr_client_free(self->priv->conn);
     }
-    g_slist_foreach(self->priv->cals, (GFunc)ESCalendar_free, NULL);
+    g_slist_foreach(self->priv->cals, (GFunc)ESCalendarInfo_free, NULL);
     g_slist_free(self->priv->cals);
 
     G_OBJECT_CLASS(eee_account_parent_class)->finalize(object);

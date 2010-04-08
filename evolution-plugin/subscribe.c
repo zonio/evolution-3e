@@ -55,13 +55,13 @@ struct subscribe_context
 
 static struct subscribe_context *active_ctx = NULL;
 
-static gboolean calendar_exists(GSList *cals, ESCalendar *ref_cal)
+static gboolean calendar_exists(GSList *cals, ESCalendarInfo *ref_cal)
 {
     GSList *iter;
 
     for (iter = cals; iter; iter = iter->next)
     {
-        ESCalendar *cal = iter->data;
+        ESCalendarInfo *cal = iter->data;
 
         if (!strcmp(cal->name, ref_cal->name) &&
             !strcmp(cal->owner, ref_cal->owner))
@@ -93,7 +93,7 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
     for (iter = cals; iter; iter = iter->next)
     {
         const char *cal_title = NULL;
-        ESCalendar *cal = iter->data;
+        ESCalendarInfo *cal = iter->data;
 
         // skip already subscribed cals
         if (calendar_exists(existing_cals, cal))

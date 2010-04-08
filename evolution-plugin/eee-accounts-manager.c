@@ -420,7 +420,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
         {
             for (iter2 = eee_account_peek_calendars(account); iter2 != NULL; iter2 = iter2->next)
             {
-                ESCalendar *cal = iter2->data;
+                ESCalendarInfo *cal = iter2->data;
                 ESource *source;
 
                 if (!strcmp(cal->owner, account->name))

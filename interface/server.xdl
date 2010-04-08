@@ -1,103 +1,3023 @@
-/* Generated XDL */
+/*
+ * Zonio 3E calendar server
+ *
+ * Copyright (C) 2008  Ondrej Jirman <ondrej.jirman@zonio.net>
+ * Copyright (C) 2008  Stanislav Slusny <stanislav.slusny@zonio.net>
+ * Copyright (C) 2008  Marek Novotny <marek.novotny@zonio.net>
+ * Copyright (C) 2008  Stanislav Stipl <stanislav.stipl@zonio.net>
+ * Copyright (C) 2009  Ondrej Filip <ondrej.filip@zonio.net>
+ * Copyright (C) 2009  Radek Pupák <radek.pupak@zonio.net>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 namespace ES;
 
-error NOT_AUTHORIZED         = 1;
-error AUTH_FAILED            = 2;
-error USER_EXISTS            = 3;
-error UNKNOWN_USER           = 4;
-error INVALID_PASSWORD       = 5;
-error NO_PERMISSION          = 6;
-error CALENDAR_EXISTS        = 7;
-error UNKNOWN_CALENDAR       = 8;
-error ALREADY_SUBSCRIBED     = 9;
-error NOT_SUBSCRIBED         = 10;
-error COMPONENT_EXISTS       = 11;
-error UNKNOWN_COMPONENT      = 12;
-error INTERNAL_SERVER_ERROR  = 20;
-error CLIENT_ERROR           = 21;
+error NOT_AUTHORIZED = 1;
+error AUTH_FAILED = 2;
+error INVALID_PARAMETER = 3;
+error NO_EFFECTIVE_USER = 4;
+error USER_EXISTS = 5;
+error UNKNOWN_USER = 6;
+error INVALID_PASSWORD = 7;
+error NO_PERMISSION = 8;
+error CALENDAR_EXISTS = 9;
+error UNKNOWN_CALENDAR = 10;
+error ALREADY_SUBSCRIBED = 11;
+error NOT_SUBSCRIBED = 12;
+error COMPONENT_EXISTS = 13;
+error UNKNOWN_COMPONENT = 14;
+error GROUP_EXISTS = 15;
+error UNKNOWN_GROUP = 16;
+error ALIAS_EXISTS = 17;
+error UNKNOWN_ALIAS = 18;
+error INVALID_QUERY = 19;
+error READ_ONLY = 20;
+error DOMAIN_EXISTS = 21;
+error DOMAIN_VIOLATION = 22;
+error SPF_VIOLATION = 23;
+error NOT_MEMBER = 24;
+error INVALID_METHOD = 99;
+error INTERNAL_SERVER_ERROR = 100;
+error CLIENT_ERROR = 101;
 
 struct Attribute
 {
-    string                   name;
-    string                   value;
-    boolean                  is_public;
+    string name;
+    string value;
+    boolean is_public;
 }
 
-struct Calendar
+struct CalendarInfo
 {
-    string                   owner;
-    string                   name;
-    array<Attribute>         attrs;
-    string                   perm;
+    string owner;
+    string name;
+    array<Attribute> attrs;
+    string perm;
 }
 
-struct Permission
+struct UserPermission
 {
-    string                   user;
-    string                   perm;
+    string user;
+    string perm;
 }
 
-struct User
+struct GroupPermission
 {
-    string                   username;
-    array<Attribute>         attrs;
+    string group;
+    string perm;
 }
 
+struct Alias
+{
+    string alias;
+}
+
+struct UserInfo
+{
+    string username;
+    array<Attribute> attrs;
+}
+
+struct GroupInfo
+{
+    string groupname;
+    string title;
+}
+    
+
+/** Client servlet interface.
+ */
 servlet Client
 {
-    boolean                  addObject                (string          calspec,
-                                                       string          object);
-    boolean                  authenticate             (string          username,
-                                                       string          password);
-    boolean                  changePassword           (string          new_password);
-    boolean                  createCalendar           (string          calname);
-    boolean                  createUser               (string          username,
-                                                       string          password);
-    boolean                  deleteCalendar           (string          calname);
-    boolean                  deleteObject             (string          calspec,
-                                                       string          oid);
-    boolean                  deleteUser               (string          username);
-    string                   freeBusy                 (string          attendee,
-                                                       string          from_date,
-                                                       string          to_date,
-                                                       string          default_timezone);
-    array<Calendar>          getCalendars             (string          query);
-    array<Permission>        getUserPermissions       (string          calname);
-    array<Calendar>          getSharedCalendars       (string          query);
-    array<Attribute>         getUserAttributes        (string          username);
-    array<User>              getUsers                 (string          query);
-    string                   queryObjects             (string          calspec,
-                                                       string          query);
-    boolean                  sendMessage              (array<string>   recipients,
-                                                       string          message);
-    boolean                  setCalendarAttribute     (string          calspec,
-                                                       string          name,
-                                                       string          value,
-                                                       boolean         is_public);
-    boolean                  setUserPermission        (string          calname,
-                                                       string          for_username,
-                                                       string          perm);
-    boolean                  setUserAttribute         (string          name,
-                                                       string          value,
-                                                       boolean         is_public);
-    boolean                  subscribeCalendar        (string          calspec);
-    boolean                  sudo                     (string          effective_username);
-    boolean                  unsubscribeCalendar      (string          calspec);
-    boolean                  updateObject             (string          calspec,
-                                                       string          object);
+    <%
+#include <config.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#ifndef HAVE_GLIB_REGEXP
+#include <regex.h>
+#endif
+
+#include "lib3es/3es.h"
+
+/* Static methods */
+
+    typedef enum
+    {
+        ADD_OBJECT,
+        UPDATE_OBJECT,
+        DELETE_OBJECT
+    } object_manipulation_kind;
+
+/**
+ * Appropriately updates calendars and sends/delivers messages to recipients.
+ * @param[in] effective_user Sender/effective user.
+ * @param[in] calname Calendar name.
+ * @param[in] owner Calendar owner.
+ * @param[in] object Manipulated object.
+ * @param[in] kind Manipulation kind.
+ * @return TRUE on success.
+ * @throw ES_XMLRPC_ERROR_UNKNOWN_USER
+ * @throw ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR
+ * @throw ES_XMLRPC_ERROR_UNKNOWN_CALENDAR
+ * @throw ES_XMLRPC_ERROR_INVALID_PARAMETER
+ * @throw ES_XMLRPC_ERROR_COMPONENT_EXISTS
+ * @throw ES_XMLRPC_ERROR_UNKNOWN_COMPONENT
+ * @throw ES_XMLRPC_ERROR_NO_PERMISSION
+ * @throw ES_XMLRPC_ERROR_CLIENT_ERROR
+ */
+    static gboolean manipulate_object(const gchar *effective_user, const gchar *calname, const gchar *owner, 
+                                        const gchar *object, object_manipulation_kind kind)
+    {
+        gboolean retval = TRUE;
+
+        if (!es_compare_users_domain(owner, effective_user))
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_USER, "User %s does not exist!", owner);
+            retval = FALSE;
+        }
+        else if (!es_calendar_exists(calname, owner))
+        {
+            if (es_error_is_set())
+            {
+                es_error_clear();
+                es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+            }
+            else
+            {
+                es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                             "Calendar %s:%s does not exist.", calname, owner);
+            }
+            retval = FALSE;
+        }
+        else if (es_calendar_can_be_written_by(calname, owner, effective_user))
+        {
+            icalcomponent *ical_comp = icalcomponent_new_from_string(object);
+
+            if (ical_comp == NULL)
+            {
+                es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER, "Invalid iCal object given.");
+                retval = FALSE;
+            }
+            else
+            {
+                ESEvent *event = NULL;
+                gchar *itip = NULL;
+                icalproperty *tzid_prop = NULL;
+                const gchar *tzid = NULL;
+                icalproperty *uid_prop = NULL;
+                const gchar *uid = NULL;
+                ESMessageType message_type;
+
+                switch (kind)
+                {
+                case ADD_OBJECT:
+                    message_type = ES_MESSAGE_TYPE_NEW;
+                    break;
+                case UPDATE_OBJECT:
+                    message_type = ES_MESSAGE_TYPE_UPDATE;
+                    break;
+                case DELETE_OBJECT:
+                    message_type = ES_MESSAGE_TYPE_CANCEL;
+                    break;
+                default:
+                    g_warn_if_reached();
+                }
+
+                GSList *recipients = NULL;
+                gboolean reply; /* is message attendee's reply or request? */
+
+                switch (icalcomponent_isa(ical_comp))
+                {
+                case ICAL_VEVENT_COMPONENT:
+                    es_message_lock_sending();
+                    event = es_event_new_from_ical(ical_comp);
+                    if (event == NULL)
+                    {
+                        es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER, "Invalid iCal object given.");
+                        retval = FALSE;
+                    }
+                    
+                    if (event->method == ICAL_METHOD_NONE)
+                    {
+                        if ( g_strcmp0(effective_user, event->organizer) != 0 )
+                        {
+                            message_type = ES_MESSAGE_TYPE_REPLY;
+                        }
+
+                        switch (message_type)
+                        {
+                        case ES_MESSAGE_TYPE_NEW:
+                        case ES_MESSAGE_TYPE_UPDATE:
+                            event->method = ICAL_METHOD_REQUEST;
+                            break;
+                        case ES_MESSAGE_TYPE_REPLY:
+                            event->method = ICAL_METHOD_REPLY;
+                            break;
+                        case ES_MESSAGE_TYPE_CANCEL:
+                            event->method = ICAL_METHOD_CANCEL;
+                            break;
+                        }
+                    }
+                    
+                    reply = (event->method == ICAL_METHOD_REPLY);
+                    if (!reply)
+                    {
+                        recipients = event->attendee_emails_without_organizer;
+                    }
+                    else
+                    {
+                        recipients = g_slist_append(recipients, event->organizer);
+                    }
+
+
+                    if (retval && kind == ADD_OBJECT && es_calendar_object_exists(calname, owner, event->id))
+                    {
+                        if (es_error_is_set())
+                        {
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        }
+                        else
+                        {
+                            es_error_set(ES_XMLRPC_ERROR_COMPONENT_EXISTS,
+                                         "Event %s already exists in calendar %s owned by %s.",
+                                         event->id, calname, owner);
+                        }
+                        retval = FALSE;
+                    }
+
+                    if (retval && (kind == UPDATE_OBJECT || kind == DELETE_OBJECT) && !es_calendar_object_exists(calname, owner, event->id))
+                    {
+                        if (es_error_is_set())
+                        {
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        }
+                        else
+                        {
+                            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_COMPONENT,
+                                         "Event %s does not exist in calendar %s owned by %s.",
+                                         event->id, calname, owner);
+                        }
+                        retval = FALSE;
+                    }
+
+                    if (retval && NULL == (itip = es_calendar_object_create_itip_from_ical(calname, owner, ical_comp, message_type, FALSE)))
+                    {
+                        switch ( es_error_get_code() )
+                        {
+                        case ES_CALENDAR_ERROR_SUCCESS:
+                            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_COMPONENT, "Referenced timezone does not exist in calendar.");
+                            break;
+                        case ES_CALENDAR_ERROR_DB:
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                            break;
+                        case ES_CALENDAR_ERROR_MISSING_ATTACHMENT:
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_CLIENT_ERROR,
+                                         "Given event contains attachment not uploaded at server.");
+                            break;
+                        case ES_CALENDAR_ERROR_MISSING_TIMEZONE:
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER,
+                                         "Given event contains timezone which is not in calendar.");
+                            break;
+                        default:
+                            g_warn_if_reached();
+                        }
+                        retval = FALSE;
+                    }
+
+                    if (retval && !es_messages_send_deliver(effective_user, recipients, itip, event, message_type))
+                    {
+                        if (es_error_get_code()==ES_MESSAGE_ERROR_DB)
+                        {
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error. Note: Some messages may be already delivered to remote servers.");
+                        }
+                        else if (es_error_get_code()==ES_MESSAGE_ERROR_MISSING_ATTACHMENT)
+                        {
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "Attachment storage error.");
+                        }
+                        else
+                        {
+                            g_warn_if_reached();
+                        }
+                        retval = FALSE;
+                    }
+
+                    if (retval && (kind == UPDATE_OBJECT || kind == DELETE_OBJECT) && !es_calendar_object_remove(calname, owner, event->id))
+                    {
+                        es_error_clear();
+                        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error");
+                        retval = FALSE;
+                    }
+
+                    if (retval && (kind == ADD_OBJECT || kind == UPDATE_OBJECT) && !es_calendar_event_add(calname, owner, object, event))
+                    {
+                        es_error_clear();
+                        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        retval = FALSE;
+                    }
+
+                    if (retval &&(kind == ADD_OBJECT || kind == UPDATE_OBJECT) && !es_event_update_status(event, owner) && es_error_is_set() )
+                    {
+                        es_error_clear();
+                        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        retval = FALSE;
+                    }
+
+                    if (retval) /* Messages already sent and everything's ok. */
+                    {
+                        GSList *iter;
+
+                        for (iter = event->attendee_emails_without_organizer; iter != NULL;
+                             iter = iter->next)
+                        {
+                            gchar *username = iter->data;
+
+                            //XXX: This should be done as a transaction. (together with adding object to sender's calendar)
+                            /* Add messages to inboxes of local users. */
+                            if (es_user_existance_assertion(username))
+                            {
+                                /* Avoid possible db inconsistency */
+                                es_message_delete(username, event->id);
+                                es_error_clear();
+
+                                if (kind != DELETE_OBJECT)
+                                {
+                                    if (!es_message_add(username, effective_user, event->id, object))
+                                    {
+                                        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                                        retval = FALSE;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (reply)
+                    {
+                        g_slist_free(recipients);
+                        recipients = NULL;
+                    }
+
+                    es_message_unlock_sending();
+                    es_event_free(event);
+                    g_free(itip);
+                    break;
+                case ICAL_VTIMEZONE_COMPONENT:
+                    tzid_prop = icalcomponent_get_first_property(ical_comp, ICAL_TZID_PROPERTY);
+                    tzid = icalproperty_get_tzid(tzid_prop);
+
+                    if (kind == ADD_OBJECT && es_calendar_object_exists(calname, owner, tzid))
+                    {
+                        es_error_set(ES_XMLRPC_ERROR_COMPONENT_EXISTS,
+                                     "Timezone %s already exists in calendar %s owned by %s.",
+                                     tzid, calname, owner);
+                        retval = FALSE;
+                    }
+
+                    if (retval && (kind == UPDATE_OBJECT || kind == DELETE_OBJECT) && !es_calendar_object_exists(calname, owner, tzid))
+                    {
+                        es_error_set(ES_XMLRPC_ERROR_UNKNOWN_COMPONENT,
+                                     "Timezone %s does not exist in calendar %s owned by %s.",
+                                     tzid, calname, owner);
+                    }
+
+                    if (retval && (kind == UPDATE_OBJECT || kind == DELETE_OBJECT) && !es_calendar_object_remove(calname, owner, tzid))
+                    {
+                        es_error_clear();
+                        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        retval = FALSE;
+                    }
+
+                    if (retval && (kind == ADD_OBJECT || kind == UPDATE_OBJECT) && !es_calendar_object_add(calname, owner, tzid, object))
+                    {
+                        if (es_error_get_code() == ES_CALENDAR_ERROR_COMPONENT_EXISTS)
+                        {
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_COMPONENT_EXISTS,
+                                         "Timezone %s already exists in calendar %s owner by %s",
+                                         tzid, calname, owner);
+                        }
+                        else
+                        {
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        }
+                        retval = FALSE;
+                    }
+                    break;
+                default:
+                    uid_prop = icalcomponent_get_first_property(ical_comp, ICAL_UID_PROPERTY);
+                    uid = icalproperty_get_uid(uid_prop);
+
+                    if (kind == ADD_OBJECT && es_calendar_object_exists(calname, owner, tzid))
+                    {
+                        es_error_set(ES_XMLRPC_ERROR_COMPONENT_EXISTS,
+                                     "Component %s already exists in calendar %s owned by %s.",
+                                     tzid, calname, owner);
+                        retval = FALSE;
+                    }
+
+                    if (retval && (kind == UPDATE_OBJECT || kind == DELETE_OBJECT) && !es_calendar_object_exists(calname, owner, tzid))
+                    {
+                        es_error_set(ES_XMLRPC_ERROR_UNKNOWN_COMPONENT,
+                                     "Component %s does not exist in calendar %s owned by %s.",
+                                     tzid, calname, owner);
+                    }
+
+                    if (retval && (kind == UPDATE_OBJECT || kind == DELETE_OBJECT) && !es_calendar_object_remove(calname, owner, tzid))
+                    {
+                        es_error_clear();
+                        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        retval = FALSE;
+                    }
+
+                    if (retval && (kind == ADD_OBJECT || kind == UPDATE_OBJECT) && !es_calendar_object_add(calname, owner, uid, object))
+                    {
+                        if (es_error_get_code() == ES_CALENDAR_ERROR_COMPONENT_EXISTS)
+                        {
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_COMPONENT_EXISTS,
+                                         "Component %s already exists in calendar %s owner by %s.",
+                                         uid, calname, owner);
+                        }
+                        else
+                        {
+                            es_error_clear();
+                            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        }
+                        retval = FALSE;
+                        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+                        retval = FALSE;
+                    }
+                    break;
+                }
+            }
+
+            if (ical_comp != NULL)
+            {
+                icalcomponent_free( ical_comp );
+            }
+        }
+        else
+        {
+            switch (kind)
+            {
+            case ADD_OBJECT:
+                es_warning("addObject: User %s has no write permissions on calendar %s owned by %s.\n",
+                           effective_user, calname, owner);
+                break;
+            case UPDATE_OBJECT:
+                es_warning("updateObject: User %s has no write permissions on calendar %s owned by %s.\n",
+                           effective_user, calname, owner);
+                break;
+            case DELETE_OBJECT:
+                es_warning("deleteObject: User %s has no write permissions on calendar %s owned by %s.\n",
+                           effective_user, calname, owner);
+                break;
+            default:
+                g_warn_if_reached();
+            }
+            es_error_set(ES_XMLRPC_ERROR_NO_PERMISSION, "User %s has no write permissions on calendar %s owned by %s.",
+                         effective_user, calname, owner);
+        }
+
+        return retval;
+    }
+
+    /**
+     * @return TRUE on success.
+     */
+    static gboolean save_remote_attachment_from_conn(xr_http *_http, const gchar *sha1)
+    {
+        char *attachment_path = g_strdup_printf("%s/%s", config.attachments_dir, sha1);
+        char *tmp_attachment_path = g_strdup_printf("%s.%08x", attachment_path, g_random_int());
+        FILE *f;
+        gssize read_bytes;
+        gchar buf[4096];
+
+        f = fopen(tmp_attachment_path, "w");
+        if (f == NULL)
+        {
+            // server error
+            while (xr_http_read(_http, buf, sizeof(buf), NULL) > 0)
+            {
+                ;
+            }
+            xr_http_setup_response(_http, 500);
+            xr_http_set_header(_http, "Content-Type", "text/plain");
+            xr_http_write_all(_http, "Can't save attachment (open error)", -1, NULL);
+            return FALSE;
+        }
+
+        while ((read_bytes = xr_http_read(_http, buf, sizeof(buf), NULL)) > 0)
+        {
+            if (fwrite(buf, 1, read_bytes, f) != (size_t)read_bytes)
+            {
+                fclose(f);
+                unlink(tmp_attachment_path);
+                // server error
+                while (xr_http_read(_http, buf, sizeof(buf), NULL) > 0)
+                {
+                    ;
+                }
+                xr_http_setup_response(_http, 500);
+                xr_http_set_header(_http, "Content-Type", "text/plain");
+                xr_http_write_all(_http, "Can't save attachment (write error)", -1, NULL);
+                return FALSE;
+            }
+        }
+
+        fclose(f);
+
+        if (read_bytes < 0)
+        {
+            // network error
+            unlink(tmp_attachment_path);
+            return FALSE;
+        }
+
+        char *real_sha1 = get_file_sha1_sum(tmp_attachment_path);
+        if (real_sha1 == NULL || strcmp(sha1, real_sha1))
+        {
+            unlink(tmp_attachment_path);
+            g_free(real_sha1);
+
+            // server error
+            xr_http_setup_response(_http, 500);
+            xr_http_set_header(_http, "Content-Type", "text/plain");
+            xr_http_write_all(_http, "Can't save attachment (sha1 mismatch)", -1, NULL);
+            return FALSE;
+        }
+
+        rename(tmp_attachment_path, attachment_path);
+        g_free(real_sha1);
+
+        return TRUE;
+    }
+
+
+    G_LOCK_DEFINE(request);
+    %>
+
+    /* servlet attributes */
+    __attrs__
+    <%
+    gchar * effective_user;
+    gchar *auth_user;
+    gchar *password;
+    gboolean is_root;
+    gboolean is_admin;          /* cached value of the is_admin user attribute */
+    guint64 ns;
+    %>
+
+    /* servlet initialization */
+    __init__
+    <%
+    if (config.log_stats)
+    {
+        stats_register_connection();
+    }
+    %>
+
+    /* servlet cleanup */
+    __fini__
+    <%
+    g_free(_priv->effective_user);
+    g_free(_priv->auth_user);
+    g_free(_priv->password);
+    es_sql_close_connection();
+    %>
+
+    /* called before each call, if you return FALSE, call will NOT proceed to
+       method itself and __post_call__ */
+    __pre_call__
+    <%
+    gboolean retval;
+    const char *method = xr_call_get_method(_call);
+    gboolean requires_sudo;
+    gint method_group; // I = 1; IIa,IIb,IIc = 2; IIIa,IIIb = 3
+
+    if (config.log_stats)
+    {
+        stats_register_call_start(method, &_priv->ns);
+    }
+
+    if ((config.ldap_enabled && ( 
+                !g_strcmp0(method,"changePassword")||
+                !g_strcmp0(method,"setUserAttribute")||
+                !g_strcmp0(method,"createUser")||
+                !g_strcmp0(method,"deleteUser")||
+                !g_strcmp0(method,"createAlias")||
+                !g_strcmp0(method,"deleteAlias")||
+                !g_strcmp0(method,"createGroup")||
+                !g_strcmp0(method,"deleteGroup")||
+                !g_strcmp0(method,"renameGroup")||
+                !g_strcmp0(method,"addUserToGroup")||
+                !g_strcmp0(method,"removeUserFromGroup")
+                ))||
+            (config.ldap_domain_aliases_enabled && (
+                !g_strcmp0(method,"createDomainAlias")||
+                !g_strcmp0(method,"deleteDoainAlias")
+                ))
+       )
+    {
+        gchar *msg = g_strdup_printf("ESClient.%s method disabled due to LDAP usage.", method);
+        xr_call_set_error(_call, ES_XMLRPC_ERROR_READ_ONLY, msg);
+        g_free(msg);
+        goto err;
+    }
+
+    if ( !g_strcmp0(method, "authenticate") ||
+         !g_strcmp0(method, "getServerAttributes") )
+    {   //group I
+        method_group = 1;
+        requires_sudo = FALSE;
+    }
+    else if (
+        !g_strcmp0(method, "getUsers") ||
+        !g_strcmp0(method, "getUserAttributes") )
+    {   //group IIa
+        method_group = 2;
+        requires_sudo = FALSE;
+    }
+    else if (
+        !g_strcmp0(method, "changePassword") ||
+        !g_strcmp0(method, "setUserAttribute") ||
+        !g_strcmp0(method, "getAliases") ||
+        !g_strcmp0(method, "getDomainAliases") ||
+        !g_strcmp0(method, "getGroups") ||
+        !g_strcmp0(method, "getUsersOfGroup") ||
+        !g_strcmp0(method, "getGroupsOfUser") ||
+        !g_strcmp0(method, "createCalendar") ||
+        !g_strcmp0(method, "deleteCalendar") ||
+        !g_strcmp0(method, "getCalendars") ||
+        !g_strcmp0(method, "getSharedCalendars") ||
+        !g_strcmp0(method, "setCalendarAttribute") ||
+        !g_strcmp0(method, "setUserPermission") ||
+        !g_strcmp0(method, "getUserPermissions") ||
+        !g_strcmp0(method, "setGroupPermission") ||
+        !g_strcmp0(method, "getGroupPermissions") ||
+        !g_strcmp0(method, "subscribeCalendar") ||
+        !g_strcmp0(method, "unsubscribeCalendar") ||
+        !g_strcmp0(method, "addObject") ||
+        !g_strcmp0(method, "updateObject") ||
+        !g_strcmp0(method, "deleteObject") ||
+        !g_strcmp0(method, "queryObjects") ||
+        !g_strcmp0(method, "freeBusy") )
+    {   //group IIb or IIc (alias translation is not managed here)
+        method_group = 2;
+        requires_sudo = TRUE;
+    }
+    else if (
+        !g_strcmp0(method, "sudo") ||
+        !g_strcmp0(method, "createUser") ||
+        !g_strcmp0(method, "deleteUser") )
+    {   //group IIIa
+        method_group = 3;
+        requires_sudo = FALSE;
+    }
+    else if (
+        !g_strcmp0(method, "createAlias") ||
+        !g_strcmp0(method, "deleteAlias") ||
+        !g_strcmp0(method, "createDomainAlias") ||
+        !g_strcmp0(method, "deleteDomainAlias") ||
+        !g_strcmp0(method, "createGroup") ||
+        !g_strcmp0(method, "deleteGroup") ||
+        !g_strcmp0(method, "renameGroup") ||
+        !g_strcmp0(method, "addUserToGroup") ||
+        !g_strcmp0(method, "removeUserFromGroup") )
+    {
+        method_group = 3;
+        requires_sudo = TRUE;
+    }
+    else
+    {
+        char *msg = g_strdup_printf("Method %s does not exist or is not implemented on server.", method);
+        xr_call_set_error(_call, ES_XMLRPC_ERROR_INVALID_METHOD, msg);
+        g_free(msg);
+        goto err;
+    }
+
+    if ( (method_group >= 2) && (!_priv->is_root) && (_priv->auth_user == NULL) )
+    {   //groups IIa,IIb,IIc,IIIa,IIIb,IIIc require authentication
+        gchar *msg = g_strdup_printf("Method %s requires authentication. (call authenticate please).", method);
+        xr_call_set_error(_call, ES_XMLRPC_ERROR_NOT_AUTHORIZED, msg);
+        g_free(msg);
+        goto err;
+    }
+
+    if ( (method_group == 3) && ((!_priv->is_root) && (!_priv->is_admin)) )
+    {   //groups IIIa,IIIb requires root or admin
+        gchar *msg = g_strdup_printf("Method %s requires admin privileges.", method);
+        xr_call_set_error(_call, ES_XMLRPC_ERROR_NOT_AUTHORIZED, msg);
+        g_free(msg);
+        goto err;
+    }
+
+    if ( requires_sudo && (_priv->effective_user == NULL) )
+    {   //groups IIb,IIc,IIIb requires effective user set
+        gchar *msg = g_strdup_printf("Method %s requires effective user. (call sudo please)", method);
+        xr_call_set_error(_call, ES_XMLRPC_ERROR_NO_EFFECTIVE_USER, msg);
+        g_free(msg);
+        goto err;
+    }
+
+    G_LOCK(request);
+    return TRUE;
+
+err:
+    if (config.log_stats)
+    {
+        stats_register_call_end(xr_call_get_method(_call), _priv->ns, xr_call_get_error_code(_call));
+    }
+    return FALSE;
+    %>
+
+    /* called after method call */
+    __post_call__
+    <%
+    const char *method = xr_call_get_method(_call);
+    gs_conn *conn;
+    gchar *ip = xr_servlet_get_client_ip(_servlet);
+
+    es_logs("Client IP: %s", ip);
+
+    /* close connection after RPC if backend is sqlite */
+    conn = es_sql_peek_connection();
+    if (conn && gs_get_backend(conn) && !strcmp(gs_get_backend(conn), "sqlite"))
+    {
+        es_sql_close_connection();
+    }
+
+    /* error handling sanity checks */
+    if (es_error_is_set())
+    {
+        xr_call_set_error(_call, es_error_get_code(), es_error_get_message());
+        es_error_clear();
+    }
+    else
+    {
+        gboolean retval;
+        /* method did not set error and returned FALSE boolean */
+        if (xr_value_to_bool(xr_call_get_retval(_call), &retval) && retval == FALSE)
+        {
+            xr_call_set_error(_call, ES_SERVER_INTERNAL_ERROR, "Method returned unidentified error!");
+        }
+    }
+
+    if (config.log_stats)
+    {
+        stats_register_call_end(xr_call_get_method(_call), _priv->ns, xr_call_get_error_code(_call));
+    }
+    
+    g_free(ip);
+
+    G_UNLOCK(request);
+    %>
+
+    __fallback__
+    <%
+    gboolean rs;
+    if (config.priv_server_url == NULL)
+    {
+        return FALSE;
+    }
+    G_LOCK(request);
+    rs = es_ext_relay_call(_call, _priv->is_root ? "root" : _priv->auth_user, _priv->password, _priv->effective_user);
+    G_UNLOCK(request);
+    return TRUE;
+    %>
+
+    /** Get server attributes.
+     *
+     * @param name Attribute name or empty string.
+     *
+     * @return Array of Attributes.
+     */
+    array<Attribute> getServerAttributes(string name)
+    <%
+    ESAttribute * attr;
+
+#define PUSH_ATTR(_name, _value) \
+    if (*name == '\0' || !g_ascii_strcasecmp(name, _name)) { \
+        attr = ESAttribute_new(); \
+        attr->name = g_strdup(_name); \
+        attr->value = g_strdup(_value); \
+        attr->is_public = TRUE; \
+        retval = g_slist_append(retval, attr); }
+
+    es_logs("getServerAtributes server %s \n", name);
+    PUSH_ATTR("server_name", "3e-server");
+    PUSH_ATTR("server_version", PACKAGE_VERSION);
+    PUSH_ATTR("protocol_version", "1.0");
+    if (config.ldap_enabled)
+    {
+        PUSH_ATTR("ldap", "1");
+        if (config.ldap_domain_aliases_enabled)
+        {
+            PUSH_ATTR("ldap_domain_aliasing", "1")
+        }
+        else
+        {
+            PUSH_ATTR("ldap_domain_aliasing", "0")
+        }
+    }
+    else
+    {
+        PUSH_ATTR("ldap", "0");
+    }
+    %>
+
+    /** Authenticate user.
+     *
+     * @param username Username in email format. (bob@domain.net)
+     * @param password Password.
+     *
+     * @return TRUE on success, FALSE otherwise.
+     *
+     * @throw 1 "Bad password or username."
+     */
+    boolean authenticate(string username, string password)
+    <%
+    ESUser * user;
+
+    /* cleanup previous identity first */
+    g_free(_priv->effective_user);
+    g_free(_priv->auth_user);
+    g_free(_priv->password);
+
+    _priv->effective_user = NULL;
+    _priv->auth_user = NULL;
+    _priv->password = NULL;
+    _priv->is_admin = FALSE;
+    _priv->is_root = FALSE;
+
+    retval = FALSE;
+
+    /* are we root? */
+    if (!strcmp(username, "root"))
+    {
+        if ( !strcmp(password, config.root_pass) )
+        {
+            _priv->is_root = TRUE;
+            _priv->password = g_strdup(password);
+            es_logs("Root user successful login. \n");
+            return TRUE;
+        }
+        else
+        {
+            es_error("Root user wrong password login atempt! \n");
+        }
+    }
+    else if (username == NULL)
+    {
+        es_logs("Login without username was made.\n");
+        return FALSE;
+    }
+    else if ( !config.ldap_enabled )
+    {
+
+        //this is KIND OF STUFF WHICH WASTES THE COMPUTER TIME - why is authentication done against the user object when only the username is needed so
+        //whole object creation and searching somewhere in cache or DB is absolutely redundant!!!
+        user = es_user_new_get_locked(username);
+        if (user)
+        {
+            retval = es_user_auth(user, password);
+            if (retval)
+            {
+                retval = TRUE;
+                g_free(_priv->effective_user);
+                _priv->effective_user = g_strdup(username);
+                _priv->auth_user = g_strdup(username);
+                _priv->password = g_strdup(password);
+                _priv->is_admin = es_user_is_admin(user);
+            }
+            else
+            {
+                es_error_clear();
+            }
+            es_data_object_release(ES_DATA_OBJECT(user));
+
+        }
+        else if (es_error_get_code()==ES_SERVER_USER_NOT_EXIST)
+        {
+            es_error_clear();
+        }
+        else
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+    }
+    else
+    {
+        retval = es_ldap_authenticate( username, password );
+        if ( retval )
+        {
+            //XXX: "" stands for domain. Once domains will be done it should be modified.
+            ESUserAttribute *is_admin = es_user_attribute_get("", username, "is_admin");
+            if (es_error_is_set())
+            {
+                es_error_clear();
+                es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+            }
+            else
+            {
+                g_free(_priv->effective_user);
+                _priv->effective_user = g_strdup(username);
+                _priv->auth_user = g_strdup(username);
+                _priv->password = g_strdup(password);
+                _priv->is_admin = !strcmp("1", is_admin->value);
+                es_user_attribute_free(is_admin);
+                retval = TRUE;
+            }
+        }
+        else if (es_error_get_code()==ES_LDAP_ERROR_INTERNAL)
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "LDAP error.");
+        }
+        else if (es_error_get_code()==ES_LDAP_ERROR_USER_DOES_NOT_EXIST)
+        {
+            es_error_clear();
+        }
+        else if (es_error_get_code()==ES_LDAP_ERROR_INVALID_PASSWORD)
+        {
+            es_error_clear();
+        }
+        else
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "Unknown error.");
+        }
+    }
+
+    if (retval)
+    {
+        return TRUE;
+    }
+    else if (es_error_is_set())
+    {
+        /* Internal server error */
+        return FALSE;
+    }
+    else
+    {
+        es_error_set(ES_XMLRPC_ERROR_AUTH_FAILED, "Authentication failed.");
+        return FALSE;
+    }
+
+    %>
+
+    boolean changePassword(string new_password)
+    <%
+    ESUser * user;
+
+    if ( !config.ldap_enabled )
+    {
+        user = es_user_new_get_locked(_priv->effective_user);
+        if (user)
+        {
+            es_user_set_password(user, new_password);
+            retval = es_user_store(user);
+
+            es_data_object_release(ES_DATA_OBJECT(user));
+
+        }
+    }
+    %>
+
+    /** Get list of calendars owned by given user.
+     *
+     * @param calsowner Owners username. Pass empty string to get list of all
+     * shared calendars on the server.
+     *
+     * @return Array of Calendar obejcts.
+     *
+     * @throw 8 "No permission"
+     * @throw 3 "User does not exist"
+     */
+    array<CalendarInfo> getSharedCalendars(string query)
+    <%
+    es_logs("getSharedCalendars %s \n", query);
+    retval = es_calendar_get_shared(_priv->effective_user, query);
+    %>
+
+    /** Get list of all calendars.
+     *
+     * This list includes subscribed calendars, calendar attrs and perms.
+     *
+     * @return Array of Calendar obejcts.
+     *
+     * @throw 8 "No permission"
+     */
+    array<CalendarInfo> getCalendars(string query)
+    <%
+    es_logs("getCalendars %s \n", query);
+    retval = es_calendar_get_all(_priv->effective_user, query);
+    %>
+
+    /** Get list of users limited by given prefix.
+     *
+     * @param prefix Prefix, case insensitive, may be empty.
+     *
+     * @return Array of usernames.
+     *
+     * @throw 8 "No permission"
+     */
+    array<UserInfo> getUsers(string query)
+    <%
+    gchar * q;
+    GSList *result;
+    gboolean empty_query;
+    gint i;
+
+    retval = es_user_get_all(_priv->effective_user, query);
+    es_logs("getUsers %s was sucessful. \n", query);
+    %>
+
+    /** Create new user calendar on the server.
+     *
+     * @param name Calendar name.
+     *
+     * @return TRUE on success.
+     *
+     * @throw 4 "Calendar already exists"
+     * @throw 2 "Internal server error"
+     */
+    boolean createCalendar(string name)
+    <%
+    //ESCalendar* calendar;
+
+    if (!es_calendar_name_verify(name))
+    {
+        es_error_set( ES_XMLRPC_ERROR_INVALID_PARAMETER,
+                      "Invalid calendar name %s.", name);
+        return FALSE;
+    }
+
+    if (es_calendar_exists(name, _priv->effective_user))
+    {
+        if (es_error_is_set())
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+            return FALSE;
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_CALENDAR_EXISTS,
+                         "Calendar %s:%s already exists", _priv->effective_user, name);
+            return FALSE;
+        }
+    }
+    else if (!es_calendar_create(name, _priv->effective_user))
+    {
+        if (es_error_get_code() == ES_CALENDAR_ERROR_CALENDAR_ALREADY_EXISTS)
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_CALENDAR_EXISTS,
+                         "Calendar %s:%s already exists", _priv->effective_user, name);
+            return FALSE;
+        }
+        else
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+
+    /*
+       calendar = es_calendar_new();
+
+       if (es_data_object_lock(ES_DATA_OBJECT(calendar)))
+       {
+       es_calendar_set_name(calendar, name);
+       es_calendar_set_owner(calendar, _priv->effective_user);
+       retval = es_calendar_set_permission(calendar, _priv->effective_user, "write");
+       if (retval)
+       {
+        retval = es_calendar_store(calendar);
+        es_logs("createCalendar %s was sucessful \n", name);
+       }
+       es_data_object_release(ES_DATA_OBJECT(calendar));
+       }
+       else
+       g_object_unref(calendar);
+     */
+    %>
+
+    /** Remove calendar from the server.
+     *
+     * This function also automatically unsubscribes all subscribers of this
+     * calendar.
+     *
+     * @param calname Calendar name.
+     *
+     * @return TRUE on success.
+     *
+     * @throw 5 "Calendar does not exist"
+     * @throw 8 "No permission"
+     */
+    boolean deleteCalendar(string name)
+    <%
+    if (!es_calendar_exists(name, _priv->effective_user))
+    {
+        if (es_error_is_set())
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                         "Calendar %s:%s does not exist.", _priv->effective_user, name);
+        }
+        return FALSE;
+    }
+
+    if (!es_calendar_remove(name, _priv->effective_user))
+    {
+        es_error_clear();
+        es_error_set( ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error");
+        return FALSE;
+    }
+
+    return TRUE;
+    /*ESCalendar* calendar;
+       ESDataObject* data;
+       es_logs("deleteCalendar %s \n", name);
+       calendar = es_calendar_new_get_locked(name, _priv->effective_user);
+       if (calendar)
+       {
+       retval = es_data_object_delete(ES_DATA_OBJECT(calendar));
+       es_data_object_release(ES_DATA_OBJECT(calendar));
+       }
+     */
+    %>
+
+    /** Subscribe to calendar.
+     *
+     * Subscription will only succeed if you are in the ACL of given calendar.
+     *
+     * @param calspec Calspec string. This means two part calendar name
+     *   (username:calname)
+     *
+     * @return TRUE on success.
+     *
+     * @throw 8 "No permission"
+     * @throw 5 "Calendar does not exist"
+     * @throw 11 "Already subscribed"
+     * @throw 12 "Subscribing your own calendar"
+     */
+    boolean subscribeCalendar(string calspec)
+    <%
+    gchar * *splitted_calspec;
+    ESCalendar *calendar;
+    gchar *calname;
+    gchar *owner;
+
+    splitted_calspec = es_calendar_split_calspec(calspec, _priv->effective_user);
+    if (splitted_calspec == NULL)
+    {
+        es_warning("subscribeCalendar: Failed to splitt calspec: %s \n",
+                   calspec);
+        es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                     "Failed to splitt calspec: %s \n", calspec);
+        return FALSE;
+    }
+
+    calname = splitted_calspec[CALSPEC_CALNAME];
+    owner = splitted_calspec[CALSPEC_CALOWNER];
+
+    if (!es_compare_users_domain(owner, _priv->effective_user))
+    {
+        es_warning("subscribeCalendar: User %s does not exist! \n", owner);
+        es_error_set(ES_XMLRPC_ERROR_UNKNOWN_USER, "User %s does not exist!", owner);
+        g_strfreev(splitted_calspec);
+        return FALSE;
+    }
+
+    if (es_calendar_exists(calname, owner))
+    {
+        if (!strcmp(owner, _priv->effective_user))
+        {
+            retval = FALSE;
+            es_error_set(ES_XMLRPC_ERROR_CLIENT_ERROR,
+                         "Cannot subscribe owner's calendar.");
+        }
+        else if (es_calendar_can_be_read_by(calname,
+                                            owner, _priv->effective_user))
+        {
+            retval = es_calendar_subscribe(calname, owner,
+                                           _priv->effective_user);
+        }
+        else if (es_error_get_code() == ES_CALENDAR_ERROR_DB)
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+            retval = FALSE;
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_NO_PERMISSION,
+                         "User does not have permission to subscribe calendar.");
+        }
+    }
+    else if (es_error_get_code() == ES_CALENDAR_ERROR_DB)
+    {
+        es_error_clear();
+        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        retval = FALSE;
+    }
+    else
+    {
+        es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                     "Calendar %s does not exist.", calspec);
+        retval = FALSE;
+    }
+
+    g_strfreev(splitted_calspec);
+    %>
+
+    /** Unsubscribe from calendar.
+     *
+     * @param calspec Calspec string. This means two part calendar name
+     *   (username:calname)
+     *
+     * @return TRUE on success.
+     */
+    boolean unsubscribeCalendar(string calspec)
+    <%
+    gchar * *splitted_calspec;
+    ESCalendar *calendar;
+    gchar *calname;
+    gchar *owner;
+
+    retval = TRUE;
+
+    splitted_calspec = es_calendar_split_calspec(calspec, _priv->effective_user);
+    if (splitted_calspec == NULL)
+    {
+        es_warning("unsubscribeCalendar: Failed split calspec %s. \n", calspec);
+        es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR, "Invalid calspec.");
+        return FALSE;
+    }
+
+    calname = splitted_calspec[CALSPEC_CALNAME];
+    owner = splitted_calspec[CALSPEC_CALOWNER];
+
+    if (!es_calendar_exists(calname, owner))
+    {
+        if (es_error_get_code() == ES_CALENDAR_ERROR_DB)
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                         "Calendar %s:%s does not exist.", owner, calname);
+        }
+        retval = FALSE;
+    }
+    else if (!es_calendar_has_subscribed(calname, owner, _priv->effective_user))
+    {
+        if (es_error_get_code() == ES_CALENDAR_ERROR_DB)
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_NOT_SUBSCRIBED,
+                         "User does not have subscribed calendar %s:%s",
+                         owner, calname);
+        }
+        retval = FALSE;
+    }
+    else if (!es_calendar_unsubscribe(calname, owner, _priv->effective_user))
+    {
+        retval = FALSE;
+        es_error_clear();
+        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+    }
+
+    g_strfreev(splitted_calspec);
+    %>
+
+    string queryObjects(string calspec, string query)
+    <%
+    gchar * *splitted_calspec;
+    ESCalendar *calendar;
+
+    splitted_calspec = es_calendar_split_calspec(calspec, _priv->effective_user);
+    if (splitted_calspec == NULL)
+    {
+        es_warning("queryObjects : Failed to splitt calspec %s and query %s. \n", calspec, query);
+        return NULL; // error will be set in __post_call__
+    }
+
+    if (!es_compare_users_domain(splitted_calspec[CALSPEC_CALOWNER], _priv->effective_user))
+    {
+        es_warning("queryObjects : User %s does not exist!. \n",  splitted_calspec[CALSPEC_CALOWNER]);
+        es_error_set(ES_SERVER_USER_NOT_EXIST, "User %s does not exist!", splitted_calspec[CALSPEC_CALOWNER]);
+        g_strfreev(splitted_calspec);
+        return NULL;
+    }
+
+    calendar = es_calendar_new_get_locked(splitted_calspec[CALSPEC_CALNAME],
+                                          splitted_calspec[CALSPEC_CALOWNER]);
+    if (calendar)
+    {
+        if (es_calendar_can_be_read_by__(calendar, _priv->effective_user))
+        {
+            es_logs("queryObjects : Sucessfuly query %s to calendar %s. \n", query, calendar);
+            retval = es_calendar_query_objects(calendar, query);
+        }
+        else
+        {
+            es_warning("queryObjects : User %s has no read permissions on calendar %s owned by %s.\n",
+                       _priv->effective_user, calendar->name, calendar->owner);
+            es_error_set(ES_SERVER_NO_PERMISSION, "User %s has no read permissions on calendar %s owned by %s.",
+                         _priv->effective_user, calendar->name, calendar->owner);
+        }
+        es_data_object_release(ES_DATA_OBJECT(calendar));
+    }
+
+    g_strfreev(splitted_calspec);
+
+    if (!retval && es_error_is_clear())
+    {
+        es_error("queryObjects : Internal server error. \n");
+        es_error_set(ES_SERVER_ERROR, "Internal server error.");
+    }
+    %>
+
+    boolean addObject(string calspec, string object)
+    <%
+    gchar * *splitted_calspec;
+    gchar *calname;
+    gchar *owner;
+
+    splitted_calspec = es_calendar_split_calspec(calspec, _priv->effective_user);
+    if (splitted_calspec == NULL)
+    {
+        es_warning("addObject : Failed to split calspec %s.\n", calspec);
+        return FALSE;
+    }
+
+    owner = splitted_calspec[0];
+    calname = splitted_calspec[1];
+
+    retval = manipulate_object(_priv->effective_user, calname, owner, object, ADD_OBJECT);
+
+    g_strfreev(splitted_calspec);
+    return retval;
+    %>
+
+    boolean updateObject(string calspec, string object)
+    <%
+    gchar * *splitted_calspec;
+    gchar *calname;
+    gchar *owner;
+
+    splitted_calspec = es_calendar_split_calspec(calspec, _priv->effective_user);
+    if (splitted_calspec == NULL)
+    {
+        es_warning("addObject : Failed to split calspec %s.\n", calspec);
+        return FALSE;
+    }
+
+    owner = splitted_calspec[0];
+    calname = splitted_calspec[1];
+
+    retval = manipulate_object(_priv->effective_user, calname, owner, object,
+                               UPDATE_OBJECT);
+
+    g_strfreev(splitted_calspec);
+    return retval;
+    %>
+
+    boolean deleteObject(string calspec, string oid)
+    <%
+    gchar * *splitted_calspec;
+    gchar *calname;
+    gchar *owner;
+    gchar *object;
+
+    splitted_calspec = es_calendar_split_calspec(calspec, _priv->effective_user);
+    if (splitted_calspec == NULL)
+    {
+        es_warning("addObject : Failed to split calspec %s.\n", calspec);
+        return FALSE;
+    }
+
+    owner = splitted_calspec[0];
+    calname = splitted_calspec[1];
+
+    if (!es_calendar_exists(calname, owner))
+    {
+        if (es_error_is_set())
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                         "Calendar %s:%s does not exist.", owner, calname);
+        }
+        retval = FALSE;
+    }
+    else if (!es_calendar_can_be_written_by(calname, owner, _priv->effective_user))
+    {
+        if (es_error_is_set())
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_NO_PERMISSION,
+                         "User %s has no write permission on calendar %s owned by %s.",
+                         _priv->effective_user, calname, owner);
+
+        }
+        retval = FALSE;
+    }
+    else
+    {
+        object = es_calendar_object_get(calname, owner, oid);
+        if (object == NULL)
+        {
+            if (es_error_is_set())
+            {
+                es_error_clear();
+                es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+            }
+            else
+            {
+                es_error_set(ES_XMLRPC_ERROR_UNKNOWN_COMPONENT,
+                             "Object %s does not exist in calendar %s owned by %s",
+                             oid, calname, owner);
+            }
+            retval = FALSE;
+        }
+        else
+        {
+            retval = manipulate_object(_priv->effective_user, calname, owner, object, DELETE_OBJECT);
+            g_free(object);
+        }
+    }
+
+    g_strfreev(splitted_calspec);
+    return retval;
+    %>
+
+    /** Set permissions on user calendar
+     *
+     * @param calname Name of the user calendar.
+     * @param for_username Grant permissions to this user.
+     * @param perm What permissions ("read", "write", "none")
+     *
+     * @return TRUE on success.
+     *
+     * @throw 8 "No permission"
+     * @throw 5 "Calendar does not exist"
+     * @throw 3 "User does not exist"
+     * @throw 2 "Internal server error"
+     */
+    boolean setUserPermission(string calname, string raw_username, string perm)
+    <%
+    gchar * username;
+
+    retval = TRUE;
+
+    if ( es_username_is_star(raw_username) )
+    {
+        username = g_strdup("*");
+    }
+    else
+    {
+        username = es_username_normalize(raw_username);
+        if (username == NULL)
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_USER, "Invalid username.");
+            return FALSE;
+        }
+
+        if (!es_user_existance_assertion(username))
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_USER,
+                         "User %s does not exist.", username);
+            g_free(username);
+            return FALSE;
+        }
+
+        if (!es_compare_users_domain(username, _priv->effective_user))
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_USER,
+                         "User %s is from different domain than effective user.",
+                         _priv->effective_user);
+            g_free(username);
+            return FALSE;
+        }
+    }
+
+    if (!strcmp(username, _priv->effective_user))
+    {
+        es_error_set(ES_XMLRPC_ERROR_CLIENT_ERROR, "Calendar owner has always write permission.");
+        g_free(username);
+        return FALSE;
+    }
+
+    if (!es_calendar_exists(calname, _priv->effective_user))
+    {
+        if (es_error_is_set())
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                         "Calendar %s does not exist.", calname);
+        }
+        g_free(username);
+        return FALSE;
+    }
+
+    if (!es_calendar_set_user_permission_by_string(calname, _priv->effective_user, username, perm))
+    {
+        g_free(username);
+        switch (es_error_get_code())
+        {
+        case ES_CALENDAR_ERROR_DB:
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+            break;
+        case ES_CALENDAR_ERROR_INVALID_PERMISSION:
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER,
+                         "'%s' is not valid permission string.", perm);
+            break;
+        }
+        return FALSE;
+    }
+
+    g_free(username);
+    return TRUE;
+    %>
+
+    /** Get permissions for user calendar.
+     *
+     * @param calname Calendar name.
+     *
+     * @return Array of Permission obejcts.
+     *
+     * @throw 8 "No permission"
+     * @throw NO_EFFECTIVE_USER
+     * @throw 5 "Calendar does not exist"
+     */
+    array<UserPermission> getUserPermissions(string calname)
+    <%
+    ESCalendar * calendar;
+
+    calendar = es_calendar_new_get_locked(calname, _priv->effective_user);
+
+    if (calendar)
+    {
+        retval = es_calendar_copy_permissions(calendar);
+
+        es_data_object_release(ES_DATA_OBJECT(calendar));
+    }
+    else
+    {
+        es_error_set( ES_XMLRPC_ERROR_UNKNOWN_CALENDAR, "Calendar does not exist." );
+        return FALSE;
+    }
+    %>
+
+/** Set group permission for a calendar.
+ *
+ * @param calname Name of the user calendar.
+ * @param for_groupname Grant permissions to this group.
+ * @param perm What permissions ("read", "write", "none")
+ *
+ * @return TRUE on success.
+ *
+ * @throw NOT_AUTHORIZED
+ * @throw NO_EFFECTIVE_USER
+ * @throw INVALID_PARAMETER
+ * @throw UNKNOWN_USER
+ * @throw UNKNOWN_CALENDAR
+ */
+    boolean setGroupPermission(string calname, string raw_groupname, string perm)
+    <%
+    gchar * groupname;
+    gchar *domain = es_username_get_domain(_priv->effective_user);
+
+    groupname = es_groupname_normalize(raw_groupname);
+    if (groupname == NULL)
+    {
+        es_error_set(ES_XMLRPC_ERROR_UNKNOWN_GROUP,
+                     "Invalid groupname given.");
+        return FALSE;
+    }
+
+    if (!es_calendar_exists(calname, _priv->effective_user))
+    {
+        if (es_error_is_set())
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                         "Calendar %s does not exist.", calname);
+        }
+        g_free(groupname);
+        return FALSE;
+    }
+
+    if (!es_group_existance_assertion(groupname, domain))
+    {
+        es_error_set(ES_XMLRPC_ERROR_UNKNOWN_GROUP, "Group %s does not exist.", groupname);
+        g_free(groupname);
+        return FALSE;
+    }
+
+    if (!es_calendar_set_group_permission_by_string(calname, _priv->effective_user, groupname, domain, perm))
+    {
+        g_free(groupname);
+        switch (es_error_get_code())
+        {
+        case ES_CALENDAR_ERROR_DB:
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+            break;
+        case ES_CALENDAR_ERROR_INVALID_PERMISSION:
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER,
+                         "'%s' is not valid permission string.", perm);
+            break;
+        }
+        return FALSE;
+    }
+
+    g_free(groupname);
+    return TRUE;
+    %>
+
+    /**
+     * Get group permissions of a calendar.
+     *
+     * @param[in] calname Calendar name.
+     *
+     * @throw NOT_AUTHORIZED
+     * @throw NO_EFFECTIVE_USER
+     * @throw UNKNOWN_CALENDAR
+     */
+    array<UserPermission> getGroupPermissions(string calname)
+    <%
+    ESCalendar * calendar;
+
+    calendar = es_calendar_new_get_locked(calname, _priv->effective_user);
+
+    if (calendar)
+    {
+        retval = es_calendar_copy_group_permissions(calendar);
+
+        es_data_object_release(ES_DATA_OBJECT(calendar));
+    }
+    else
+    {
+        es_error_set( ES_XMLRPC_ERROR_UNKNOWN_CALENDAR, "Calendar does not exist." );
+        return FALSE;
+    }
+    %>
+
+
+
+
+/** Set calendar specific attribute on calendar owned or subscribed by
+ * logged-in user. Setting attributes on subscribed calendar will make this
+ * attribute local/vissible only to the logged-in user (is_public is ignored).
+ *
+ * Setting attribute on owned calendar will make that attribute accessible to
+ * others using getSharedCalendars().
+ *
+ * Not all attributes may be writable, some may be generated.
+ *
+ * Attributes may be read using getCalendars() and getSharedCalendars().
+ *
+ * @param calspec Calspec string.
+ * @param name Attribute name.
+ * @param value Attribute value.
+ * @param is_public If TRUE then attribute will be readable by anyone.
+ *
+ * @return TRUE on success.
+ *
+ * @throw ES_XMLRPC_ERROR_NOT_AUTHORIZED
+ * @throw ES_XMLRPC_ERROR_UNKNOWN_CALENDAR
+ */
+    boolean setCalendarAttribute(string calspec, string name, string value, boolean is_public)
+    <%
+    //ESCalendar* calendar;
+    gchar * *splitted_calspec;
+    gchar *calname;
+    gchar *owner;
+
+    if ( name[0] == '\0' )
+    {
+        es_error_set( ES_SERVER_INVALID_PARAMETER,
+                      "Empty string given as parameter name." );
+        return FALSE;
+    }
+
+    splitted_calspec = es_calendar_split_calspec(calspec, _priv->effective_user);
+    if (splitted_calspec == NULL)
+    {
+        return FALSE;
+    }
+
+    calname = splitted_calspec[CALSPEC_CALNAME];
+    owner = splitted_calspec[CALSPEC_CALOWNER];
+
+    if (!es_calendar_exists(calname, owner))
+    {
+        if (es_error_is_set())
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        }
+        else
+        {
+            es_error_set(ES_XMLRPC_ERROR_UNKNOWN_CALENDAR,
+                         "Calendar %s:%s does not exist.", owner, calname);
+        }
+        g_strfreev(splitted_calspec);
+        return FALSE;
+    }
+
+    if (!es_calendar_set_attribute(calname, owner, _priv->effective_user, name,
+                                   value, is_public))
+    {
+        es_error_clear();
+        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        g_strfreev(splitted_calspec);
+        return FALSE;
+    }
+
+    /*
+       calendar = es_calendar_new_get_locked(splitted_calspec[CALSPEC_CALNAME],
+                                          splitted_calspec[CALSPEC_CALOWNER]);
+       if (calendar)
+       {
+       retval = es_calendar_set_attribute__(calendar, _priv->effective_user, name, value, is_public);
+       if (retval)
+        retval = es_calendar_store(calendar);
+       es_data_object_release(ES_DATA_OBJECT(calendar));
+       }
+     */
+
+    g_strfreev(splitted_calspec);
+    return TRUE;
+    %>
+
+    /** Set user specific attribute.
+     *
+     * Not all attributes may be writable, some may be generated.
+     *
+     * @param name Attribute name.
+     * @param value Attribute valeu.
+     * @param is_public If TRUE then attribute will be readable by anyone.
+     *
+     * @return TRUE on success.
+     *
+     * @throw ES_XMLRPC_ERROR_NOT_AUTHORIZED
+     * @throw ES_XMLRPC_ERROR_CLIENT_ERROR
+     */
+    boolean setUserAttribute(string name, string value, boolean is_public)
+    <%
+    ESUser * user;
+
+    if ( !strcmp(name, "") )
+    {
+        es_error_set( ES_SERVER_INVALID_PARAMETER, "Empty name parameter given.");
+        return FALSE;
+    }
+
+    if (!strcmp(name, "is_admin"))
+    {
+        /* only admin can modify is_admin attribute */
+        if (!_priv->is_root && !_priv->is_admin)
+        {
+            g_set_error(_error, 0, ES_XMLRPC_ERROR_NO_PERMISSION, "Only admin can set is_admin attribute.");
+            return FALSE;
+        }
+    }
+
+    user = es_user_new_get_locked(_priv->effective_user);
+    if (user)
+    {
+        retval = es_user_set_attribute(user, name, value, is_public);
+        if (retval)
+        {
+            retval = es_user_store(user);
+        }
+        es_data_object_release(ES_DATA_OBJECT(user));
+    }
+    %>
+
+    /** Get list of user attributes.
+     *
+     * If username is empty or set to logged in user, you will get all attrbiutes,
+     * otherwise you will get only public attributes.
+     *
+     * @param username Username of the user you want to get attributes for. May be
+     *   empty. If user is from different domain error is returned.
+     *
+     * @return Array of Attributes.
+     *
+     * @throw ES_XMLRPC_ERROR_NOT_AUTHORIZED
+     * @throw ES_XMLRPC_ERROR_UNKNOWN_USER
+     */
+    array<Attribute> getUserAttributes(string username)
+    <%
+    ESUser * user;
+    gboolean all_attrs;
+    gchar *username_ = username[0] ? username : _priv->effective_user;
+
+
+    if (username[0] && !es_compare_users_domain(username, _priv->effective_user))
+    {
+        es_error_set(ES_SERVER_USER_NOT_EXIST, "User %s does not exist!", username);
+        return FALSE;
+    }
+
+    all_attrs = es_compare_usernames(username_, _priv->effective_user);
+    user = es_user_new_get_locked( username_ );
+    if (user)
+    {
+        retval = es_user_attributes_get_filtered(user, !all_attrs);
+        es_data_object_release(ES_DATA_OBJECT(user));
+    }
+    %>
+
+    /** Get freebusy components for specified attendees.
+     *
+     * @param attendee Attendee's username/email.
+     * @param from_date Start date (YYYY-MM-DD HH:MM:SS) UTC.
+     * @param to_date End date (YYYY-MM-DD HH:MM:SS) UTC.
+     * @param default_zone Default timezone (VTIMEZONE component string) for VEVENT times without one.
+     *
+     * @return VFREEBUSY component.
+     *
+     * @throw ES_XMLRPC_ERROR_NOT_AUTHORIZED
+     * @throw ES_XMLRPC_ERROR_UNKNOWN_USER
+     */
+    string freeBusy(string attendee, string from_date, string to_date, string default_zone)
+    <%
+    gchar * translated_attendee;
+
+    translated_attendee = es_username_translate(attendee);
+    if ( translated_attendee == NULL )
+    {
+        return FALSE;
+    }
+
+    if ( es_user_existance_assertion(translated_attendee) )
+    {
+        retval = es_ecal_freebusy(_priv->effective_user, translated_attendee, from_date, to_date, default_zone);
+    }
+    else
+    {
+        es_error_clear();
+        retval = es_ecal_freebusy_remote(_priv->effective_user, translated_attendee, from_date, to_date, default_zone);
+    }
+
+    g_free(translated_attendee);
+
+    if (!retval && es_error_is_clear())
+    {
+        es_error_set(ES_SERVER_ERROR, "Internal server error.");
+    }
+    %>
+
+    boolean createUser(string username, string password)
+    <%
+    ESUser * user;
+    gchar *normalized_username;
+
+    if ( !es_username_verify_name(username) )
+    {
+        es_error_set( ES_SERVER_INVALID_PARAMETER, "Invalid username format." );
+        return FALSE;
+    }
+
+    if (!_priv->is_root && !_priv->is_admin)
+    {
+        g_set_error(_error, 0, ES_XMLRPC_ERROR_NOT_AUTHORIZED, "Only admin can call createUser.");
+        return FALSE;
+    }
+
+    if (_priv->auth_user && !es_compare_users_domain(username, _priv->auth_user))
+    {
+        g_set_error(_error, 0, ES_XMLRPC_ERROR_DOMAIN_VIOLATION, "You can manage users only from your own domain.");
+        return FALSE;
+    }
+
+    normalized_username = es_username_normalize(username);
+    if ( normalized_username == NULL )
+    {
+        return FALSE;
+    }
+
+    if ( es_alias_existance_assertion(normalized_username) )
+    {
+        es_error_set( ES_SERVER_ALIAS_EXISTS, "Given username exists as alias of another user." );
+        es_logs("CreateUser: Given username: %s exists as alias of another user.", normalized_username);
+        return FALSE;
+    }
+
+
+    user = es_user_new();
+    if (es_data_object_lock(ES_DATA_OBJECT(user)))
+    {
+        es_user_set_username(user, normalized_username);
+        es_user_set_password(user, password);
+        retval = es_user_store(user);
+        es_data_object_release(ES_DATA_OBJECT(user));
+    }
+    else
+    {
+        g_object_unref(user);
+    }
+
+    if (!retval && es_error_is_clear())
+    {
+        es_error_set(ES_SERVER_ERROR, "Internal server error.");
+    }
+    %>
+
+    boolean deleteUser(string username)
+    <%
+    ESUser * user;
+    ESCalendar *calendar;
+    GSList *calendars, *iter;
+    gchar *normalized_username;
+
+    if (!_priv->is_root && !_priv->is_admin)
+    {
+        g_set_error(_error, 0, ES_XMLRPC_ERROR_NOT_AUTHORIZED, "Only admin can call deleteUser.");
+        return FALSE;
+    }
+
+    if (_priv->auth_user && !es_compare_users_domain(username, _priv->auth_user))
+    {
+        g_set_error(_error, 0, ES_XMLRPC_ERROR_DOMAIN_VIOLATION, "You can manage users only from your own domain.");
+        return FALSE;
+    }
+
+    normalized_username = es_username_normalize(username);
+    if ( normalized_username == NULL )
+    {
+        return FALSE;
+    }
+
+    es_messages_delete_for_user(normalized_username);
+    if (es_error_is_set())
+    {
+        es_error_clear();
+        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "DB error.");
+        g_free(normalized_username);
+        return FALSE;
+    }
+
+    calendars = es_calendar_get_all(normalized_username, "");
+    for (iter = calendars; iter; iter = iter->next)
+    {
+        ESCalendarInfo *cal;
+        cal = iter->data;
+        if (!strcmp(cal->owner, normalized_username))
+        {
+            calendar = es_calendar_new_get_locked(cal->name, normalized_username);
+            if (calendar)
+            {
+                //if( !g_str_has_prefix( config.storage_dsn, "pgsql" ) )
+                if (1)
+                {
+                    es_data_object_delete(ES_DATA_OBJECT(calendar)); //SQL does it automatically
+                }
+                es_data_object_release(ES_DATA_OBJECT(calendar));
+            }
+        }
+        else
+        {
+            calendar = es_calendar_new_get_locked(cal->name, cal->owner);
+            if (calendar)
+            {
+                retval = es_calendar_unsubscribe__(calendar, normalized_username);
+                if (retval)
+                {
+                    retval = es_calendar_store(calendar);
+                }
+                retval = es_calendar_set_permission(calendar, normalized_username, "none");
+                if (retval)
+                {
+                    retval = es_calendar_store(calendar);
+                }
+                es_data_object_release(ES_DATA_OBJECT(calendar));
+            }
+            //delete permission
+        }
+    }
+    calendars = es_calendar_get_shared(normalized_username, "");
+    for (iter = calendars; iter; iter = iter->next)
+    {
+        ESCalendarInfo *cal;
+        cal = iter->data;
+        calendar = es_calendar_new_get_locked(cal->name, cal->owner);
+        if (calendar)
+        {
+            retval = es_calendar_set_permission(calendar, normalized_username, "none");
+            if (retval)
+            {
+                retval = es_calendar_store(calendar);
+            }
+            es_data_object_release(ES_DATA_OBJECT(calendar));
+        }
+    }
+    /* if user exists set ->effective_user */
+    user = es_user_new_get_locked(normalized_username);
+    if (user)
+    {
+        es_data_object_delete(ES_DATA_OBJECT(user));
+        es_data_object_release(ES_DATA_OBJECT(user));
+        /* handle self-removal */
+        if (_priv->auth_user && !strcmp(normalized_username, _priv->auth_user))
+        {
+            g_free(_priv->auth_user);
+            _priv->auth_user = NULL;
+            _priv->is_admin = FALSE;
+        }
+
+        /* handle effective user removal */
+        if (_priv->effective_user && !strcmp(normalized_username, _priv->effective_user))
+        {
+            g_free(_priv->effective_user);
+            _priv->effective_user = NULL;
+        }
+    }
+    else
+    {
+        es_error_set(ES_SERVER_USER_NOT_EXIST, "User %s does not exist!", normalized_username);
+    }
+
+    g_free(normalized_username);
+    return TRUE;
+    %>
+
+    boolean createAlias(string alias)
+    <%
+    if (!es_alias_existance_assertion(alias))
+    {
+        retval = es_alias_set_to_user(_priv->effective_user, alias);
+    }
+    else
+    {
+        es_error_set(ES_SERVER_ALIAS_EXISTS, "Alias %s already exists!", alias);
+    }
+
+    %>
+
+    boolean deleteAlias(string alias)
+    <%
+
+    retval = es_alias_rem_from_user(_priv->effective_user, alias);
+    %>
+
+
+    array<Alias> getAliases()
+    <%
+    if ( !config.ldap_enabled )
+    {
+        retval = es_alias_get_aliases_of_user(_priv->effective_user);
+    }
+    else
+    {
+        retval = es_ldap_get_aliases(_priv->effective_user);
+        if ( es_error_is_clear() )
+        {
+            return retval;
+        }
+        else
+        {
+            return FALSE;
+        }
+    }
+    %>
+
+
+
+    boolean createDomainAlias(string alias)
+    <%
+    ESUser * user;
+    const gchar *domain;
+
+    if (!es_domain_not_exist(alias))
+    {
+        es_error_set(ES_SERVER_USER_EXISTS, "Given alias exists as username domain of another user." );
+        es_warning("ESClient.createDomainAlias Given alias exists as username domain of another user.");
+        return FALSE;
+    }
+
+    if (!es_da_existance_assertion(alias))
+    {
+        domain = es_username_get_domain(_priv->effective_user);
+        retval = es_da_set_to_domain(domain, alias);
+        if ( retval)
+        {
+            es_logs("ESClient.createDomainAlias Alias %s for domain %s was created.", alias, domain);
+        }
+    }
+    else
+    {
+        es_error_set(ES_SERVER_ALIAS_EXISTS, "Alias %s already exists!", alias);
+        es_warning("ESClient.createDomainAlias Alias %s already exists! ", alias);
+    }
+
+    %>
+
+    boolean deleteDomainAlias(string alias)
+    <%
+    ESUser * user;
+    const gchar *domain;
+
+    if (es_da_existance_assertion(alias))
+    {
+        domain = es_username_extract_domain(_priv->effective_user);
+        domain++;
+        retval = es_da_rem_from_domain(domain, alias);
+        es_logs("ESClient.deleteDomainAlias Alias %s for domain %s was removed. ", alias, domain);
+    }
+    else
+    {
+        es_error_set(ES_SERVER_ALIAS_NOT_EXIST, "Alias %s does not exist!", alias);
+        es_warning("ESClient.deleteDomainAlias Alias %s does not exist!", alias);
+    }
+    %>
+
+
+    array<Alias> getDomainAliases()
+    <%
+    const gchar *domain = es_username_get_domain(_priv->effective_user);
+    if ( !config.ldap_domain_aliases_enabled )
+    {
+        retval = es_da_get_aliases_of_domain(domain);
+    }
+    else
+    {
+        retval = es_ldap_get_domain_aliases(domain);
+        if (!retval)
+        {
+            es_error_clear();
+            es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "LDAP error.");
+        }
+    }
+    %>
+
+
+    boolean createGroup(string groupname, string grouptitle)
+    <%
+    ESGroup * group;
+
+    const gchar *domain = es_username_get_domain( _priv->effective_user );
+
+    if (es_group_existance_assertion(groupname, domain))
+    {
+        es_error_set(ES_XMLRPC_ERROR_GROUP_EXISTS, 
+                "Group %s already exists in domain %s.", groupname, domain);
+        return FALSE;
+    }
+
+    group = es_group_new();
+
+    if (es_data_object_lock(ES_DATA_OBJECT(group)))
+    {
+        es_group_set_groupname(group, groupname);
+        es_group_set_domain(group, domain);
+        es_group_set_title(group, grouptitle);
+        retval = es_group_store(group);
+        es_data_object_release(ES_DATA_OBJECT(group));
+    }
+    else
+    {
+        g_object_unref(group);
+    }
+
+    if (!retval && es_error_is_clear())
+    {
+        es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "Internal server error.");
+    }
+
+    %>
+
+    boolean deleteGroup(string groupname)
+    <%
+    ESGroup * group;
+
+    if (groupname == NULL)
+    {
+        return FALSE;
+    }
+
+    group = es_group_new_get_locked(groupname, es_username_extract_domain(_priv->effective_user) + 1);
+    if (group)
+    {
+        es_data_object_delete(ES_DATA_OBJECT(group));
+        es_data_object_release(ES_DATA_OBJECT(group));
+
+    }
+    else
+    {
+        es_error_set(ES_SERVER_GROUP_NOT_EXIST, "Group %s does not exist!", groupname);
+    }
+
+    return TRUE;
+    %>
+
+
+
+    boolean renameGroup(string groupname, string new_alias)
+    <%
+    ESGroup * group;
+
+    if (groupname == NULL)
+    {
+        return FALSE;
+    }
+
+    group = es_group_new_get_locked(groupname, es_username_get_domain(_priv->effective_user));
+    if (group)
+    {
+        es_group_set_title(group, new_alias);
+        retval = es_group_store(group);
+    }
+    else
+    {
+        es_error_set(ES_SERVER_GROUP_NOT_EXIST, "Group %s does not exist!", groupname);
+    }
+
+    es_data_object_release(ES_DATA_OBJECT(group));
+
+    %>
+
+    array<GroupInfo> getGroups(string query)
+    <%
+    const char *domain = es_username_extract_domain( _priv->effective_user ) + 1;
+
+    retval = es_group_get_all(query, domain);
+
+    if ( es_error_is_clear() )
+    {
+        return retval;
+    }
+    else
+    {
+        return FALSE;
+    }
+    %>
+
+    boolean addUserToGroup(string groupname)
+    <%
+    ESUser * user;
+    ESGroup *group;
+
+    user = es_user_new_get_locked(_priv->effective_user);
+    group = es_group_new_get_locked(groupname, es_username_extract_domain(_priv->effective_user) + 1);
+    if (group)
+    {
+        retval = es_group_add_user_to_group(group, user);
+    }
+    else
+    {
+        es_error_set(ES_SERVER_GROUP_NOT_EXIST, "Group %s does not exist!", groupname);
+    }
+
+    es_data_object_release(ES_DATA_OBJECT(user));
+    es_data_object_release(ES_DATA_OBJECT(group));
+
+    %>
+
+
+    boolean removeUserFromGroup(string groupname)
+    <%
+    ESUser *user;
+    ESGroup *group;
+
+    user = es_user_new_get_locked(_priv->effective_user);
+    group = es_group_new_get_locked(groupname, es_username_extract_domain(_priv->effective_user) + 1);
+    if (group)
+    {
+        if (es_group_contains_user(groupname, _priv->effective_user))
+        {
+            retval = es_group_rem_user_from_group(group, user);
+        }
+        else
+        {
+            if (!es_error_is_set())
+            {
+                es_error_set(ES_XMLRPC_ERROR_NOT_MEMBER, "%s is not member of %s", _priv->effective_user, groupname); 
+            }
+        }
+    }
+    else
+    {
+        es_error_set(ES_SERVER_GROUP_NOT_EXIST, "Group %s does not exist!", groupname);
+    }
+
+    es_data_object_release(ES_DATA_OBJECT(user));
+    es_data_object_release(ES_DATA_OBJECT(group));
+
+    %>
+
+    array<GroupInfo> getGroupsOfUser()
+    <%
+    ESUser * user;
+
+    user = es_user_new_get_locked(_priv->effective_user);
+    retval = es_group_get_groups_contain_user(user);
+    es_data_object_release(ES_DATA_OBJECT(user));
+
+    if ( es_error_is_clear() )
+    {
+        return retval;
+    }
+    else
+    {
+        return FALSE;
+    }
+    %>
+
+    array<UserInfo> getUsersOfGroup(string groupname)
+    <%
+    ESGroup * group;
+
+    group = es_group_new_get_locked(groupname, es_username_extract_domain(_priv->effective_user) + 1);
+    if (group)
+    {
+        retval = es_group_get_users_from_group(group);
+    }
+    else
+    {
+        es_error_set(ES_SERVER_GROUP_NOT_EXIST, "Group %s does not exist!", groupname);
+    }
+
+    es_data_object_release(ES_DATA_OBJECT(group));
+
+    if ( es_error_is_clear() )
+    {
+        return retval;
+    }
+    else
+    {
+        return FALSE;
+    }
+    %>
+
+    boolean sudo(string effective_username)
+    <%
+    es_debug("Server.xdl call sudo function with %s user.", effective_username);
+    if (!_priv->is_root && !_priv->is_admin)
+    {
+        g_set_error(_error, 0, ES_XMLRPC_ERROR_NOT_AUTHORIZED, "Only admin can call createUser.");
+        es_warning("Only admin can call createUser.");
+        return FALSE;
+    }
+
+    if (!strcmp(effective_username, ""))
+    {
+        g_free(_priv->effective_user);
+        _priv->effective_user = g_strdup(_priv->auth_user);
+        es_logs("EsClient.SUDO was sucessfull.");
+        return TRUE;
+    }
+
+    if (_priv->auth_user && !es_compare_users_domain(effective_username, _priv->auth_user))
+    {
+        g_set_error(_error, 0, ES_XMLRPC_ERROR_DOMAIN_VIOLATION, "You can manage users only from your own domain.");
+        es_warning("Admin try to change different domain user. % You can manage users only from your own domain.", effective_username);
+        return FALSE;
+    }
+
+    if ( es_user_existance_assertion(effective_username) )
+    {
+        g_free(_priv->effective_user);
+        _priv->effective_user = g_strdup(effective_username);
+    }
+    else
+    {
+        es_error_set(ES_SERVER_USER_NOT_EXIST, "User %s does not exist!", effective_username);
+        es_warning("User %s does not exist!", effective_username);
+        return FALSE;
+    }
+
+    return TRUE;
+    %>
+
+
+    /* Attachment storage and access */
+
+    __upload__
+    <%
+    GError * err = NULL;
+    const char *path = xr_http_get_resource(_http);
+    char *username;
+    char *password;
+    char buf[4096];
+    gboolean authorized = FALSE;
+
+    if (!xr_http_get_basic_auth(_http, &username, &password))
+    {
+        while (xr_http_read(_http, buf, sizeof(buf), NULL) > 0)
+        {
+            ;
+        }
+        xr_http_setup_response(_http, 401);
+        xr_http_set_header(_http, "Content-Type", "text/plain");
+        xr_http_set_header(_http, "WWW-Authenticate", "Basic realm=\"3E Attachments\"");
+        xr_http_write_all(_http, "Authentication Required", -1, NULL);
+        return TRUE;
+    }
+
+    // check authenticate info
+    if (!config.ldap_enabled)
+    {
+        char *un = es_username_normalize(username);
+        ESUser *user = es_user_new_get_locked(un);
+        g_free(un);
+        if (user)
+        {
+            authorized = es_user_auth(user, password);
+            es_data_object_release(ES_DATA_OBJECT(user));
+        }
+    }
+    else
+    {
+        authorized = es_ldap_authenticate(username, password);
+    }
+
+    g_free(username);
+    g_free(password);
+
+    if (!authorized)
+    {
+        while (xr_http_read(_http, buf, sizeof(buf), NULL) > 0)
+        {
+            ;
+        }
+        xr_http_setup_response(_http, 401);
+        xr_http_set_header(_http, "Content-Type", "text/plain");
+        xr_http_set_header(_http, "WWW-Authenticate", "Basic realm=\"3E Attachments\"");
+        xr_http_write_all(_http, "Invalid Credentials", -1, NULL);
+        return TRUE;
+    }
+#ifndef HAVE_GLIB_REGEXP
+    regex_t regex;
+
+    regcomp(&regex, "^/attach/[0-9a-f]{40}(/.*)?$", REG_ICASE | REG_EXTENDED);
+
+    if ( regexec(&regex, path, 0, NULL, 0) == 0 )
+#else
+    if (g_regex_match_simple("|^/attach/[0-9a-fA-F]{40}(/.*)?$|", path, 0, 0))
+#endif
+    {
+        char *sha1 = g_ascii_strdown(path + 8, 40);
+        gssize read_bytes;
+
+        if (!save_remote_attachment_from_conn(_http, sha1))
+        {
+            g_free(sha1);
+            return TRUE;
+        }
+        g_free(sha1);
+
+        xr_http_setup_response(_http, 200);
+        xr_http_set_header(_http, "Content-Type", "text/plain");
+        xr_http_write_all(_http, "Attachment uploaded", -1, NULL);
+    }
+    else
+    {
+        while (xr_http_read(_http, buf, sizeof(buf), NULL) > 0)
+        {
+            ;
+        }
+        xr_http_setup_response(_http, 500);
+        xr_http_set_header(_http, "Content-Type", "text/plain");
+        xr_http_write_all(_http, "Invalid attachment path.", -1, NULL);
+    }
+
+    return TRUE;
+    %>
+
+    __download__
+    <%
+    const char *path = xr_http_get_resource(_http);
+
+#ifndef HAVE_GLIB_REGEXP
+    regex_t regex;
+
+    regcomp(&regex, "^/attach/[0-9a-f]{40}(/.*)?$", REG_ICASE | REG_EXTENDED);
+
+    if ( regexec(&regex, path, 0, NULL, 0) == 0 )
+#else
+    if (g_regex_match_simple("|^/attach/[0-9a-fA-F]{40}(/.*)?$|", path, 0, 0))
+#endif
+    {
+        char buf[4096];
+        char *sha1 = g_ascii_strdown(path + 8, 40);
+        char *attachment_path = g_strdup_printf("%s/%s", config.attachments_dir, sha1);
+        struct stat st;
+        size_t read_bytes;
+        FILE *f;
+        g_free(sha1);
+
+        if (!g_file_test(attachment_path, G_FILE_TEST_IS_REGULAR))
+        {
+            xr_http_setup_response(_http, 404);
+            xr_http_set_header(_http, "Content-Type", "text/plain");
+            xr_http_write_all(_http, "Attachment not found.", -1, NULL);
+            return FALSE;
+        }
+
+        stat(attachment_path, &st);
+        f = fopen(attachment_path, "r");
+        if (f == NULL)
+        {
+            xr_http_setup_response(_http, 404);
+            xr_http_set_header(_http, "Content-Type", "text/plain");
+            xr_http_write_all(_http, "Attachment not found.", -1, NULL);
+            return TRUE;
+        }
+
+        xr_http_setup_response(_http, 200);
+        xr_http_set_header(_http, "Content-Type", "application/octet-stream");
+        xr_http_set_message_length(_http, st.st_size);
+        if (!xr_http_write_header(_http, NULL))
+        {
+            return TRUE;
+        }
+
+        while ((read_bytes = fread(buf, 1, 4096, f)) > 0)
+        {
+            if (!xr_http_write(_http, buf, read_bytes, NULL))
+            {
+                fclose(f);
+                return TRUE;
+            }
+        }
+
+        fclose(f);
+        xr_http_write_complete(_http, NULL);
+        return TRUE;
+    }
+    else
+    {
+        xr_http_setup_response(_http, 404);
+        xr_http_set_header(_http, "Content-Type", "text/plain");
+        xr_http_write_all(_http, "Attachment not found.", -1, NULL);
+    }
+    %>
 }
 
-/*
+/** Interserver servlet interface.
+ */
 servlet Server
 {
-    boolean                  deliverMessage           (string          sender,
-                                                       array<string>   recipients,
-                                                       string          message);
-    string                   freeBusy                 (string          organizer,
-                                                       string          attendee,
-                                                       string          from_date,
-                                                       string          to_date,
-                                                       string          default_timezone);
+    <%
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <unistd.h>
+#include <xr-client.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+
+#include "lib3es/3es.h"
+
+    G_LOCK_EXTERN(request);
+    %>
+
+    __attrs__
+    <%
+        guint64 ns;
+    %>
+
+    __init__
+    <%
+    if (config.log_stats)
+    {
+        stats_register_connection();
+    }
+    %>
+
+    __fini__
+    <%
+    es_sql_close_connection();
+    %>
+
+    __pre_call__
+    <%
+    /* check self-call */
+    gboolean retval;
+    const gchar *method = xr_call_get_method(_call);
+    xr_http * http = xr_servlet_get_http(_servlet);
+    const char *server_id = xr_http_get_header(http, "X-EEE-Server-ID");
+
+    if (server_id && !strcmp(server_id, config.server_id))
+    {
+        xr_call_set_error(_call, ES_XMLRPC_ERROR_CLIENT_ERROR, "Self-calls are not allowed.");
+        return FALSE;
+    }
+
+    if (config.log_stats)
+    {
+        stats_register_call_start(method, &_priv->ns);
+    }
+
+    if (!g_strcmp0(method, "deliverMessage")||
+        !g_strcmp0(method, "freeBusy") )
+    {
+        ;
+    }
+    else
+    {
+        char *msg = g_strdup_printf("Method %s does not exist or is not implemented on server.", method);
+        xr_call_set_error(_call, ES_XMLRPC_ERROR_INVALID_METHOD, msg);
+        g_free(msg);
+        goto err;
+    }
+
+    G_LOCK(request);
+    return TRUE;
+err:
+    if (config.log_stats)
+    {
+        stats_register_call_end(xr_call_get_method(_call), _priv->ns, xr_call_get_error_code(_call));
+    }
+    return FALSE;
+    %>
+
+    __post_call__
+    <%
+    const char *method = xr_call_get_method(_call);
+    gs_conn *conn;
+
+    // close connection after RPC if backend is sqlite
+    conn = es_sql_peek_connection();
+    if (conn && gs_get_backend(conn) && !strcmp(gs_get_backend(conn), "sqlite"))
+    {
+        es_sql_close_connection();
+    }
+
+    if (es_error_is_set())
+    {
+        es_error("RPC[%s] %s", method, es_error_get_message());
+        xr_call_set_error(_call, es_error_get_code(), es_error_get_message());
+        es_error_clear();
+    }
+    else
+    {
+        gboolean retval;
+        if (xr_value_to_bool(xr_call_get_retval(_call), &retval) && retval == FALSE)
+        {
+            xr_call_set_error(_call, ES_SERVER_INTERNAL_ERROR, "Method returned unidentified error!");
+        }
+    }
+
+    if (config.log_stats)
+    {
+        stats_register_call_end(xr_call_get_method(_call), _priv->ns, xr_call_get_error_code(_call));
+    }
+
+    G_UNLOCK(request);
+    %>
+
+/** Deliver message to given recipients. (interserver comm)
+ *
+ * @param sender Sender email address/username.
+ * @param recipients Array of email addresses/usernames.
+ * @param message Messages text.
+ * @param message_type Message type. Enum defined in message.h
+ *
+ * @return TRUE on success, exception on error.
+ */
+    boolean deliverMessage(string sender, array<string> recipients, string message,
+                           int message_type)
+    <%
+    icalcomponent * itip_comp;
+    icalcomponent *event_comp;
+    ESEvent *event;
+    const gchar *domain = es_username_get_domain(sender);
+    gchar *client_ip;
+    struct hostent *dns_hostname;
+    const gchar *remote_hostname = get_eee_server_hostname_for_email_cached(sender);
+    gboolean spf_ok = FALSE;
+    int i;
+    gchar buf[INET6_ADDRSTRLEN];
+
+    /* XXX: SPF check works only for IPv4 */
+    if (domain==NULL)
+    {
+        es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER, "Invalid sender.");
+        return FALSE;
+    }
+
+    if (remote_hostname==NULL)
+    {
+        es_error_set(ES_XMLRPC_ERROR_SPF_VIOLATION, "Unable to get TXT record for sender's domain.");
+        return FALSE;
+    }
+
+    client_ip = xr_servlet_get_client_ip(_servlet);
+    dns_hostname = gethostbyname(domain);
+
+    if (dns_hostname==NULL)
+    {
+        es_error_set(ES_XMLRPC_ERROR_SPF_VIOLATION, "Unable to translate sender's domain to IP.");
+        return FALSE;
+    }
+
+    for (i=0; dns_hostname->h_addr_list[i]!=NULL; i++)
+    {
+        if (inet_ntop(dns_hostname->h_addrtype, dns_hostname->h_addr_list[i], buf, INET6_ADDRSTRLEN))
+        {
+            if(strcmp(client_ip, buf)==0)
+            {
+                spf_ok = TRUE;
+                break;
+            }
+        }
+    }
+
+    g_free(client_ip);
+
+    if (!spf_ok)
+    {
+        es_error_set(ES_XMLRPC_ERROR_SPF_VIOLATION, "Sender's domain does not correpond with client IP.");
+        return FALSE;
+    }
+
+    if (message_type!=ES_MESSAGE_TYPE_NEW&&
+        message_type!=ES_MESSAGE_TYPE_UPDATE&&
+        message_type!=ES_MESSAGE_TYPE_CANCEL )
+    {
+        es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER, "Invalid message type parameter: %d.", message_type);
+        return FALSE;
+    }
+
+    itip_comp = icalcomponent_new_from_string(message);
+
+    if (itip_comp == NULL)
+    {
+        es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER,
+                     "Message is not valid iTip.");
+        return FALSE;
+    }
+    else if (NULL == (event_comp = icalcomponent_get_first_component(itip_comp,
+                                                                     ICAL_VEVENT_COMPONENT)))
+    {
+        icalcomponent_free(itip_comp);
+        es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER,
+                     "Message is not valid iTip - missing event.");
+        return FALSE;
+    }
+    else if (NULL == (event = es_event_new_from_ical(event_comp)))
+    {
+        icalcomponent_free(itip_comp);
+        es_error_set(ES_XMLRPC_ERROR_INVALID_PARAMETER,
+                     "Message is not valid iTip.");
+        return FALSE;
+    }
+    else
+    {
+        /* Download remote attachments */
+        GSList *a;
+        
+        for (a = event->attachments; a!=NULL; a=a->next)
+        {
+            ESEventAttachment *attach = a->data;
+            gchar *attachment_path = g_strdup_printf("%s/%s", config.attachments_dir, attach->sha1);
+            gchar *tmp_attachment_path = g_strdup_printf("%s.%08x", attachment_path, g_random_int());
+            gchar *uri = g_strdup_printf("https://%s/RPC2", attach->hostname);
+            FILE *f;
+            gssize read_bytes;
+            gchar buf[4096];
+            gchar *remote_path = g_strdup_printf("/attach/%s/%s", attach->sha1, attach->filename);
+            GError *err = NULL;
+
+            if (g_file_test(attachment_path, G_FILE_TEST_IS_REGULAR))
+            {
+                g_free(attachment_path);
+                g_free(tmp_attachment_path);
+                g_free(remote_path);
+                g_free(uri);
+                continue;
+            }
+
+            xr_client_conn *conn = xr_client_new(&err);
+            xr_client_open(conn, uri, &err);
+            if (err!=NULL)
+            {
+                es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "Unable to save remote attachment.");
+                icalcomponent_free(itip_comp);
+                es_event_free(event);
+                g_free(remote_path);
+                xr_client_free(conn);
+                g_error_free(err);
+                g_free(uri);
+                return FALSE;
+            }
+
+            xr_http *http = xr_client_get_http(conn);
+
+            f = fopen(tmp_attachment_path, "w");
+            if (f == NULL)
+            {
+                es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "Unable to save remote attachment.");
+                icalcomponent_free(itip_comp);
+                es_event_free(event);
+                g_free(remote_path);
+                xr_client_free(conn);
+                g_free(uri);
+                return FALSE;
+            }
+            
+            xr_http_setup_request(http, "GET", remote_path, attach->hostname);
+            xr_http_write_header(http, &err);
+            xr_http_write_complete(http, &err);
+            xr_http_read_header(http, &err);
+
+            if (err!=NULL)
+            {
+                g_error_free(err);
+                es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "Unable to save remote attachment.");
+                icalcomponent_free(itip_comp);
+                es_event_free(event);
+                g_free(remote_path);
+                xr_client_free(conn);
+                g_free(uri);
+                return FALSE;
+            }
+
+            if (xr_http_get_code(http)/100 != 2)
+            {
+                es_error_set(ES_XMLRPC_ERROR_CLIENT_ERROR, "Unable to download remote attachment: %s", attach->eee_uri);
+                icalcomponent_free(itip_comp);
+                es_event_free(event);
+                g_free(remote_path);
+                xr_client_free(conn);
+                g_free(uri);
+                return FALSE;
+            }
+
+            while ((read_bytes = xr_http_read(http, buf, sizeof(buf), NULL)) > 0)
+            {
+                if (fwrite(buf, 1, read_bytes, f) != (size_t)read_bytes)
+                {
+                    fclose(f);
+                    unlink(tmp_attachment_path);
+
+                    // server error
+                    while (xr_http_read(http, buf, sizeof(buf), NULL) > 0)
+                    {
+                        ;
+                    }
+                    es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "Unable to save remote attachment.");
+                    icalcomponent_free(itip_comp);
+                    es_event_free(event);
+                    g_free(remote_path);
+                    xr_client_free(conn);
+                    g_free(uri);
+                    return FALSE;
+                }
+            }
+
+            fclose(f);
+
+            if (read_bytes < 0)
+            {
+                // network error
+                es_error_set(ES_XMLRPC_ERROR_CLIENT_ERROR, "Unable to download remote attachment: %s", attach->eee_uri);
+                icalcomponent_free(itip_comp);
+                es_event_free(event);
+                unlink(tmp_attachment_path);
+                g_free(remote_path);
+                xr_client_free(conn);
+                g_free(uri);
+                return FALSE;
+            }
+
+            char *real_sha1 = get_file_sha1_sum(tmp_attachment_path);
+            if (real_sha1 == NULL || strcmp(attach->sha1, real_sha1))
+            {
+                unlink(tmp_attachment_path);
+                es_error_set(ES_XMLRPC_ERROR_INTERNAL_SERVER_ERROR, "Unable to save remote attachment. (Checksum failed)");
+                icalcomponent_free(itip_comp);
+                es_event_free(event);
+                g_free(remote_path);
+                xr_client_free(conn);
+                g_free(uri);
+                return FALSE;
+            }
+            rename(tmp_attachment_path, attachment_path);
+            g_free(remote_path);
+            xr_client_free(conn);
+        }
+
+        /* Send messages */
+        GSList *recipient;
+
+        for (recipient = recipients; recipient; recipient = recipient->next)
+        {
+            gchar *username = recipient->data;
+
+            if (es_user_existance_assertion(username))
+            {
+                es_message_add(username, sender,
+                               icalproperty_get_uid(
+                                   icalcomponent_get_first_property(event_comp, ICAL_UID_PROPERTY)
+                                   ),
+                               icalcomponent_as_ical_string(event_comp));
+            }
+        }
+    }
+
+    /* es_messages_send handles remote attachments automatically */
+    es_messages_send(sender, recipients, message, event, message_type);
+    icalcomponent_free(itip_comp);
+    es_event_free(event);
+
+    return TRUE;
+    %>
+
+    /** Get freebusy components for specified attendees.
+     *
+     * @param organizer Organizer of the meeting (guy requesting free/busy).
+     * @param attendee Attendee's username/email.
+     * @param from_date Start date (YYYY-MM-DD HH:MM:SS) UTC.
+     * @param to_date End date (YYYY-MM-DD HH:MM:SS) UTC.
+     * @param default_zone Default timezone (VTIMEZONE component string) for VEVENT times without one.
+     *
+     * @return VFREEBUSY component.
+     *
+     * @throw ES_XMLRPC_ERROR_UNKNOWN_USER
+     */
+    string freeBusy(string organizer, string attendee, string from_date, string to_date, string default_zone)
+    <%
+    char *translated_attendee = es_username_translate(attendee);
+
+    retval = es_ecal_freebusy(organizer, translated_attendee, from_date, to_date, default_zone);
+
+    g_free(translated_attendee);
+
+    if (!retval && es_error_is_clear())
+    {
+        es_error_set(ES_SERVER_ERROR, "Internal server error.");
+    }
+    %>
+
+
 }
-*/
+
+
+
+

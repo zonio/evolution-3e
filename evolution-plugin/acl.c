@@ -51,7 +51,7 @@ enum
 
 struct acl_perm
 {
-    ESPermission perm;
+    ESUserPermission perm;
     char *realname;
 };
 
@@ -170,7 +170,7 @@ static gboolean store_acl(struct acl_context *ctx)
         {
             do
             {
-                ESPermission *p = ESPermission_new();
+                ESUserPermission *p = ESUserPermission_new();
                 gtk_tree_model_get(GTK_TREE_MODEL(ctx->acl_model), &iter,
                                    ACL_USERNAME_COLUMN, &p->user,
                                    ACL_PERM_COLUMN, &p->perm,
@@ -205,7 +205,7 @@ static gboolean store_acl(struct acl_context *ctx)
         }
     }
 
-    g_slist_foreach(perms, (GFunc)ESPermission_free, NULL);
+    g_slist_foreach(perms, (GFunc)ESUserPermission_free, NULL);
     g_slist_free(perms);
 
     eee_account_disconnect(ctx->account);
@@ -224,7 +224,7 @@ static void on_acl_button_ok_clicked(GtkButton *button, struct acl_context *ctx)
 void acl_perm_free(struct acl_perm *p)
 {
     g_free(p->realname);
-    ESPermission_free((ESPermission *)p);
+    ESUserPermission_free((ESUserPermission *)p);
 }
 
 static void on_acl_window_destroy(GtkObject *object, struct acl_context *ctx)
@@ -287,7 +287,7 @@ static gboolean load_state(struct acl_context *ctx)
 
     for (iter = perms; iter; iter = iter->next)
     {
-        ESPermission *perm = iter->data;
+        ESUserPermission *perm = iter->data;
         if (!strcmp(perm->user, "*"))
         {
             ctx->initial_mode = ACL_MODE_PUBLIC;
@@ -346,7 +346,7 @@ static void update_users_list(struct acl_context *ctx)
 
     for (iter = ctx->initial_perms; iter; iter = iter->next)
     {
-        ESPermission *perm = iter->data;
+        ESUserPermission *perm = iter->data;
         users = g_slist_append(users, perm->user);
     }
     gtk_list_store_clear(ctx->users_model);

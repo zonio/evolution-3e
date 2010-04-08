@@ -346,12 +346,12 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb)
 
     for (iter = cals; iter; iter = iter->next)
     {
-        ESCalendar *cal = iter->data;
+        ESCalendarInfo *cal = iter->data;
         if (!g_ascii_strcasecmp(cal->owner, cb->priv->owner) &&
             !g_ascii_strcasecmp(cal->name, cb->priv->calname))
         {
             e_cal_backend_3e_calendar_set_perm(cb, cal->perm);
-            Array_ESCalendar_free(cals);
+            Array_ESCalendarInfo_free(cals);
             e_cal_backend_3e_close_connection(cb);
             return TRUE;
         }
@@ -359,7 +359,7 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb)
 
     e_cal_backend_3e_close_connection(cb);
 
-    Array_ESCalendar_free(cals);
+    Array_ESCalendarInfo_free(cals);
     e_cal_backend_3e_calendar_set_perm(cb, "none");
     return FALSE;
 }
@@ -1070,6 +1070,13 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
             g_free(oid);
             if (local_err)
             {
+                // ignore the error if component doesn't exist anymore
+                if (local_err->code == ES_XMLRPC_ERROR_UNKNOWN_COMPONENT)
+                {
+                    g_error_free(local_err);
+                    local_err = NULL;
+                    break;
+                }
                 e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
                 g_clear_error(&local_err);
                 break;
