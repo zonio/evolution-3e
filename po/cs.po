@@ -14,6 +14,10 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+#: ../evolution-plugin/acl.c:404 ../evolution-plugin/acl.c:589
+msgid "read only"
+msgstr "pouze ke čtení"
+
 #: ../evolution-plugin/acl.c:580
 msgid "Username"
 msgstr "Uživatelské jméno"
@@ -22,11 +26,15 @@ msgstr "Uživatelské jméno"
 msgid "Real Name"
 msgstr "Plné jméno"
 
+#: ../evolution-plugin/acl.c:591
+msgid "read & write"
+msgstr "čtení a zápis"
+
 #: ../evolution-plugin/acl.c:598 ../evolution-plugin/subscribe.c:323
 msgid "Permission"
 msgstr "Přístupové právo"
 
-#: ../evolution-plugin/eee-calendar-config.c:136
+#: ../evolution-plugin/eee-calendar-config.c:141
 msgid ""
 "Evolution is in offline mode. You cannot create or modify calendars now.\n"
 "Please switch to online mode for such operations."
@@ -34,25 +42,46 @@ msgstr ""
 "Evolution je v offline módu. Není možné vytvářet ani měnit kalendáře.\n"
 "Přepněte se do online módu, abyste to mohli dělat."
 
-#: ../evolution-plugin/eee-calendar-config.c:158
+#: ../evolution-plugin/eee-calendar-config.c:163
 msgid "You cannot create calendars for this 3e account."
 msgstr "Na tomto 3e účtu není možné vytvářet nové kalendáře."
 
+#: ../evolution-plugin/eee-calendar-config.c:380
+#: ../evolution-plugin/eee-calendar-config.c:395
+msgid "_Unsubscribe"
+msgstr "_Odpojit"
+
+#: ../evolution-plugin/eee-calendar-config.c:382
+#: ../evolution-plugin/eee-calendar-config.c:389
+#: ../evolution-plugin/eee-calendar-config.c:397
+msgid "_Delete"
+msgstr "_Vymazat"
+
+#: ../evolution-plugin/eee-calendar-config.c:387
+#: ../evolution-plugin/eee-calendar-config.c:394
+msgid "Setup _Permissions..."
+msgstr "Nastavit _práva..."
+
+#: ../evolution-plugin/eee-calendar-config.c:399
+#: ../evolution-plugin/eee-calendar-config.c:401
+msgid "_Properties..."
+msgstr "V_lastnosti"
+
 #. Status group
-#: ../evolution-plugin/eee-calendar-config.c:560
+#: ../evolution-plugin/eee-calendar-config.c:565
 msgid "3e Account Status"
 msgstr "Stav 3e účtu"
 
-#: ../evolution-plugin/eee-calendar-config.c:561
+#: ../evolution-plugin/eee-calendar-config.c:566
 #, c-format
 msgid "If you have 3e account <i>%s</i>, you can turn it on/off here."
 msgstr "Jestliže máte 3e účet <i>%s</i>, můžete ho zde zapnout či vypnout."
 
-#: ../evolution-plugin/eee-calendar-config.c:571
+#: ../evolution-plugin/eee-calendar-config.c:576
 msgid "Enable 3e Account"
 msgstr "Používat 3e účet"
 
-#: ../evolution-plugin/eee-calendar-config.c:579
+#: ../evolution-plugin/eee-calendar-config.c:584
 msgid "3e Settings"
 msgstr "Nastavení 3e"
 
@@ -99,3 +128,11 @@ msgstr "Jméno kalendáře"
 #: ../evolution-plugin/utils.c:126 ../evolution-plugin/utils.c:134
 msgid "[No Title]"
 msgstr "[Bez titulku]"
+
+#: ../evolution-plugin/org-gnome-eee-cal-subscription.xml.in.h:1
+msgid "Subscribe to 3e calendar..."
+msgstr "Připojit 3e kalendář..."
+
+#: ../evolution-plugin/org-gnome-eee-cal-subscription.xml.in.h:2
+msgid "Subscribe to other user's 3e calendar."
+msgstr "Připojit 3e kalendář jiného uživatele."

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-04-08 16:37+0200\n"
+"POT-Creation-Date: 2010-04-12 20:22+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -130,9 +130,9 @@ msgid "[No Title]"
 msgstr ""
 
 #: ../evolution-plugin/org-gnome-eee-cal-subscription.xml.in.h:1
-msgid "Subscribe to 3E calendar..."
+msgid "Subscribe to 3e calendar..."
 msgstr ""
 
 #: ../evolution-plugin/org-gnome-eee-cal-subscription.xml.in.h:2
-msgid "Subscribe to other user's 3E calendar."
+msgid "Subscribe to other user's 3e calendar."
 msgstr ""
