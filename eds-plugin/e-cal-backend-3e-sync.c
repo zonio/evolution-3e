@@ -788,6 +788,8 @@ const char *e_cal_backend_3e_get_message(ECalBackend3e *cb)
  */
 gboolean e_cal_backend_3e_send_message(ECalBackend3e *cb, const char *object, GError * *err)
 {
+    fprintf(stderr, "*** EEE Warning: Using deprecated function 3e_send_message.\n");
+
     icalcomponent *comp;
     GSList *recipients = NULL, *iter;
     GError *local_err = NULL;
@@ -1106,9 +1108,6 @@ next:
     g_list_free(components);
 
     e_cal_backend_3e_close_connection(cb);
-
-    // send itips
-    e_cal_backend_3e_process_message_queue(cb);
 
     return TRUE;
 }
