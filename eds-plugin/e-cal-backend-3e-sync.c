@@ -1212,13 +1212,11 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
             if (server_deleted)
             {
                 /* deleted by the server */
-                if (comp)
+                if (comp && e_cal_component_get_cache_state(comp) != E_CAL_COMPONENT_CACHE_STATE_CREATED &&
+                    e_cal_component_get_cache_state(comp) != E_CAL_COMPONENT_CACHE_STATE_MODIFIED)
                 {
                     char *object = e_cal_component_get_as_string(comp);
                     ECalComponentId *id = e_cal_component_get_id(comp);
-
-                    //XXX: check if cached object was not modified since (use sequences?)
-                    // if it was modified mark it as created?
 
                     g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
                     e_cal_backend_cache_remove_component(cb->priv->cache, uid, NULL);
