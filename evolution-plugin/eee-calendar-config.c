@@ -278,10 +278,11 @@ void eee_calendar_properties_commit(EPlugin *epl, ECalConfigTargetSource *target
 
 /* calendar source list popup menu items */
 
-static void on_permissions_cb(EPopup *ep, EPopupItem *pitem, void *data)
+static void on_permissions_cb(GtkAction *action, ECalShellView *shell_view)
 {
-    ECalPopupTargetSource *target = (ECalPopupTargetSource *)ep->target;
-    ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+    ECalShellSidebar *shell_sidebar = shell_view->priv->cal_shell_sidebar;
+    ESourceSelector *selector = e_cal_shell_sidebar_get_selector(shell_sidebar);
+    ESource *source = e_source_selector_peek_primary_selection(selector);
     ESourceGroup *group = e_source_peek_group(source);
     EeeAccount *account;
 
@@ -294,10 +295,11 @@ static void on_permissions_cb(EPopup *ep, EPopupItem *pitem, void *data)
     acl_gui_create(mgr(), account, source);
 }
 
-static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
+static void on_unsubscribe_cb(GtkAction *action, ECalShellView *shell_view)
 {
-    ECalPopupTargetSource *target = (ECalPopupTargetSource *)ep->target;
-    ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+    ECalShellSidebar *shell_sidebar = shell_view->priv->cal_shell_sidebar;
+    ESourceSelector *selector = e_cal_shell_sidebar_get_selector(shell_sidebar);
+    ESource *source = e_source_selector_peek_primary_selection(selector);
     ESourceGroup *group = e_source_peek_group(source);
     const char *owner = e_source_get_property(source, "eee-owner");
     const char *calname = e_source_get_property(source, "eee-calname");
@@ -331,10 +333,11 @@ static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
     eee_accounts_manager_restart_sync(mgr());
 }
 
-static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
+static void on_delete_cb(GtkAction *action, ECalShellView *shell_view)
 {
-    ECalPopupTargetSource *target = (ECalPopupTargetSource *)ep->target;
-    ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+    ECalShellSidebar *shell_sidebar = shell_view->priv->cal_shell_sidebar;
+    ESourceSelector *selector = e_cal_shell_sidebar_get_selector(shell_sidebar);
+    ESource *source = e_source_selector_peek_primary_selection(selector);
 
     if (e_alert_run_dialog_for_args((GtkWindow *)gtk_widget_get_toplevel(ep->target->widget),
                     "calendar:prompt-delete-calendar", e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)
