@@ -29,7 +29,7 @@
 #include <shell/es-event.h>
 #include <mail/em-menu.h>
 #include <mail/em-config.h>
-#include <e-util/e-error.h>
+#include <e-util/e-alert.h>
 #include <libintl.h>
 
 #define _(String) gettext(String)
@@ -337,7 +337,7 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
     ECalPopupTargetSource *target = (ECalPopupTargetSource *)ep->target;
     ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
 
-    if (e_error_run((GtkWindow *)gtk_widget_get_toplevel(ep->target->widget),
+    if (e_alert_run_dialog_for_args((GtkWindow *)gtk_widget_get_toplevel(ep->target->widget),
                     "calendar:prompt-delete-calendar", e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)
     {
         return;
@@ -506,7 +506,7 @@ void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
 {
     if (!eee_plugin_online)
     {
-        e_error_run(NULL, "eee:subscribe-offline", NULL);
+        e_alert_run_dialog_for_args(NULL, "eee:subscribe-offline", NULL);
     }
     else
     {
