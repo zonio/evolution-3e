@@ -28,6 +28,7 @@
 #include <shell/es-event.h>
 #include <mail/em-config.h>
 #include <e-util/e-alert.h>
+#include <widgets/misc/e-popup-action.h>
 #include <libintl.h>
 
 #define _(String) gettext(String)
@@ -373,7 +374,11 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
     eee_accounts_manager_restart_sync(mgr());
 }
 
-static EPopupItem popup_items_shared_cal[] = {
+static EPopupMenu popup_items_shared_cal [] = {
+    // TODO
+};
+
+static EPopup popup_items_shared_cal[] = {
     { E_POPUP_BAR,	"12.eee.00",  NULL,                       NULL,				NULL, NULL,          0, 0                          },
     { E_POPUP_ITEM, "12.eee.03",  N_("Unsubscribe"), on_unsubscribe_cb, NULL, "remove",      0, E_CAL_POPUP_SOURCE_PRIMARY },
     { E_POPUP_BAR,	"12.eee.04",  NULL,          NULL,		  NULL, NULL,          0, 0                          },
@@ -405,10 +410,12 @@ static void popup_free(EPopup *ep, GSList *items, void *data)
     g_slist_free(items);
 }
 
-void eee_calendar_popup_source_factory(EPlugin *ep, ECalPopupTargetSource *target)
+void eee_calendar_popup_source_factory(ECalShellView *shell_view)
 {
     // get selected source (which was right-clciked on)
-    ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+    ECalShellSidebar *shell_sidebar = shell_view->priv->cal_shell_sidebar;
+    ESourceSelector *selector = e_cal_shell_sidebar_get_selector(shell_sidebar);
+    ESource *source = e_source_selector_peek_primary_selection(selector);
     ESourceGroup *group = e_source_peek_group(source);
     int items_count;
     EPopupItem *items;
@@ -452,7 +459,8 @@ offline_mode:
         menus = g_slist_prepend(menus, items + i);
     }
 
-    e_popup_add_items(target->target.popup, menus, NULL, popup_free, NULL);
+    e_action_group_add_popup_actions(ACTION_GROUP (CALENDAR), menus,
+                                     G_N_ELEMENTS(menus));
 }
 
 /* watch evolution state (online/offline) */
