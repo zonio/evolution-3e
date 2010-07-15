@@ -374,41 +374,42 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
     eee_accounts_manager_restart_sync(mgr());
 }
 
-static EPopupMenu popup_items_shared_cal [] = {
-    // TODO
+static GtkActionEntry calendar_entries[] = {
+    { "eee-permissions",
+      "stock_shared-by-me",
+      N_("Setup Permissions..."),
+      NULL,
+      NULL,
+      G_CALLBACK(on_permissions_cb) },
+
+    { "eee-unsubscribe",
+      "remove",
+      N_("Unsubscribe"),
+      NULL,
+      NULL,
+      G_CALLBACK(on_unsubscribe_cb) },
+    
+    { "calendar-delete",
+      GTK_STOCK_DELETE,
+      N_("_Delete"),
+      NULL,
+      NULL,
+      G_CALLBACK(on_delete_cb) }
 };
 
-static EPopup popup_items_shared_cal[] = {
-    { E_POPUP_BAR,	"12.eee.00",  NULL,                       NULL,				NULL, NULL,          0, 0                          },
-    { E_POPUP_ITEM, "12.eee.03",  N_("Unsubscribe"), on_unsubscribe_cb, NULL, "remove",      0, E_CAL_POPUP_SOURCE_PRIMARY },
-    { E_POPUP_BAR,	"12.eee.04",  NULL,          NULL,		  NULL, NULL,          0, 0                          },
-    { E_POPUP_ITEM, "20.delete",  N_("_Delete"),     on_delete_cb,		NULL, "edit-delete", 0, 0xffff                     },
+static EPopupActionEntry popup_items_shared_cal [] = {
+    { "eee-popup-unsubscribe", NULL, "eee-unsubscribe" },
+    { "calendar-popup-delete", NULL, "calendar-delete" }
 };
 
-static EPopupItem popup_items_user_cal[] = {
-    { E_POPUP_BAR,	"12.eee.00",  NULL,                                NULL,              NULL, NULL,                 0, 0                                                    },
-    { E_POPUP_ITEM, "12.eee.02",  N_("Setup Permissions..."), on_permissions_cb, NULL, "stock_shared-by-me", 0, E_CAL_POPUP_SOURCE_PRIMARY                           },
-    { E_POPUP_BAR,	"12.eee.04",  NULL,               NULL,            NULL, NULL,                 0, 0                                                    },
-    { E_POPUP_ITEM, "20.delete",  N_("_Delete"),              on_delete_cb,      NULL, "edit-delete",        0, E_CAL_POPUP_SOURCE_USER | E_CAL_POPUP_SOURCE_PRIMARY },
+static EPopupActionEntry popup_items_user_cal [] = {
+    { "eee-popup-permissions", NULL, "eee-permissions" },
+    { "calendar-popup-delete", NULL, "calendar-delete" }
 };
 
-static EPopupItem popup_items_cal_offline[] = {
-    { E_POPUP_BAR,	"12.eee.00",     NULL,               NULL,				NULL, NULL,                      0, 0      },
-    { E_POPUP_ITEM, "12.eee.02",     N_("Setup Permissions..."), on_permissions_cb, NULL, "stock_shared-by-me",      0, 0xffff },
-    { E_POPUP_ITEM, "12.eee.03",     N_("Unsubscribe"),      on_unsubscribe_cb, NULL, "remove",                  0, 0xffff },
-    { E_POPUP_BAR,	"12.eee.04",     NULL,               NULL,				NULL, NULL,                      0, 0      },
-    { E_POPUP_ITEM, "20.delete",     N_("_Delete"),          on_delete_cb,		NULL, "edit-delete",             0, 0xffff },
-#if EVOLUTION_VERSION < 222
-    { E_POPUP_ITEM, "30.properties", N_("_Properties..."),   NULL,				NULL, "stock_folder-properties", 0, 0xffff },
-#else
-    { E_POPUP_ITEM, "99.properties", N_("_Properties..."),   NULL,				NULL, "document-properties",     0, 0xffff },
-#endif
+static EPopupActionEntry popup_items_cal_offline [] = {
+    // TODO disable Properties
 };
-
-static void popup_free(EPopup *ep, GSList *items, void *data)
-{
-    g_slist_free(items);
-}
 
 void eee_calendar_popup_source_factory(ECalShellView *shell_view)
 {
@@ -418,7 +419,7 @@ void eee_calendar_popup_source_factory(ECalShellView *shell_view)
     ESource *source = e_source_selector_peek_primary_selection(selector);
     ESourceGroup *group = e_source_peek_group(source);
     int items_count;
-    EPopupItem *items;
+    EPopupActionEntry *items;
     GSList *menus = NULL;
     EeeAccount *account;
     int i;
