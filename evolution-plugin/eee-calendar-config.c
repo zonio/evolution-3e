@@ -25,9 +25,7 @@
 
 #include <libedataserverui/e-source-selector.h>
 #include <calendar/gui/e-cal-config.h>
-#include <calendar/gui/e-cal-popup.h>
 #include <shell/es-event.h>
-#include <mail/em-menu.h>
 #include <mail/em-config.h>
 #include <e-util/e-alert.h>
 #include <libintl.h>

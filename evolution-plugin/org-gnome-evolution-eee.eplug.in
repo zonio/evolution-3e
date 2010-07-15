@@ -93,6 +93,7 @@
       -->
     </hook>
 
+    <!-- pre-KillBonobo definition
     <hook class="org.gnome.evolution.calendar.popup:1.0">
       <menu 
         id="org.gnome.evolution.calendar.source.popup"
@@ -100,6 +101,15 @@
         factory="eee_calendar_popup_source_factory">
       </menu>
     </hook>
+    -->
+
+    <hook class="org.gnome.evolution.ui:1.0">
+      <ui-manager id="org.gnome.evolution.calendars">
+        <popup name='calendar-popup' factory="eee_calendar_popup_source_factory">
+        </popup>
+      </ui-manager>
+    </hook>
+
 
     <hook class="org.gnome.evolution.shell.events:1.0">
       <event 
@@ -128,6 +138,20 @@
       </group>
     </hook>
 
+    <hook class="org.gnome.evolution.ui:1.0">
+      <ui-manager id="org.gnome.evolution.calendars">
+        <menubar name='main-menu'>
+          <menu action="file-menu">
+            <placeholder name='file-action'>
+              <menuitem action="eee-calendar-subscribe"/>
+            </menu>
+          </placeholder>
+        </menubar>
+      </ui-manager>
+    </hook>
+
+
+    <!-- pre-KillBonobo definition
     <hook class="org.gnome.evolution.calendar.bonobomenu:1.0">
       <menu id="org.gnome.evolution.calendar.view" target="select">
       <ui file="@plugindir@/org-gnome-eee-cal-subscription.xml"/>
@@ -139,6 +163,7 @@
         activate="eee_calendar_subscription"/>
       </menu>
     </hook>
+    -->
 
   </e-plugin>
 </e-plugin-list>
