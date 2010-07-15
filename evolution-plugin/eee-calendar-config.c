@@ -71,6 +71,30 @@ int e_plugin_lib_enable(EPluginLib *ep, int enable)
     return 0;
 }
 
+static GtkActionEntry menuItems [] = {
+    { "eee-calendar-subscribe",
+      NULL,
+      N_("Subscribe to 3e calendar..."),
+      NULL,
+      NULL,
+      G_CALLBACK(eee_calendar_subscription) }
+};
+
+gboolean e_plugin_ui_init(GtkUIManager *ui_manager, EShellView *shell_view)
+{
+    EShellWindow *shell_window;
+    GtkActionGroup *action_group;
+
+    shell_window = e_shell_view_get_shell_window (shell_view);
+    action_group = e_shell_window_get_action_group (shell_window, "calendar");
+
+    gtk_action_group_add_actions (
+        action_group, menuItems,
+        G_N_ELEMENTS (menuItems), shell_view);
+
+    return TRUE;
+}
+
 /* calendar add/properties dialog */
 
 static GtkWidget *hidden = NULL;
@@ -512,7 +536,7 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
 
 /* calendar subscription menu item callback */
 
-void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
+void eee_calendar_subscription(GtkAction *action, EShellView *shell_view)
 {
     if (!eee_plugin_online)
     {
