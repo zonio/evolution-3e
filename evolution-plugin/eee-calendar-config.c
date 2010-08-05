@@ -28,7 +28,8 @@
 #include <shell/es-event.h>
 #include <mail/em-config.h>
 #include <e-util/e-alert.h>
-#include <widgets/misc/e-popup-action.h>
+#include <misc/e-popup-action.h>
+#include <shell/e-shell-window.h>
 #include <libintl.h>
 
 #define _(String) gettext(String)
