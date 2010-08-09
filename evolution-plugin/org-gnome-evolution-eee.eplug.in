@@ -144,8 +144,8 @@
           <menu action="file-menu">
             <placeholder name='file-action'>
               <menuitem action="eee-calendar-subscribe"/>
-            </menu>
-          </placeholder>
+            </placeholder>
+          </menu>
         </menubar>
       </ui-manager>
     </hook>
