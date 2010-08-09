@@ -30,6 +30,8 @@
 #include <e-util/e-alert.h>
 #include <misc/e-popup-action.h>
 #include <shell/e-shell-window.h>
+#include <shell/e-shell-view.h>
+#include <shell/e-shell-sidebar.h>
 #include <libintl.h>
 
 #define _(String) gettext(String)
@@ -55,7 +57,7 @@ static EeeAccountsManager *mgr()
     return _mgr;
 }
 
-int e_plugin_lib_enable(EPluginLib *ep, int enable)
+int e_plugin_lib_enable(EPlugin *ep, int enable)
 {
     xr_init();
     g_type_class_ref(EEE_TYPE_ACCOUNT);
@@ -71,6 +73,8 @@ int e_plugin_lib_enable(EPluginLib *ep, int enable)
     textdomain(GETTEXT_PACKAGE);
     return 0;
 }
+
+void eee_calendar_subscription(GtkAction *action, EShellView *shell_view);
 
 static GtkActionEntry menuItems [] = {
     { "eee-calendar-subscribe",
@@ -303,10 +307,10 @@ void eee_calendar_properties_commit(EPlugin *epl, ECalConfigTargetSource *target
 
 /* calendar source list popup menu items */
 
-static void on_permissions_cb(GtkAction *action, ECalShellView *shell_view)
+static void on_permissions_cb(GtkAction *action, EShellView *shell_view)
 {
-    ECalShellSidebar *shell_sidebar = shell_view->priv->cal_shell_sidebar;
-    ESourceSelector *selector = e_cal_shell_sidebar_get_selector(shell_sidebar);
+    EShellSidebar *shell_sidebar = shell_view->priv->shell_sidebar;
+    ESourceSelector *selector = e_shell_sidebar_get_selector(shell_sidebar);
     ESource *source = e_source_selector_peek_primary_selection(selector);
     ESourceGroup *group = e_source_peek_group(source);
     EeeAccount *account;
@@ -320,10 +324,10 @@ static void on_permissions_cb(GtkAction *action, ECalShellView *shell_view)
     acl_gui_create(mgr(), account, source);
 }
 
-static void on_unsubscribe_cb(GtkAction *action, ECalShellView *shell_view)
+static void on_unsubscribe_cb(GtkAction *action, EShellView *shell_view)
 {
-    ECalShellSidebar *shell_sidebar = shell_view->priv->cal_shell_sidebar;
-    ESourceSelector *selector = e_cal_shell_sidebar_get_selector(shell_sidebar);
+    EShellSidebar *shell_sidebar = shell_view->priv->shell_sidebar;
+    ESourceSelector *selector = e_shell_sidebar_get_selector(shell_sidebar);
     ESource *source = e_source_selector_peek_primary_selection(selector);
     ESourceGroup *group = e_source_peek_group(source);
     const char *owner = e_source_get_property(source, "eee-owner");
@@ -358,10 +362,10 @@ static void on_unsubscribe_cb(GtkAction *action, ECalShellView *shell_view)
     eee_accounts_manager_restart_sync(mgr());
 }
 
-static void on_delete_cb(GtkAction *action, ECalShellView *shell_view)
+static void on_delete_cb(GtkAction *action, EShellView *shell_view)
 {
-    ECalShellSidebar *shell_sidebar = shell_view->priv->cal_shell_sidebar;
-    ESourceSelector *selector = e_cal_shell_sidebar_get_selector(shell_sidebar);
+    EShellSidebar *shell_sidebar = shell_view->priv->shell_sidebar;
+    ESourceSelector *selector = e_shell_sidebar_get_selector(shell_sidebar);
     ESource *source = e_source_selector_peek_primary_selection(selector);
 
     if (e_alert_run_dialog_for_args((GtkWindow *)gtk_widget_get_toplevel(ep->target->widget),
@@ -439,11 +443,11 @@ static EPopupActionEntry popup_items_cal_offline [] = {
     // TODO disable Properties
 };
 
-void eee_calendar_popup_source_factory(ECalShellView *shell_view)
+void eee_calendar_popup_source_factory(EShellView *shell_view)
 {
     // get selected source (which was right-clciked on)
-    ECalShellSidebar *shell_sidebar = shell_view->priv->cal_shell_sidebar;
-    ESourceSelector *selector = e_cal_shell_sidebar_get_selector(shell_sidebar);
+    EShellSidebar *shell_sidebar = shell_view->priv->shell_sidebar;
+    ESourceSelector *selector = e_shell_sidebar_get_selector(shell_sidebar);
     ESource *source = e_source_selector_peek_primary_selection(selector);
     ESourceGroup *group = e_source_peek_group(source);
     int items_count;
