@@ -5,10 +5,10 @@
     id="org.gnome.evolution.eee" 
     location="@plugindir@/liborg-gnome-evolution-eee@SOEXT@" 
     load-on-startup="true" 
-    name="3E Calendar Accounts Manager">
+    name="3e Calendar Accounts Manager">
 
     <author name="Ondrej Jirman" email="oss@zonio.net"/>
-    <description>3E Calendar sources</description>
+    <description>3e Calendar sources</description>
 
 <!--
     List of available popup menus:
@@ -58,7 +58,7 @@
         <item 
           type="page" 
           path="40.eee" 
-          label="3E Account Settings"
+          label="3e Account Settings"
           factory="eee_account_properties_page"/>
         <!--
         <item 

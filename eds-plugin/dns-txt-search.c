@@ -211,7 +211,7 @@ char *get_eee_server_hostname(const char *email)
     txt_list = get_txt_records(++domain);
     if (txt_list == NULL)
     {
-        g_debug("** EEE ** 3E server hostname can't be determined for '%s'. Your admin forgot to setup 3E TXT records in DNS?", email);
+        g_debug("** EEE ** 3e server hostname can't be determined for '%s'. Your admin forgot to setup 3E TXT records in DNS?", email);
         return NULL;
     }
 

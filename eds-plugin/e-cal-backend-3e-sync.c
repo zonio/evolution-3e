@@ -84,7 +84,7 @@ gboolean e_cal_backend_3e_open_connection(ECalBackend3e *cb, GError * *err)
        if any and return error. this shouldn't happen, but let's check it anyway */
     if (!e_cal_backend_3e_calendar_is_online(cb))
     {
-        g_set_error(err, 0, -1, "Can't open 3E server connection in offline mode.");
+        g_set_error(err, 0, -1, "Can't open 3e server connection in offline mode.");
         e_cal_backend_3e_close_connection(cb);
         return FALSE;
     }
@@ -982,7 +982,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
 
     if (!e_cal_backend_3e_open_connection(cb, &local_err))
     {
-        g_warning("Sync failed. Can't open connection to the 3E server. (%s)", local_err ? local_err->message : "Unknown error");
+        g_warning("Sync failed. Can't open connection to the 3e server. (%s)", local_err ? local_err->message : "Unknown error");
         g_clear_error(&local_err);
         return FALSE;
     }
@@ -1017,7 +1017,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
         {
             if (!e_cal_backend_3e_upload_attachments(cb, remote_comp, &local_err))
             {
-                e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E attachemnts sync failure", local_err);
+                e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3e attachemnts sync failure", local_err);
                 g_clear_error(&local_err);
                 goto next;
             }
@@ -1030,7 +1030,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
             ESClient_addObject(cb->priv->conn, cb->priv->calspec, remote_object, &local_err);
             if (local_err)
             {
-                e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
+                e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3e sync failure", local_err);
                 g_clear_error(&local_err);
                 break;
             }
@@ -1050,7 +1050,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
             ESClient_updateObject(cb->priv->conn, cb->priv->calspec, remote_object, &local_err);
             if (local_err)
             {
-                e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
+                e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3e sync failure", local_err);
                 g_clear_error(&local_err);
                 break;
             }
@@ -1080,7 +1080,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
                 }
                 else 
                 {
-                    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3E sync failure", local_err);
+                    e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3e sync failure", local_err);
                     g_clear_error(&local_err);
                     break;
                 }
@@ -1130,7 +1130,7 @@ static icalcomponent *get_server_objects(ECalBackend3e *cb, const char *query)
 
     if (!e_cal_backend_3e_open_connection(cb, &local_err))
     {
-        g_warning("Sync failed. Can't open connection to the 3E server. (%s)", local_err->message);
+        g_warning("Sync failed. Can't open connection to the 3e server. (%s)", local_err->message);
         g_error_free(local_err);
         return NULL;
     }
@@ -1322,7 +1322,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
         }
         else
         {
-            g_warning("Unsupported component kind (%d) found on the 3E server.", kind);
+            g_warning("Unsupported component kind (%d) found on the 3e server.", kind);
         }
     }
 
@@ -1410,7 +1410,7 @@ void e_cal_backend_3e_periodic_sync_enable(ECalBackend3e *cb)
     }
     if (cb->priv->sync_thread == NULL)
     {
-        g_warning("Failed to create sync thread for 3E calendar.");
+        g_warning("Failed to create sync thread for 3e calendar.");
     }
 
     g_mutex_unlock(cb->priv->sync_mutex);

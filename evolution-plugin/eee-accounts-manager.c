@@ -357,7 +357,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
         EeeAccount *account = iter->data;
         EeeAccount *current_account;
         ESourceGroup *group;
-        char *group_name = g_strdup_printf("3E: %s", account->name);
+        char *group_name = g_strdup_printf("3e: %s", account->name);
 
         // find ESourceGroup and EeeAccount
         group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
@@ -440,7 +440,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
                 }
                 else
                 {
-                    char *owner_group_name = g_strdup_printf("3E: %s", cal->owner);
+                    char *owner_group_name = g_strdup_printf("3e: %s", cal->owner);
                     // shared calendar, it should be put into another group
                     ESourceGroup *owner_group = e_source_list_peek_group_by_name(self->priv->eslist, owner_group_name);
                     if (owner_group == NULL)
@@ -520,7 +520,7 @@ void eee_accounts_manager_add_source(EeeAccountsManager *self, const char *group
     g_return_if_fail(source != NULL);
     g_return_if_fail(e_source_is_3e(source));
 
-    real_group_name = g_strdup_printf("3E: %s", group_name);
+    real_group_name = g_strdup_printf("3e: %s", group_name);
     group = e_source_list_peek_group_by_name(self->priv->eslist, real_group_name);
     if (group == NULL)
     {
@@ -735,7 +735,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager *self)
         EeeAccount *account;
         ESourceGroup *group;
         char *name = iter->data;
-        char *group_name = g_strdup_printf("3E: %s", name);
+        char *group_name = g_strdup_printf("3e: %s", name);
 
         // find ESourceGroup and EeeAccount
         group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);

@@ -76,7 +76,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync *backend, EDa
         /* load calendar info */
         if (!e_cal_backend_3e_calendar_info_load(cb))
         {
-            e_cal_backend_notify_error(E_CAL_BACKEND(cb), "Trying to open non-3E source using 3E backend.");
+            e_cal_backend_notify_error(E_CAL_BACKEND(cb), "Trying to open non-3e source using 3e backend.");
             return GNOME_Evolution_Calendar_OtherError;
         }
 
