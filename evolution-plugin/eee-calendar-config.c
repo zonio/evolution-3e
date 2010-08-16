@@ -27,13 +27,21 @@
 #include <calendar/gui/e-cal-config.h>
 #include <shell/es-event.h>
 #include <mail/em-config.h>
+#include <libintl.h>
+
+#if EVO_VERSION >= 230
 #include <e-util/e-alert.h>
 #include <e-util/e-alert-dialog.h>
 #include <misc/e-popup-action.h>
 #include <shell/e-shell-window.h>
 #include <shell/e-shell-view.h>
 #include <shell/e-shell-sidebar.h>
-#include <libintl.h>
+
+#else
+#include <calendar/e-cal-popup.h>
+#include <mail/em-menu.h>
+#include <e-util/e-error.h>
+#endif /* EVO_VERSION >= 230 */
 
 #define _(String) gettext(String)
 #define gettext_noop(String) String
@@ -58,7 +66,11 @@ static EeeAccountsManager *mgr()
     return _mgr;
 }
 
+#if EVO_VERSION >= 230
 int e_plugin_lib_enable(EPlugin *ep, int enable)
+#else
+int e_plugin_lib_enable(EPluginLib *ep, int enable)
+#endif /* EVO_VERSION >= 230 */
 {
     xr_init();
     g_type_class_ref(EEE_TYPE_ACCOUNT);
@@ -75,6 +87,7 @@ int e_plugin_lib_enable(EPlugin *ep, int enable)
     return 0;
 }
 
+#if EVO_VERSION >= 230
 void eee_calendar_subscription(GtkAction *action, EShellView *shell_view);
 
 static GtkActionEntry menuItems [] = {
@@ -100,6 +113,7 @@ gboolean e_plugin_ui_init(GtkUIManager *ui_manager, EShellView *shell_view)
 
     return TRUE;
 }
+#endif /* EVO_VERSION >= 230 */
 
 /* calendar add/properties dialog */
 
@@ -308,12 +322,19 @@ void eee_calendar_properties_commit(EPlugin *epl, ECalConfigTargetSource *target
 
 /* calendar source list popup menu items */
 
+#if EVO_VERSION >= 230
 static void on_permissions_cb(GtkAction *action, EShellView *shell_view)
 {
     EShellSidebar *shell_sidebar = e_shell_view_get_shell_sidebar(shell_view);
     ESourceSelector *selector;
     g_object_get(shell_sidebar, "selector", &selector, NULL);
     ESource *source = e_source_selector_peek_primary_selection(selector);
+#else
+static void on_permissions_cb(EPopup *ep, EPopupItem *pitem, void *data)
+{
+    ECalPopupTargetSource *target = (ECalPopupTargetSource *)ep->target;
+    ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+#endif /* EVO_VERSION >= 230 */
     ESourceGroup *group = e_source_peek_group(source);
     EeeAccount *account;
 
@@ -326,12 +347,19 @@ static void on_permissions_cb(GtkAction *action, EShellView *shell_view)
     acl_gui_create(mgr(), account, source);
 }
 
+#if EVO_VERSION >= 230
 static void on_unsubscribe_cb(GtkAction *action, EShellView *shell_view)
 {
     EShellSidebar *shell_sidebar = e_shell_view_get_shell_sidebar(shell_view);
     ESourceSelector *selector;
     g_object_get(shell_sidebar, "selector", &selector, NULL);
     ESource *source = e_source_selector_peek_primary_selection(selector);
+#else
+static void on_unsubscribe_cb(EPopup *ep, EPopupItem *pitem, void *data)
+{
+    ECalPopupTargetSource *target = (ECalPopupTargetSource *)ep->target;
+    ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+#endif /* EVO_VERSION >= 230 */
     ESourceGroup *group = e_source_peek_group(source);
     const char *owner = e_source_get_property(source, "eee-owner");
     const char *calname = e_source_get_property(source, "eee-calname");
@@ -365,13 +393,19 @@ static void on_unsubscribe_cb(GtkAction *action, EShellView *shell_view)
     eee_accounts_manager_restart_sync(mgr());
 }
 
+#if EVO_VERSION >= 230
 static void on_delete_cb(GtkAction *action, EShellView *shell_view)
 {
     EShellSidebar *shell_sidebar = e_shell_view_get_shell_sidebar(shell_view);
     ESourceSelector *selector;
     g_object_get(shell_sidebar, "selector", &selector, NULL);
     ESource *source = e_source_selector_peek_primary_selection(selector);
-
+#else
+static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
+{
+    ECalPopupTargetSource *target = (ECalPopupTargetSource *)ep->target;
+    ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+#endif /* EVO_VERSION >= 230 */
     if (e_alert_run_dialog_for_args(GTK_WINDOW(shell_view),
                     "calendar:prompt-delete-calendar", e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)
     {
@@ -410,6 +444,7 @@ static void on_delete_cb(GtkAction *action, EShellView *shell_view)
     eee_accounts_manager_restart_sync(mgr());
 }
 
+#if EVO_VERSION >= 230
 static GtkActionEntry calendar_entries[] = {
     { "eee-permissions",
       "stock_shared-by-me",
@@ -447,16 +482,78 @@ static EPopupActionEntry popup_items_cal_offline [] = {
     // TODO disable Properties
 };
 
-void eee_calendar_popup_source_factory(EShellView *shell_view)
+#else
+static EPopupItem popup_items_shared_cal[] = {
+    { E_POPUP_BAR,  "12.eee.00",  NULL,                       NULL,
+NULL, NULL,          0, 0                          },
+    { E_POPUP_ITEM, "12.eee.03",  N_("Unsubscribe"), on_unsubscribe_cb, NULL,
+"remove",      0, E_CAL_POPUP_SOURCE_PRIMARY },
+    { E_POPUP_BAR,  "12.eee.04",  NULL,          NULL,        NULL, NULL,
+0, 0                          },
+    { E_POPUP_ITEM, "20.delete",  N_("_Delete"),     on_delete_cb,      NULL,
+"edit-delete", 0, 0xffff                     },
+};
+
+static EPopupItem popup_items_user_cal[] = {
+    { E_POPUP_BAR,  "12.eee.00",  NULL,                                NULL,
+NULL, NULL,                 0, 0
+},
+    { E_POPUP_ITEM, "12.eee.02",  N_("Setup Permissions..."), on_permissions_cb,
+NULL, "stock_shared-by-me", 0, E_CAL_POPUP_SOURCE_PRIMARY
+},
+    { E_POPUP_BAR,  "12.eee.04",  NULL,               NULL,            NULL,
+NULL,                 0, 0                                                    },
+    { E_POPUP_ITEM, "20.delete",  N_("_Delete"),              on_delete_cb,
+NULL, "edit-delete",        0, E_CAL_POPUP_SOURCE_USER |
+E_CAL_POPUP_SOURCE_PRIMARY },
+};
+
+static EPopupItem popup_items_cal_offline[] = {
+    { E_POPUP_BAR,  "12.eee.00",     NULL,               NULL,
+NULL, NULL,                      0, 0      },
+    { E_POPUP_ITEM, "12.eee.02",     N_("Setup Permissions..."),
+on_permissions_cb, NULL, "stock_shared-by-me",      0, 0xffff },
+    { E_POPUP_ITEM, "12.eee.03",     N_("Unsubscribe"),      on_unsubscribe_cb,
+NULL, "remove",                  0, 0xffff },
+    { E_POPUP_BAR,  "12.eee.04",     NULL,               NULL,
+NULL, NULL,                      0, 0      },
+    { E_POPUP_ITEM, "20.delete",     N_("_Delete"),          on_delete_cb,
+NULL, "edit-delete",             0, 0xffff },
+#if EVOLUTION_VERSION < 222
+    { E_POPUP_ITEM, "30.properties", N_("_Properties..."),   NULL,
+NULL, "stock_folder-properties", 0, 0xffff },
+#else
+    { E_POPUP_ITEM, "99.properties", N_("_Properties..."),   NULL,
+NULL, "document-properties",     0, 0xffff },
+#endif
+};
+
+static void popup_free(EPopup *ep, GSList *items, void *data)
 {
-    // get selected source (which was right-clciked on)
+    g_slist_free(items);
+}
+#endif /* EVO_VERSION >= 230 */
+
+#if EVO_VERSION >= 230
+static void eee_calendar_popup_source_factory(EShellView *shell_view)
+{
     EShellSidebar *shell_sidebar = e_shell_view_get_shell_sidebar(shell_view);
     ESourceSelector *selector;
     g_object_get(shell_sidebar, "selector", &selector, NULL);
     ESource *source = e_source_selector_peek_primary_selection(selector);
+#else
+static void eee_calendar_popup_source_factory(EPlugin *ep, ECalPopupTargetSource *target)
+{
+    ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+#endif /* EVO_VERSION >= 230 */
     ESourceGroup *group = e_source_peek_group(source);
     int items_count;
+#if EVO_VERSION >= 230
     EPopupActionEntry *items;
+#else
+    EPopupItem *items;
+    GSList *menus = NULL;
+#endif /* EVO_VERSION >= 230 */
     EeeAccount *account;
     int i;
 
@@ -491,10 +588,19 @@ offline_mode:
         items = popup_items_cal_offline;
     }
 
+#if EVO_VERSION >= 230
     EShellWindow *shell_window = e_shell_view_get_shell_window(shell_view);
     GtkActionGroup *action_group = e_shell_window_get_action_group(shell_window, "calendar");
     e_action_group_add_popup_actions(action_group, items,
                                      G_N_ELEMENTS(items));
+#else
+    for (i = 0; i < items_count; i++)
+    {
+        menus = g_slist_prepend(menus, items + i);
+    }
+
+    e_popup_add_items(target->target.popup, menus, NULL, popup_free, NULL);
+#endif /* EVO_VERSION >= 230 */
 }
 
 /* watch evolution state (online/offline) */
@@ -542,11 +648,19 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
 
 /* calendar subscription menu item callback */
 
+#if EVO_VERSION >= 230
 void eee_calendar_subscription(GtkAction *action, EShellView *shell_view)
+#else
+void eee_calendar_subscription(EPlugin *ep, EMMenuTargetSelect *target)
+#endif /* EVO_VERSION >= 230 */
 {
     if (!eee_plugin_online)
     {
+#if EVO_VERSION >= 230
         e_alert_run_dialog_for_args(NULL, "eee:subscribe-offline", NULL);
+#else
+        e_error_run(NULL, "eee:subscribe-offline", NULL);
+#endif /* EVO_VERSION >= 230 */
     }
     else
     {
