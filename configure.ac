@@ -88,6 +88,7 @@ fi
 
 if [[ "$EVO_VERSION" -lt 230 ]]; then
   mv evolution-plugin/org-gnome-evolution-eee-old.eplug.in evolution-plugin/org-gnome-evolution-eee.eplug.in
+fi
 
 PKG_CHECK_MODULES(EVO3E, [
   evolution-plugin >= 2.12.0
