@@ -2,11 +2,11 @@
 <error-list domain="eee">
 
  <error id="generic-error" type="error">
-   <primary>3E Error {0}.</primary>
+   <primary>3e Error {0}.</primary>
  </error>
 
  <error id="multiple-auth-failures" type="error">
-   <primary>Can't authenticate to 3E account {0}.</primary>
+   <primary>Can't authenticate to 3e account {0}.</primary>
    <secondary>Account was disabled. To re-enable it, go to account preferences and click on enable account.</secondary>
  </error>
 

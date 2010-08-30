@@ -105,12 +105,12 @@ gboolean eee_account_find_server(EeeAccount *self)
     self->server = get_eee_server_hostname(self->name);
     if (self->server)
     {
-        //g_debug("** EEE ** Found 3E server '%s' for account '%s'.", self->server, self->name);
+        //g_debug("** EEE ** Found 3e server '%s' for account '%s'.", self->server, self->name);
         return TRUE;
     }
     else
     {
-        g_warning("** EEE ** 3E server NOT found for account '%s'.", self->name);
+        g_warning("** EEE ** 3e server NOT found for account '%s'.", self->name);
         return FALSE;
     }
 }
@@ -663,7 +663,7 @@ gboolean eee_account_auth(EeeAccount *self)
             gconf = gconf_client_get_default();
             char *path = g_strdup_printf(EEE_KEY "accounts/%s/remember_password", self->name);
             remember = gconf_client_get_bool(gconf, path, NULL);
-            char *prompt = g_strdup_printf("%sEnter password for your 3E calendar account: %s.", fail_msg, self->name);
+            char *prompt = g_strdup_printf("%sEnter password for your 3e calendar account: %s.", fail_msg, self->name);
             // key must have uri format or unpatched evolution segfaults in
             // ep_get_password_keyring()
             password = e_passwords_ask_password(prompt, EEE_PASSWORD_COMPONENT, key, prompt, flags, &remember, NULL);
@@ -733,7 +733,7 @@ xr_client_conn *eee_account_connect(EeeAccount *self)
         return self->priv->conn;
     }
 
-    //g_debug("** EEE ** Connecting to 3E server: server=%s user=%s", self->server, self->name);
+    //g_debug("** EEE ** Connecting to 3e server: server=%s user=%s", self->server, self->name);
 
     self->priv->conn = xr_client_new(&err);
     if (err)

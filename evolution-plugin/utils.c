@@ -61,7 +61,7 @@ gboolean e_source_group_is_3e(ESourceGroup *group)
 
     if (base_uri && name)
     {
-        return g_str_has_prefix(name, "3E: ") && !strcmp(base_uri, EEE_URI_PREFIX);
+        return g_str_has_prefix(name, "3e: ") && !strcmp(base_uri, EEE_URI_PREFIX);
     }
     return FALSE;
 }

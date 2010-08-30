@@ -27,7 +27,7 @@
 #include <libedataserver/e-source-list.h>
 #include "interface/ESClient.xrc.h"
 
-#define EEE_PASSWORD_COMPONENT "3E Account"
+#define EEE_PASSWORD_COMPONENT "3e Account"
 
 #define EEE_TYPE_ACCOUNT            (eee_account_get_type())
 #define EEE_ACCOUNT(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), EEE_TYPE_ACCOUNT, EeeAccount))
@@ -45,8 +45,8 @@ struct _EeeAccount
     GObject parent;
 
     char *name;         /**< Account name (usually e-mail address). Used to login
-                             to the 3E server. */
-    char *server;       /**< 3E server hostname:port. */
+                             to the 3e server. */
+    char *server;       /**< 3e server hostname:port. */
     int state;          /**< Account state. */
 
     EeeAccountPriv *priv;

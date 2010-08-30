@@ -1,13 +1,13 @@
-3E Calendar Plugin for Evolution
+3e Calendar Plugin for Evolution
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-3E calendar plugin for Evolution is implementation of 3E calendaring
+3e calendar plugin for Evolution is implementation of 3e calendaring
 protocol for this popular opensource groupware suite. It allows you to
-access calendars stored on a 3E server and schedule meetings.
+access calendars stored on a 3e server and schedule meetings.
 
 Features:
 
-  - Automatic 3E account setup via DNS TXT records
+  - Automatic 3e account setup via DNS TXT records
   - Online and offline calendar access with automatic switchover on server
     failure
   - Add and remove calendars from your account
@@ -30,14 +30,14 @@ Build Instructions
 
 Detailed instructions can be found at http://wiki.zonio.net/.
 
-3E calendar plugin requires a few small patches to evolution and
+3e calendar plugin requires a few small patches to evolution and
 evolution-data-server (EDS). These will be integrated upstream in the future. As
 of now you still need to rebuild Evolution and EDS with patches from patches/
 directory.
 
 Get and build libxr-0.9.94 or newer.
 
-Build and install 3E plugin itself:
+Build and install 3e plugin itself:
 
   ./configure
   make
@@ -53,16 +53,16 @@ evolution.
 1) Setup DNS
 
   Setup DNS TXT records for the domain of your email account. If you just want to
-  try 3E without changing DNS TXT records for your domain globaly, you can setup
+  try 3e without changing DNS TXT records for your domain globaly, you can setup
   dnsmasq(8) to act as DNS cache and supply TXT records for your domain.
 
   Add this line to your /etc/dnsmasq.conf:
 
     txt-record=your-domain.net,eee server=localhost:4444
 
-2) Get 3E server
+2) Get 3e server
 
-  Get 3E server from https://3e.zonio.net/releases/3e-server/.
+  Get 3e server from https://3e.zonio.net/releases/3e-server/.
 
   Edit the 3e server config file /etc/3e/server.conf:
 
@@ -80,7 +80,7 @@ evolution.
 
 3) Create your user account on the server
 
-  You can do this using 3E command line client.
+  You can do this using 3e command line client.
 
   Run 3e-client:
 
