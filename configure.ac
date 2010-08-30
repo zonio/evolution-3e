@@ -86,6 +86,9 @@ else
   AC_MSG_ERROR([Unsupported evolution version, you need 2.12, 2.22, 2.24, 2.26, 2.28, 2.30, or 2.32.])
 fi
 
+if [[ "$EVO_VERSION" -lt 230 ]]; then
+  mv evolution-plugin/org-gnome-evolution-eee-old.eplug.in evolution-plugin/org-gnome-evolution-eee.eplug.in
+
 PKG_CHECK_MODULES(EVO3E, [
   evolution-plugin >= 2.12.0
   libglade-2.0
