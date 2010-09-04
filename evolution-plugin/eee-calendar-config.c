@@ -38,7 +38,7 @@
 #include <shell/e-shell-sidebar.h>
 
 #else
-#include <calendar/e-cal-popup.h>
+#include <calendar/gui/e-cal-popup.h>
 #include <mail/em-menu.h>
 #include <e-util/e-error.h>
 #endif /* EVOLUTION_VERSION >= 230 */
