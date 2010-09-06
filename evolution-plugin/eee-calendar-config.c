@@ -411,7 +411,7 @@ static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
 
     if (e_error_run((GtkWindow *)gtk_widget_get_toplevel(ep->target->widget),
                         "calendar:prompt-delete-calendar",
-                        e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)`
+                        e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)
 #endif /* EVOLUTION_VERSION >= 230 */
     {
         return;
