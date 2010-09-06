@@ -400,14 +400,19 @@ static void on_delete_cb(GtkAction *action, EShellView *shell_view)
     ESourceSelector *selector;
     g_object_get(shell_sidebar, "selector", &selector, NULL);
     ESource *source = e_source_selector_peek_primary_selection(selector);
+
+    if (e_alert_run_dialog_for_args(GTK_WINDOW(shell_view),
+                    "calendar:prompt-delete-calendar", e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)
 #else
 static void on_delete_cb(EPopup *ep, EPopupItem *pitem, void *data)
 {
     ECalPopupTargetSource *target = (ECalPopupTargetSource *)ep->target;
     ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
+
+    if (e_error_run((GtkWindow *)gtk_widget_get_toplevel(ep->target->widget),
+                        "calendar:prompt-delete-calendar",
+                        e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)`
 #endif /* EVOLUTION_VERSION >= 230 */
-    if (e_alert_run_dialog_for_args(GTK_WINDOW(shell_view),
-                    "calendar:prompt-delete-calendar", e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)
     {
         return;
     }
