@@ -825,7 +825,11 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e *cb, const char *object, GE
         if (!e_cal_backend_3e_open_connection(cb, &local_err))
         {
             g_error_free(local_err);
+#if EVOLUTION_VERSION >= 232
+            return OtherError;
+#else
             return GNOME_Evolution_Calendar_OtherError;
+#endif /* EVOLUTION_VERSION >= 232 */
         }
 
         ESClient_sendMessage(cb->priv->conn, recipients, remote_object, &local_err);
