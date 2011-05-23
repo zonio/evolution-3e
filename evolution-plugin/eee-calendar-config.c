@@ -609,9 +609,11 @@ offline_mode:
 }
 
 /* watch evolution state (online/offline) */
-
+#if EVOLUTION_VERSION >= 230
+gboolean eee_plugin_online = TRUE;
+#else
 gboolean eee_plugin_online = FALSE;
-
+#endif
 void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 {
     int online = !!target->state;
