@@ -476,7 +476,11 @@ static void e_cal_backend_3e_start_query(ECalBackend *backend, EDataCalView *que
         g_list_free(objects);
     }
 
+#if EVOLUTION_VERSION >= 232
     e_data_cal_view_notify_done(query, &local_err);
+#else
+    e_data_cal_view_notify_done(query, status);
+#endif /* EVOLUTION_VERSION >= 232 */
 }
 
 /** Returns a list of events/tasks given a set of conditions.
