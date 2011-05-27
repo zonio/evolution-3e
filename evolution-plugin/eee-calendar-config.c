@@ -24,6 +24,7 @@
 #endif
 
 #include <libedataserverui/e-source-selector.h>
+#include <libgnomeui/libgnomeui.h>
 #include <calendar/gui/e-cal-config.h>
 #include <shell/es-event.h>
 #include <mail/em-config.h>
@@ -780,4 +781,80 @@ void eee_account_properties_commit(EPlugin *epl, EConfigHookItemFactoryData *dat
 {
     EMConfigTargetAccount *target = (EMConfigTargetAccount *)data->config->target;
     const char *name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+}
+
+gboolean wizard_eee_account_activated = TRUE;
+
+void wizard_chb_status_changed(GtkToggleButton* button, const char* name)
+{
+  if (gtk_toggle_button_get_active(button))
+    wizard_eee_account_activated = TRUE;
+  else
+    wizard_eee_account_activated = FALSE;
+	g_debug("**EEE**: Checkbox state changed.");
+}
+
+GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *data)
+{
+	//TODO: Add DNS lookup if there is 3E server for defined domain
+	//and don't show this page if not so.
+  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+  GtkWidget *page, *panel, *section, *checkbutton_status, *label;
+
+  if (data->old)
+    return data->old;
+  
+	page = gnome_druid_page_standard_new_with_vals("3E account settings", NULL, NULL);
+  // toplevel vbox contains frames that group 3E account settings into various
+  // groups
+  panel = gtk_vbox_new(FALSE, 12);
+  gtk_container_set_border_width(GTK_CONTAINER(panel), 12);
+
+  // Status group
+  section = add_section(panel, "Account Status");
+  char* note = g_strdup_printf("If you have 3E account for this e-mail address, you can turn it on/off here.");
+  label = (GtkWidget*)gtk_object_new(GTK_TYPE_LABEL, 
+    "label", note, 
+    "use-markup", TRUE,
+    "justify", GTK_JUSTIFY_LEFT, 
+    "xaling", 0, 
+    "yalign", 0.5, 
+    NULL); 
+  g_free(note);
+  gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
+  checkbutton_status = gtk_check_button_new_with_label("3E Account Enabled");
+  gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
+
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), !eee_accounts_manager_account_is_disabled(mgr(), name));
+  g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(wizard_chb_status_changed), (gpointer)name);
+
+	gtk_container_add((GtkContainer *) GNOME_DRUID_PAGE_STANDARD(page)->vbox, panel);
+
+  gtk_widget_show_all(panel);
+	
+	gnome_druid_append_page(GNOME_DRUID(data->parent), GNOME_DRUID_PAGE(page));
+	g_object_set_data((GObject *)data->parent, "restore", GINT_TO_POINTER(FALSE));
+
+  return GTK_WIDGET(page);
+}
+
+gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
+{
+//  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+//  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+//	g_debug("**EEE**: Wizard check: E-mail: %s", name);
+  return TRUE;
+}
+
+void eee_account_wizard_commit(EPlugin *epl, EConfigHookItemFactoryData *data)
+{
+  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+	if (wizard_eee_account_activated == TRUE) 
+		eee_accounts_manager_enable_account(mgr(), name);
+	else
+    eee_accounts_manager_disable_account(mgr(), name);
+  eee_accounts_manager_restart_sync(mgr());
+	g_debug("**EEE**: Wizard commit for e-mail '%s'.", name);
 }
