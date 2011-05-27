@@ -19,6 +19,10 @@
  * along with evolution-3e.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <glib.h>
 #include <string.h>
 #include <libintl.h>
@@ -91,6 +95,10 @@ void e_source_set_3e_properties(ESource *source, const char *calname, const char
     char *relative_uri = g_strdup_printf("%s/%s/%s", account->name, owner, calname);
     char *key = g_strdup_printf("eee://%s", account->name);
 
+#if EVOLUTION_VERSION >= 232
+    gchar *scolor;
+#endif /* EVOLUTION_VERSION >= 232 */
+
     e_source_set_relative_uri(source, relative_uri);
     e_source_set_property(source, "auth", "1");
     e_source_set_property(source, "auth-domain", EEE_PASSWORD_COMPONENT);
@@ -114,7 +122,13 @@ void e_source_set_3e_properties(ESource *source, const char *calname, const char
     }
     if (color)
     {
+#if EVOLUTION_VERSION >= 232
+        scolor = gdk_color_to_string (&color);
+        e_source_set_color_spec(source, scolor);
+        g_free(scolor);
+#else
         e_source_set_color(source, color);
+#endif /* EVOLUTION_VERSION >= 232 */
     }
 
     g_free(relative_uri);
