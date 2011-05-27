@@ -53,6 +53,10 @@
 #include "subscribe.h"
 #include "acl.h"
 
+#if EVOLUTION_VERSION >= 230
+static void eee_calendar_state_changed(EShell *shell);
+#endif /* EVOLUTION_VERSION >= 230 */
+
 /* plugin intialization */
 
 static EeeAccountsManager *mgr()
@@ -68,10 +72,19 @@ static EeeAccountsManager *mgr()
 
 #if EVOLUTION_VERSION >= 230
 int e_plugin_lib_enable(EPlugin *ep, int enable)
+{
+    EShell *shell = e_shell_get_default();
+
+    if (shell) {
+        g_signal_handlers_disconnect_by_func(shell, G_CALLBACK (eee_calendar_state_changed), NULL);
+        if (enable)
+            g_signal_connect(shell, "notify::online", G_CALLBACK (eee_calendar_state_changed), NULL);
+    }
+
 #else
 int e_plugin_lib_enable(EPluginLib *ep, int enable)
-#endif /* EVOLUTION_VERSION >= 230 */
 {
+#endif /* EVOLUTION_VERSION >= 230 */
     xr_init();
     g_type_class_ref(EEE_TYPE_ACCOUNT);
     g_type_class_ref(EEE_TYPE_ACCOUNTS_MANAGER);
@@ -609,15 +622,18 @@ offline_mode:
 }
 
 /* watch evolution state (online/offline) */
-#if EVOLUTION_VERSION >= 230
-gboolean eee_plugin_online = TRUE;
-#else
+
 gboolean eee_plugin_online = FALSE;
-#endif
+
+#if EVOLUTION_VERSION >= 230
+static void eee_calendar_state_changed(EShell *shell)
+{
+    int online = e_shell_get_online(shell);
+#else
 void eee_calendar_state_changed(EPlugin *ep, ESEventTargetState *target)
 {
     int online = !!target->state;
-
+#endif /* EVOLUTION_VERSION >= 230 */
     g_debug("** EEE ** State changed to: %s", online ? "online" : "offline");
 
     eee_plugin_online = online;

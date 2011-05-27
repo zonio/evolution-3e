@@ -110,6 +110,11 @@
       </ui-manager>
     </hook>
 
+    <!--
+      This shell hook is non-functional since evolution v2.30.
+      Its handling is now in eee-calendar-config.c.
+      The hook remains here because of old versions.
+    -->
 
     <hook class="org.gnome.evolution.shell.events:1.0">
       <event 
