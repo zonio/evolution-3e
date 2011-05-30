@@ -170,10 +170,17 @@
     </hook>
     -->
 
-		<hook class="org.gnome.evolution.mail.config:1.0">
-			<group target="account" id="org.gnome.evolution.mail.config.accountWizard" commit="eee_account_wizard_commit" check="eee_account_wizard_check">
-				<item type="page" path="45.eee_account_page.10" factory="eee_account_wizard_page"/>
-			</group>
-		</hook>
+    <hook class="org.gnome.evolution.mail.config:1.0">
+      <group
+        target="account"
+        id="org.gnome.evolution.mail.config.accountWizard"
+        commit="eee_account_wizard_commit"
+        check="eee_account_wizard_check">
+        <item
+          type="page"
+          path="45.eee_account_page.10"
+          factory="eee_account_wizard_page"/>
+      </group>
+    </hook>
   </e-plugin>
 </e-plugin-list>

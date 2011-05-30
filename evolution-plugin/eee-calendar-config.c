@@ -24,7 +24,6 @@
 #endif
 
 #include <libedataserverui/e-source-selector.h>
-#include <libgnomeui/libgnomeui.h>
 #include <calendar/gui/e-cal-config.h>
 #include <shell/es-event.h>
 #include <mail/em-config.h>
@@ -787,27 +786,30 @@ gboolean wizard_eee_account_activated = TRUE;
 
 void wizard_chb_status_changed(GtkToggleButton* button, const char* name)
 {
-  if (gtk_toggle_button_get_active(button))
-    wizard_eee_account_activated = TRUE;
-  else
-    wizard_eee_account_activated = FALSE;
-	g_debug("**EEE**: Checkbox state changed.");
+    if (gtk_toggle_button_get_active(button))
+        wizard_eee_account_activated = TRUE;
+    else
+        wizard_eee_account_activated = FALSE;
+    g_debug("**EEE**: Checkbox state changed.");
 }
 
 GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *data)
 {
-	//TODO: Add DNS lookup if there is 3E server for defined domain
-	//and don't show this page if not so.
-  EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
-  const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
-  GtkWidget *page, *panel, *section, *checkbutton_status, *label;
+//TODO: Add DNS lookup if there is 3E server for defined domain
+//and don't show this page if not so.
+    EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+    const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+    GtkWidget *page, *panel, *section, *checkbutton_status, *label;
 
-  if (data->old)
-    return data->old;
-  
+    if (data->old)
+        return data->old;
+/*  
 	page = gnome_druid_page_standard_new_with_vals("3E account settings", NULL, NULL);
-  // toplevel vbox contains frames that group 3E account settings into various
-  // groups
+*/
+    page = gtk_vbox_new (FALSE, 0);
+    gtk_container_set_border_width (GTK_CONTAINER (page), 12);
+    // toplevel vbox contains frames that group 3E account settings into various
+    // groups
   panel = gtk_vbox_new(FALSE, 12);
   gtk_container_set_border_width(GTK_CONTAINER(panel), 12);
 
@@ -829,11 +831,11 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
   gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), !eee_accounts_manager_account_is_disabled(mgr(), name));
   g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(wizard_chb_status_changed), (gpointer)name);
 
-	gtk_container_add((GtkContainer *) GNOME_DRUID_PAGE_STANDARD(page)->vbox, panel);
+	gtk_container_add((GtkContainer *) page, panel);
 
   gtk_widget_show_all(panel);
 	
-	gnome_druid_append_page(GNOME_DRUID(data->parent), GNOME_DRUID_PAGE(page));
+	gtk_assistant_append_page(GTK_ASSISTANT(data->parent), page);
 	g_object_set_data((GObject *)data->parent, "restore", GINT_TO_POINTER(FALSE));
 
   return GTK_WIDGET(page);
