@@ -1,6 +1,8 @@
 AC_PREREQ(2.57)
 AC_INIT([evolution-3e-plugin], 1.0, [3e-list@zonio.net], evolution-3e-plugin)
 AC_CONFIG_SRCDIR([Makefile.am])
+#AC_CONFIG_MACRO_DIR([m4])
+AC_PROG_RANLIB
 AM_CONFIG_HEADER([config.h])
 AC_CANONICAL_SYSTEM
 AM_INIT_AUTOMAKE([dist-bzip2 tar-ustar])
@@ -20,10 +22,12 @@ AC_SUBST(PROGRAMNAME_LOCALEDIR)
 
 
 # Static plugins are uesless
-AM_DISABLE_STATIC
+#m4_pattern_allow(AC_DISABLE_STATIC)
+AC_DISABLE_STATIC
 
 # Checks for programs.
 AC_PROG_CC
+#m4_pattern_allow(AC_PROG_LIBTOOL)
 AC_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG
 
@@ -48,9 +52,9 @@ PKG_CHECK_MODULES(EDS3E, [
   libecal-1.2
   libedata-cal-1.2
   libedataserver-1.2
-  libedataserverui-1.2
+  libedataserverui-3.0
   evolution-data-server-1.2 >= 1.12.0
-  evolution-plugin >= 2.12.0
+  evolution-plugin-3.0 >= 2.12.0
 ])
 
 XDL_COMPILER=xdl-compiler
@@ -59,14 +63,14 @@ AC_SUBST(XDL_COMPILER)
 AC_SUBST(EDS3E_CFLAGS)
 AC_SUBST(EDS3E_LIBS)
 
-extensiondir=`$PKG_CONFIG --variable=extensiondir evolution-data-server-1.2`
+extensiondir=`$PKG_CONFIG --variable=backenddir libedata-cal-1.2`
 AC_SUBST(extensiondir)
 
 #
 # Get packages for Evolution 3e plugin
 #
 
-evoversion=`$PKG_CONFIG --variable=execversion evolution-shell`
+evoversion=`$PKG_CONFIG --variable=execversion evolution-shell-3.0`
 
 if [[ "$evoversion" = "2.12" ]]; then
   EVO_VERSION=212
@@ -82,8 +86,10 @@ elif [[ "$evoversion" = "2.30" ]]; then
   EVO_VERSION=230
 elif [[ "$evoversion" = "2.32" ]]; then 
   EVO_VERSION=232
+elif [[ "$evoversion" = "3.0" ]]; then 
+  EVO_VERSION=300
 else
-  AC_MSG_ERROR([Unsupported evolution version, you need 2.12, 2.22, 2.24, 2.26, 2.28, 2.30, or 2.32.])
+  AC_MSG_ERROR([Unsupported evolution version, you need 2.12, 2.22, 2.24, 2.26, 2.28, 2.30, 2.32 or 3.0.])
 fi
 
 if [[ "$EVO_VERSION" -lt 230 ]]; then
@@ -91,15 +97,15 @@ if [[ "$EVO_VERSION" -lt 230 ]]; then
 fi
 
 PKG_CHECK_MODULES(EVO3E, [
-  evolution-plugin >= 2.12.0
+  evolution-plugin-3.0 >= 2.12.0
   libglade-2.0
 ])
 
 AC_SUBST(EVO3E_CFLAGS)
 AC_SUBST(EVO3E_LIBS)
 
-plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin`
-errordir=`$PKG_CONFIG --variable=errordir evolution-plugin`
+plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin-3.0`
+errordir=`$PKG_CONFIG --variable=errordir evolution-plugin-3.0`
 AC_SUBST(plugindir)
 AC_SUBST(errordir)
 

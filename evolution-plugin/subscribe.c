@@ -19,6 +19,10 @@
  * along with evolution-3e.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <string.h>
 #include <gtk/gtk.h>
 #include <glade/glade.h>
@@ -199,11 +203,11 @@ static void calendar_selection_changed(GtkTreeSelection *selection, struct subsc
 
         if (is_calendar)
         {
-            gtk_widget_set(ctx->subscribe_button, "sensitive", TRUE, NULL);
+            g_object_set(ctx->subscribe_button, "sensitive", TRUE, NULL);
         }
         else
         {
-            gtk_widget_set(ctx->subscribe_button, "sensitive", FALSE, NULL);
+            g_object_set(ctx->subscribe_button, "sensitive", FALSE, NULL);
         }
 
         g_free(perm);
@@ -211,7 +215,7 @@ static void calendar_selection_changed(GtkTreeSelection *selection, struct subsc
     }
     else
     {
-        gtk_widget_set(ctx->subscribe_button, "sensitive", FALSE, NULL);
+        g_object_set(ctx->subscribe_button, "sensitive", FALSE, NULL);
     }
 }
 
@@ -280,9 +284,13 @@ static void on_subs_button_cancel_clicked(GtkButton *button, struct subscribe_co
     gtk_widget_destroy(GTK_WIDGET(ctx->win));
 }
 
+#if EVOLUTION_VERSION >= 300
+static void on_subs_window_destroy(GtkWidget *object, struct subscribe_context *ctx)
+#else
 static void on_subs_window_destroy(GtkObject *object, struct subscribe_context *ctx)
+#endif /* EVOLUTION_VERSION >= 300 */
 {
-    gtk_object_unref(GTK_OBJECT(ctx->win));
+    g_object_unref(ctx->win);
     g_object_unref(ctx->xml);
     g_free(ctx);
     active_ctx = NULL;
@@ -308,7 +316,7 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
     c->mgr = mgr;
     c->xml = glade_xml_new(PLUGINDIR "/org-gnome-evolution-eee.glade", "subs_window", NULL);
 
-    c->win = GTK_WINDOW(gtk_widget_ref(glade_xml_get_widget(c->xml, "subs_window")));
+    c->win = GTK_WINDOW(g_object_ref(glade_xml_get_widget(c->xml, "subs_window")));
     c->tview = GTK_TREE_VIEW(glade_xml_get_widget(c->xml, "treeview_calendars"));
 
     // create model for calendar list
@@ -355,7 +363,7 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
 
     // activate buttons
     c->subscribe_button = glade_xml_get_widget(c->xml, "subs_button_subscribe");
-    gtk_widget_set(c->subscribe_button, "sensitive", FALSE, NULL);
+    g_object_set(c->subscribe_button, "sensitive", FALSE, NULL);
     glade_xml_signal_connect_data(c->xml, "on_subs_button_subscribe_clicked", G_CALLBACK(on_subs_button_subscribe_clicked), c);
     glade_xml_signal_connect_data(c->xml, "on_subs_button_cancel_clicked", G_CALLBACK(on_subs_button_cancel_clicked), c);
     glade_xml_signal_connect_data(c->xml, "on_subs_window_destroy", G_CALLBACK(on_subs_window_destroy), c);

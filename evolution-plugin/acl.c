@@ -19,6 +19,10 @@
  * along with evolution-3e.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <string.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
@@ -137,7 +141,7 @@ static void on_rb_perm_toggled(GtkButton *button, struct acl_context *ctx)
     }
 
     int mode = get_acl_mode(ctx);
-    gtk_widget_set(ctx->users_frame, "visible", mode == ACL_MODE_SHARED, NULL);
+    g_object_set(ctx->users_frame, "visible", mode == ACL_MODE_SHARED, NULL);
     if (mode == ACL_MODE_SHARED)
     {
         gtk_window_resize(ctx->win, 500, 400);
@@ -227,9 +231,13 @@ void acl_perm_free(struct acl_perm *p)
     ESUserPermission_free((ESUserPermission *)p);
 }
 
+#if EVOLUTION_VERSION >= 300
+static void on_acl_window_destroy(GtkWidget *object, struct acl_context *ctx)
+#else
 static void on_acl_window_destroy(GtkObject *object, struct acl_context *ctx)
+#endif /* EVOLUTION_VERSION >= 300 */
 {
-    gtk_object_unref(GTK_OBJECT(ctx->win));
+    g_object_unref(ctx->win);
     g_object_unref(ctx->source);
     g_object_unref(ctx->account);
     g_object_unref(ctx->xml);
@@ -302,7 +310,7 @@ static gboolean load_state(struct acl_context *ctx)
 void update_gui_state(struct acl_context *ctx)
 {
     set_acl_mode(ctx, ctx->initial_mode);
-    gtk_widget_set(ctx->users_frame, "visible", ctx->initial_mode == ACL_MODE_SHARED, NULL);
+    g_object_set(ctx->users_frame, "visible", ctx->initial_mode == ACL_MODE_SHARED, NULL);
     if (ctx->initial_mode == ACL_MODE_SHARED)
     {
         gtk_window_resize(ctx->win, 500, 400);
@@ -477,7 +485,11 @@ static gboolean on_tview_clicked(GtkTreeView *tv, GdkEventButton *event, struct 
 // user pressed enter on the entry
 static gboolean combo_entry_keypress(GtkEntry *entry, GdkEventKey *event, struct acl_context *ctx)
 {
+#if EVOLUTION_VERSION >= 300
+    if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter)
+#else
     if (event->keyval == GDK_Return || event->keyval == GDK_KP_Enter)
+#endif /* EVOLUTION_VERSION >= 300 */
     {
         add_user(gtk_entry_get_text(entry), ctx);
     }
@@ -496,7 +508,11 @@ static gboolean user_selected(GtkEntryCompletion *widget, GtkTreeModel *model, G
 }
 
 // combo box item selected
+#if EVOLUTION_VERSION >= 300
+static void cbe_changed(GtkComboBox *cbe, struct acl_context *ctx)
+#else
 static void cbe_changed(GtkComboBoxEntry *cbe, struct acl_context *ctx)
+#endif /* EVOLUTION_VERSION >= 300 */
 {
     GtkTreeIter iter;
 
@@ -511,7 +527,11 @@ static void cbe_changed(GtkComboBoxEntry *cbe, struct acl_context *ctx)
 }
 
 // add compeltion to the combobox entry
+#if EVOLUTION_VERSION >= 300
+static void combo_add_completion(GtkComboBox *cbe, struct acl_context *ctx)
+#else
 static void combo_add_completion(GtkComboBoxEntry *cbe, struct acl_context *ctx)
+#endif /* EVOLUTION_VERSION >= 300 */
 {
     GtkEntry *entry;
     GtkEntryCompletion *completion;
@@ -557,7 +577,7 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
     c->source = g_object_ref(source);
     c->account = g_object_ref(account);
     c->xml = glade_xml_new(PLUGINDIR "/org-gnome-evolution-eee.glade", "acl_window", NULL);
-    c->win = GTK_WINDOW(gtk_widget_ref(glade_xml_get_widget(c->xml, "acl_window")));
+    c->win = GTK_WINDOW(g_object_ref(glade_xml_get_widget(c->xml, "acl_window")));
     c->rb_private = glade_xml_get_widget(c->xml, "rb_perm_private");
     c->rb_public = glade_xml_get_widget(c->xml, "rb_perm_public");
     c->rb_shared = glade_xml_get_widget(c->xml, "rb_perm_shared");
@@ -568,7 +588,11 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
     // users list for autocompletion inside acl table combo cells
     c->users_model = gtk_list_store_new(USERS_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
     gtk_combo_box_set_model(GTK_COMBO_BOX(c->user_entry), GTK_TREE_MODEL(c->users_model));
+#if EVOLUTION_VERSION >= 300
+    combo_add_completion(GTK_COMBO_BOX(c->user_entry), c);
+#else
     combo_add_completion(GTK_COMBO_BOX_ENTRY(c->user_entry), c);
+#endif /* EVOLUTION_VERSION >= 300 */
     g_object_set(c->user_entry, "text-column", USERS_USERNAME_COLUMN, NULL);
 
     // acl list

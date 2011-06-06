@@ -155,7 +155,11 @@ static gboolean is_new_calendar_dialog(ESource *source)
 
 static GSList *offline_labels = NULL;
 
+#if EVOLUTION_VERSION >= 300
+static void on_label_destroy(GtkWidget *object, gpointer data)
+#else
 static void on_label_destroy(GtkObject *object, gpointer data)
+#endif /* EVOLUTION_VERSION >= 300 */
 {
     offline_labels = g_slist_remove(offline_labels, object);
 }
@@ -176,7 +180,12 @@ GtkWidget *eee_calendar_properties_factory(EPlugin *epl, EConfigHookItemFactoryD
     ESourceGroup *group = e_source_peek_group(target->source);
     EeeAccount *account;
     GtkWidget *label;
+#if EVOLUTION_VERSION >= 300
+    int row; 
+    gtk_table_get_size(GTK_TABLE(data->parent), &row, NULL);
+#else
     int row = GTK_TABLE(data->parent)->nrows;
+#endif /* EVOLUTION_VERSION >= 300 */
     char *msg;
 
     //g_debug("** EEE ** Properties Dialog Items Hook Call:\n\n%s\n\n", e_source_to_standalone_xml(target->source));
