@@ -1,7 +1,6 @@
 AC_PREREQ(2.57)
 AC_INIT([evolution-3e-plugin], 1.0, [3e-list@zonio.net], evolution-3e-plugin)
 AC_CONFIG_SRCDIR([Makefile.am])
-#AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_RANLIB
 AM_CONFIG_HEADER([config.h])
 AC_CANONICAL_SYSTEM
@@ -17,17 +16,11 @@ AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [Package name for gettex
 PROGRAMNAME_LOCALEDIR=[${datadir}/locale]
 AC_SUBST(PROGRAMNAME_LOCALEDIR)
 
-# localedir='$(prefix)/$(DATADIRNAME)/locale'
-# AC_SUBST(localedir)
-
-
 # Static plugins are uesless
-#m4_pattern_allow(AC_DISABLE_STATIC)
 AC_DISABLE_STATIC
 
 # Checks for programs.
 AC_PROG_CC
-#m4_pattern_allow(AC_PROG_LIBTOOL)
 AC_PROG_LIBTOOL
 PKG_PROG_PKG_CONFIG
 
@@ -52,25 +45,63 @@ PKG_CHECK_MODULES(EDS3E, [
   libecal-1.2
   libedata-cal-1.2
   libedataserver-1.2
-  libedataserverui-3.0
+  libedataserverui-1.2
   evolution-data-server-1.2 >= 1.12.0
-  evolution-plugin-3.0 >= 2.12.0
 ])
-
-XDL_COMPILER=xdl-compiler
-AC_SUBST(XDL_COMPILER)
 
 AC_SUBST(EDS3E_CFLAGS)
 AC_SUBST(EDS3E_LIBS)
 
-extensiondir=`$PKG_CONFIG --variable=backenddir libedata-cal-1.2`
-AC_SUBST(extensiondir)
+PKG_CHECK_EXISTS([
+  libedataserverui-3.0
+],
+[
+  PKG_CHECK_MODULES(EDSUI, [
+    libedataserverui-3.0
+  ])
+],
+[
+  PKG_CHECK_MODULES(EDSUI, [
+    libedataserverui-1.2
+  ]) 
+])
+
+AC_SUBST(EDSUI_CFLAGS)
+AC_SUBST(EDSUI_LIBS)
+
+PKG_CHECK_EXISTS([
+  evolution-plugin-3.0
+],
+[
+  PKG_CHECK_MODULES(EVOLUTION_PLUGIN, [
+    evolution-plugin-3.0 >= 2.12.0
+  ])
+  evover3=yes 
+],
+[
+  PKG_CHECK_MODULES(EVOLUTION_PLUGIN, [
+    evolution-plugin >= 2.12.0
+  ]) 
+])
+
+AC_SUBST(EVOLUTION_PLUGIN_CFLAGS)
+AC_SUBST(EVOLUTION_PLUGIN_LIBS)
+
+XDL_COMPILER=xdl-compiler
+AC_SUBST(XDL_COMPILER)
 
 #
 # Get packages for Evolution 3e plugin
 #
 
-evoversion=`$PKG_CONFIG --variable=execversion evolution-shell-3.0`
+if test evover3 = yes; then
+  extensiondir=`$PKG_CONFIG --variable=backenddir libedata-cal-1.2`
+  evoversion=`$PKG_CONFIG --variable=execversion evolution-shell-3.0`
+else
+  extensiondir=`$PKG_CONFIG --variable=extensiondir evolution-data-server-1.2`
+  evoversion=`$PKG_CONFIG --variable=execversion evolution-shell`
+fi
+AC_SUBST(extensiondir)
 
 if [[ "$evoversion" = "2.12" ]]; then
   EVO_VERSION=212
@@ -97,15 +128,20 @@ if [[ "$EVO_VERSION" -lt 230 ]]; then
 fi
 
 PKG_CHECK_MODULES(EVO3E, [
-  evolution-plugin-3.0 >= 2.12.0
   libglade-2.0
 ])
 
 AC_SUBST(EVO3E_CFLAGS)
 AC_SUBST(EVO3E_LIBS)
 
-plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin-3.0`
-errordir=`$PKG_CONFIG --variable=errordir evolution-plugin-3.0`
+if test evover3 = yes; then
+  plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin-3.0`
+  errordir=`$PKG_CONFIG --variable=errordir evolution-plugin-3.0`
+else
+  plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin`
+  errordir=`$PKG_CONFIG --variable=errordir evolution-plugin`
+fi
+
 AC_SUBST(plugindir)
 AC_SUBST(errordir)
 
