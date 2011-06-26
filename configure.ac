@@ -77,7 +77,7 @@ AC_SUBST(XDL_COMPILER)
 # Get packages for Evolution 3e plugin
 #
 
-if test evover3 = yes; then
+if [[ "$edsversion" = "3.0" ]]; then
   extensiondir=`$PKG_CONFIG --variable=backenddir libedata-cal-1.2`
   evoversion=`$PKG_CONFIG --variable=execversion evolution-shell-3.0`
 else
@@ -129,7 +129,7 @@ PKG_CHECK_EXISTS([
 AC_SUBST(EVO3E_CFLAGS)
 AC_SUBST(EVO3E_LIBS)
 
-if test evover3 = yes; then
+if [[ "$evoversion" = "3.0" ]]; then
   plugindir=`$PKG_CONFIG --variable=plugindir evolution-plugin-3.0`
   errordir=`$PKG_CONFIG --variable=errordir evolution-plugin-3.0`
 else
