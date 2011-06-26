@@ -41,51 +41,34 @@ AC_SUBST(LIBXR_LIBS)
 
 edsversion=`$PKG_CONFIG --variable=execversion evolution-data-server-1.2`
 
-PKG_CHECK_MODULES(EDS3E, [
-  libecal-1.2
-  libedata-cal-1.2
-  libedataserver-1.2
-  libedataserverui-1.2
-  evolution-data-server-1.2 >= 1.12.0
-])
-
-AC_SUBST(EDS3E_CFLAGS)
-AC_SUBST(EDS3E_LIBS)
-
 PKG_CHECK_EXISTS([
   libedataserverui-3.0
 ],
 [
-  PKG_CHECK_MODULES(EDSUI, [
+  PKG_CHECK_MODULES(EDS3E, [
+    libecal-1.2
+    libedata-cal-1.2
+    libedataserver-1.2
     libedataserverui-3.0
-  ])
-],
-[
-  PKG_CHECK_MODULES(EDSUI, [
-    libedataserverui-1.2
-  ]) 
-])
-
-AC_SUBST(EDSUI_CFLAGS)
-AC_SUBST(EDSUI_LIBS)
-
-PKG_CHECK_EXISTS([
-  evolution-plugin-3.0
-],
-[
-  PKG_CHECK_MODULES(EVOLUTION_PLUGIN, [
+    evolution-data-server-1.2 >= 1.12.0
     evolution-plugin-3.0 >= 2.12.0
   ])
-  evover3=yes 
+  evover3=yes
 ],
 [
-  PKG_CHECK_MODULES(EVOLUTION_PLUGIN, [
+  PKG_CHECK_MODULES(EDS3E, [
+    libecal-1.2
+    libedata-cal-1.2
+    libedataserver-1.2
+    libedataserverui-1.2
+    evolution-data-server-1.2 >= 1.12.0
     evolution-plugin >= 2.12.0
-  ]) 
+  ])
+  evover3=no
 ])
 
-AC_SUBST(EVOLUTION_PLUGIN_CFLAGS)
-AC_SUBST(EVOLUTION_PLUGIN_LIBS)
+AC_SUBST(EDS3E_CFLAGS)
+AC_SUBST(EDS3E_LIBS)
 
 XDL_COMPILER=xdl-compiler
 AC_SUBST(XDL_COMPILER)
@@ -127,8 +110,20 @@ if [[ "$EVO_VERSION" -lt 230 ]]; then
   mv evolution-plugin/org-gnome-evolution-eee-old.eplug.in evolution-plugin/org-gnome-evolution-eee.eplug.in
 fi
 
-PKG_CHECK_MODULES(EVO3E, [
-  libglade-2.0
+PKG_CHECK_EXISTS([
+  evolution-plugin-3.0
+],
+[
+  PKG_CHECK_MODULES(EVO3E, [
+    libglade-2.0
+    evolution-plugin-3.0 >= 2.12.0
+  ])
+],
+[
+  PKG_CHECK_MODULES(EVO3E, [
+    libglade-2.0
+    evolution-plugin >= 2.12.0
+  ])
 ])
 
 AC_SUBST(EVO3E_CFLAGS)
