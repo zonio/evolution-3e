@@ -52,6 +52,7 @@
 #include "utils.h"
 #include "subscribe.h"
 #include "acl.h"
+#include "dns-txt-search.h"
 
 #if EVOLUTION_VERSION >= 230
 static void eee_calendar_state_changed(EShell *shell);
@@ -754,7 +755,7 @@ GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
                                         "label", note,
                                         "use-markup", TRUE,
                                         "justify", GTK_JUSTIFY_LEFT,
-                                        "xaling", 0,
+                                        "xalign", 0,
                                         "yalign", 0.5,
                                         NULL);
     g_free(note);
@@ -789,4 +790,137 @@ void eee_account_properties_commit(EPlugin *epl, EConfigHookItemFactoryData *dat
 {
     EMConfigTargetAccount *target = (EMConfigTargetAccount *)data->config->target;
     const char *name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+}
+
+gboolean wizard_eee_account_activated = TRUE;
+gboolean dns_resolv_successful = FALSE;
+GtkAssistant *assistant;
+GtkLabel *lbl;
+gchar *prev_name = NULL;
+
+void wizard_chb_status_changed(GtkToggleButton* button, const char* name)
+{
+    if (gtk_toggle_button_get_active(button))
+        wizard_eee_account_activated = TRUE;
+    else
+        wizard_eee_account_activated = FALSE;
+
+    g_debug("** EEE **: Checkbox state changed to %s.",
+            wizard_eee_account_activated ? "CHECKED" : "EMPTY");
+}
+
+static gint skip_3e_page(gint current_page, gpointer data)
+{
+    switch (current_page)
+    {
+        case 5:
+            return 7;
+        default:
+            return current_page + 1;
+    }
+}
+
+GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *data)
+{
+    GtkWidget *page, *panel, *section, *checkbutton_status, *label;
+
+    char *title = _("3e Calendar Account");
+    assistant = GTK_ASSISTANT(data->parent);
+
+    if (data->old)
+        return data->old;
+
+    page = gtk_vbox_new (FALSE, 12);
+    gtk_container_set_border_width (GTK_CONTAINER (page), 12);
+    // toplevel vbox contains frames that group 3E account settings into various
+    // groups
+
+    // Status group
+    section = add_section(page, _("Enable 3e calendar account"));
+//    char* note = g_strdup(_("3e calendar server has been found for your domain. You can enable\n"
+//                            "calendar account if you have it. If you don't know ask your system\n"
+//                            "administrator or provider of your email service. Go to email account\n"
+//                            "preferences to change this setting later."));
+    label = (GtkWidget*)gtk_object_new(GTK_TYPE_LABEL, 
+             "label", "", 
+             "use-markup", TRUE,
+             "justify", GTK_JUSTIFY_LEFT, 
+             "xalign", 0, 
+             "yalign", 0.5, 
+             NULL); 
+//    g_free(note);
+    lbl = (GtkLabel*)label;
+
+    gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
+
+    checkbutton_status = gtk_check_button_new_with_label(_("Enable 3e calendar account"));
+    gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
+
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), TRUE);
+    g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(wizard_chb_status_changed), (gpointer)title);
+
+    gtk_widget_show_all(page);
+
+    gtk_assistant_append_page(GTK_ASSISTANT(data->parent), page);
+    gtk_assistant_set_page_title (GTK_ASSISTANT(data->parent), page, title);
+    gtk_assistant_set_page_type (GTK_ASSISTANT(data->parent), page, GTK_ASSISTANT_PAGE_CONTENT);	
+
+//    g_object_set_data((GObject *)data->parent, "restore", GINT_TO_POINTER(FALSE));
+    
+    return GTK_WIDGET(page);
+}
+
+gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
+{
+    EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+    const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+    char *eee_host = NULL;
+    GtkWidget *page;
+    
+    if (name == NULL)
+        return TRUE;
+
+    if (g_strcmp0(name, prev_name) == 0)
+        return TRUE;
+
+    g_debug("** EEE **: Wizard check: E-mail: %s", name);
+
+    prev_name = g_strdup(name);
+
+    if (name != NULL)
+        eee_host = get_eee_server_hostname(name);
+
+    if (eee_host != NULL)
+    {
+        dns_resolv_successful = TRUE;
+        gtk_assistant_set_forward_page_func(assistant, NULL, NULL, NULL);
+        gtk_label_set_text(lbl, g_strdup_printf(_("3e calendar server has been found for your domain. You can enable\n"
+                                                  "calendar account for your account <i>%s</i> if you have it. If you\n"
+                                                  "don't know ask your system administrator or provider of your email\n"
+                                                  "service. Go to email account preferences to change this setting later."), name));
+        gtk_label_set_use_markup(lbl, TRUE);
+        
+    }
+    else
+    {
+        dns_resolv_successful = FALSE;
+        gtk_assistant_set_forward_page_func(assistant, skip_3e_page, NULL, NULL);
+    }
+
+    return TRUE;
+}
+
+void eee_account_wizard_commit(EPlugin *epl, EConfigHookItemFactoryData *data)
+{
+    EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
+    const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+        if ((wizard_eee_account_activated == TRUE) && (dns_resolv_successful == TRUE)) 
+            eee_accounts_manager_enable_account(mgr(), name);
+        else
+            eee_accounts_manager_disable_account(mgr(), name);
+
+    eee_accounts_manager_restart_sync(mgr());
+
+    g_debug("** EEE **: Wizard commit for e-mail %s. 3e account is %s.",
+            name, wizard_eee_account_activated ? "activated" : "disabled");
 }

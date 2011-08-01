@@ -85,6 +85,26 @@ msgstr "Používat 3e účet"
 msgid "3e Settings"
 msgstr "Nastavení 3e"
 
+#: ../evolution-plugin/eee-calendar-config.c:818
+msgid "3e Calendar Account"
+msgstr "Účet 3e kalendáře"
+
+#: ../evolution-plugin/eee-calendar-config.c:830
+msgid "Enable 3e calendar account"
+msgstr "Zapnout účet 3e kalendáře"
+
+#: ../evolution-plugin/eee-calendar-config.c:888
+msgid ""
+"3e calendar server has been found for your domain. You can enable\n"
+"calendar account for your account <i>%s</i> if you have it. If you\n"
+"don't know ask your system administrator or provider of your email\n"
+"service. Go to email account preferences to change this setting later."
+msgstr ""
+"Pro váš doménu byl nalezen server 3e kalendáře. Můžete zapnout\n"
+"kalendářový účet pro vaši adresu <i>%s</i>. Jestliže nevíte,\n"
+"kontaktujte administátora či poskytovatele vaší emailové služby.\n"
+"Jděte do možností emailového účtu pro změnu tohoto nastavení později."
+
 #: ../evolution-plugin/org-gnome-evolution-eee.glade.h:1
 msgid "<b>Selected Users</b>"
 msgstr "<b>Vybraní uživatelé</b>"
