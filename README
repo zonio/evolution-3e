@@ -1,100 +1,36 @@
-3e Calendar Plugin for Evolution
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ABOUT
+-----
 
-3e calendar plugin for Evolution is implementation of 3e calendaring
-protocol for this popular opensource groupware suite. It allows you to
-access calendars stored on a 3e server and schedule meetings.
+3e calendar plugin for Evolution is implementation of 
+Easy Event Exchange (EEE) calendaring protocol for popular opensource 
+groupware suite Evolution. It allows you to access calendars stored 
+on a 3e server and schedule meetings.
 
 Features:
-
-  - Automatic 3e account setup via DNS TXT records
-  - Online and offline calendar access with automatic switchover on server
-    failure
-  - Add and remove calendars from your account
-  - Calendar list synchronization with server (admin can remotely subscribe or
-    add calendars for users, setup ACLs, etc.)
-  - Modify calendar access control list (ACL)
-  - Subscribe or unsubscribe from shared calendars
-  - Free/busy information retrieval
-  - Meeting scheduling (with "act on behalf of" feature for shared calendars)
-  - Appointment and meeting request attachments support
+ - Automatic 3e account setup via DNS TXT records
+ - Online and offline calendar access with automatic switchover on server
+   failure
+ - Add and remove calendars from your account
+ - Calendar list synchronization with server (admin can remotely subscribe or
+   add calendars for users, setup ACLs, etc.)
+ - Modify calendar access control list (ACL)
+ - Subscribe or unsubscribe from shared calendars
+ - Free/busy information retrieval
+ - Meeting scheduling (with "act on behalf of" feature for shared calendars)
+ - Appointment and meeting request attachments support
   
-  and more...
 
-For more information see http://eee.zonio.net or join our mailing list on
-http://zhost.zonio.net/mailman/listinfo/3e-list.
+MORE INFORMATION
+----------------
+Get more information about 3e and its functionalities at http://zonio.net. 
+Browse through resources wiki at http://zonio.net/wiki to get the 
+information how to build, install, configure and run the server.
 
+Source code is available as a tarball of latest stable release at 
+http://zonio.net/releases For latest development snapshot there is a 
+GIT repository of Evolution 3e plugin at http://git.zonio.net 
 
-Build Instructions
-~~~~~~~~~~~~~~~~~~
-
-Detailed instructions can be found at http://wiki.zonio.net/.
-
-3e calendar plugin requires a few small patches to evolution and
-evolution-data-server (EDS). These will be integrated upstream in the future. As
-of now you still need to rebuild Evolution and EDS with patches from patches/
-directory.
-
-Get and build libxr-0.9.94 or newer.
-
-Build and install 3e plugin itself:
-
-  ./configure
-  make
-  sudo make install
-
-
-Quick Installation Instructions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-These instructions assume you have 'you@your-domain.net' e-mail account in
-evolution.
-
-1) Setup DNS
-
-  Setup DNS TXT records for the domain of your email account. If you just want to
-  try 3e without changing DNS TXT records for your domain globaly, you can setup
-  dnsmasq(8) to act as DNS cache and supply TXT records for your domain.
-
-  Add this line to your /etc/dnsmasq.conf:
-
-    txt-record=your-domain.net,eee server=localhost:4444
-
-2) Get 3e server
-
-  Get 3e server from https://3e.zonio.net/releases/3e-server/.
-
-  Edit the 3e server config file /etc/3e/server.conf:
-
-    listen = *:4444
-	threads = 10
-	user = nobody
-    group = nobody
-	daemonize = 1
-    pidfile = /var/run/3e-server.pid
-    certificate = /etc/3e/server.pem
-
-  Run the server using following command:
-
-    /etc/init.d/3e-server start
-
-3) Create your user account on the server
-
-  You can do this using 3e command line client.
-
-  Run 3e-client:
-
-    3e-client -u root -p qwe
-
-  Type in the following commands:
-
-    create_user 'you@your-domain.net' 'qwe'
-    modify_user 'you@your-domain.net' realname 'Your Name'
-    create_calendar 'you@your-domain.net:personal'
-    modify_calendar ''you@your-domain.net:personal' title 'Personal'
-    modify_calendar 'you@your-domain.net:personal' color 'aabcbc'
-    exit
-
-4) Start Evolution
-
-  You should be now able to see your 'Personal' calendar in a calendar list.
+CONTRIBUTE
+----------
+If you have any bug fixes, patches, new functionality etc. please send 
+them to developers@zonio.net.
