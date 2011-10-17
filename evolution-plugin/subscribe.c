@@ -263,7 +263,7 @@ static void on_subs_button_subscribe_clicked(GtkButton *button, struct subscribe
     eee_account_set_calendar_attribute(ctx->account, owner, name, "title", title, FALSE);
     eee_account_set_calendar_attribute(ctx->account, owner, name, "color", color_string, FALSE);
 
-    source = e_source_new_3e(name, owner, ctx->account, perm, title, color);
+    source = e_source_new_3e(name, owner, ctx->account, perm, title, color_string);
 
     eee_accounts_manager_add_source(ctx->mgr, owner, source);
     eee_accounts_manager_restart_sync(ctx->mgr);

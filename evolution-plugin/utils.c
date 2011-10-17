@@ -90,14 +90,14 @@ gboolean e_source_is_3e_owned_calendar(ESource *source)
                    e_source_get_property(source, "eee-account"));
 }
 
-void e_source_set_3e_properties(ESource *source, const char *calname, const char *owner, EeeAccount *account, const char *perm, const char *title, guint32 color)
+void e_source_set_3e_properties(ESource *source, const char *calname, const char *owner, EeeAccount *account, const char *perm, const char *title, const char *color)
 {
     char *relative_uri = g_strdup_printf("%s/%s/%s", account->name, owner, calname);
     char *key = g_strdup_printf("eee://%s", account->name);
 
-#if EVOLUTION_VERSION >= 232
-    gchar *scolor;
-#endif /* EVOLUTION_VERSION >= 232 */
+//#if EVOLUTION_VERSION >= 232
+//    gchar *scolor;
+//#endif /* EVOLUTION_VERSION >= 232 */
 
     e_source_set_relative_uri(source, relative_uri);
     e_source_set_property(source, "auth", "1");
@@ -123,11 +123,14 @@ void e_source_set_3e_properties(ESource *source, const char *calname, const char
     if (color)
     {
 #if EVOLUTION_VERSION >= 232
-        scolor = gdk_color_to_string (&color);
-        e_source_set_color_spec(source, scolor);
-        g_free(scolor);
+        //scolor = gdk_color_to_string (&color);
+        e_source_set_color_spec(source, color);
+        //g_free(scolor);
 #else
-        e_source_set_color(source, color);
+        guint32 scolor = 0;
+        sscanf(color + 1, "%X", &scolor); //we don't want to read #
+
+        e_source_set_color(source, scolor);
 #endif /* EVOLUTION_VERSION >= 232 */
     }
 
@@ -135,7 +138,7 @@ void e_source_set_3e_properties(ESource *source, const char *calname, const char
     g_free(key);
 }
 
-ESource *e_source_new_3e(const char *calname, const char *owner, EeeAccount *account, const char *perm, const char *title, guint32 color)
+ESource *e_source_new_3e(const char *calname, const char *owner, EeeAccount *account, const char *perm, const char *title, const char *color)
 {
     ESource *source = e_source_new(_("[No Title]"), "");
 
@@ -162,7 +165,8 @@ void e_source_set_3e_properties_with_attrs(ESource *source, const char *calname,
     }
     guint32 color = 0;
     sscanf(color_string + 1, "%X", &color); //we don't want to read #
-    e_source_set_3e_properties(source, calname, owner, account, perm, title, color);
+
+    e_source_set_3e_properties(source, calname, owner, account, perm, title, color_string);
 }
 
 /* get ESource by 3E calendar name */
