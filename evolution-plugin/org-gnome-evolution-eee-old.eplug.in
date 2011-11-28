@@ -71,26 +71,26 @@
           factory="org_gnome_exchange_auth_section"/>
         -->
       </group>
-      <!--
       <group
         target="account"
         id="org.gnome.evolution.mail.config.accountDruid"
-        check="org_gnome_exchange_check_options">
-        <item 
-          type="item_table"
-          path="10.receive/10.config/20.owa"
-          factory="org_gnome_exchange_owa_url"/>
+        commit="eee_account_wizard_commit"
+        check="eee_account_wizard_check">
+        <item
+          type="page"
+          path="45.eee_account_page.10"
+          factory="eee_account_wizard_page"/> 
       </group>
       <group
         target="account"
         id="org.gnome.evolution.mail.config.accountWizard"
-        check="org_gnome_exchange_check_options">
+        commit="eee_account_wizard_commit"
+        check="eee_account_wizard_check">
         <item 
-          type="item_table"
-          path="10.receive/10.config/20.owa"
-          factory="org_gnome_exchange_owa_url"/>
+          type="page"
+          path="45.eee_account_page.10"
+          factory="eee_account_wizard_page"/>
       </group>
-      -->
     </hook>
 
     <hook class="org.gnome.evolution.calendar.popup:1.0">
