@@ -29,19 +29,12 @@
 #include <mail/em-config.h>
 #include <libintl.h>
 
-#if EVOLUTION_VERSION >= 230
 #include <e-util/e-alert.h>
 #include <e-util/e-alert-dialog.h>
 #include <misc/e-popup-action.h>
 #include <shell/e-shell-window.h>
 #include <shell/e-shell-view.h>
 #include <shell/e-shell-sidebar.h>
-
-#else
-#include <calendar/gui/e-cal-popup.h>
-#include <mail/em-menu.h>
-#include <e-util/e-error.h>
-#endif /* EVOLUTION_VERSION >= 230 */
 
 #define _(String) gettext(String)
 #define gettext_noop(String) String
@@ -421,7 +414,7 @@ static void on_delete_cb(GtkAction *action, EShellView *shell_view)
     {
         // get ECal and remove calendar from the server
         ECalClient *ecal = e_cal_client_new(source, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, &err);
-        if (!e_cal_remove(ecal, &err))
+        if (!e_client_remove_sync((EClient *)ecal, NULL, &err))
         {
             g_warning("** EEE ** ECal remove failed (%d:%s)", err->code, err->message);
             g_clear_error(&err);
@@ -553,7 +546,7 @@ static gint activation_cb(gpointer data)
     mgr();
     return FALSE;
 }
-
+/* TODO: Fix or replace this method
 void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *target)
 {
     if (strstr(target->id, "OAFIID:GNOME_Evolution_Calendar_Component") == NULL)
@@ -563,7 +556,7 @@ void eee_calendar_component_activated(EPlugin *ep, ESEventTargetComponent *targe
 
     g_idle_add(activation_cb, NULL);
 }
-
+*/
 /* calendar subscription menu item callback */
 
 void eee_calendar_subscription(GtkAction *action, EShellView *shell_view)
@@ -612,7 +605,7 @@ void status_changed(GtkToggleButton *button, const char *name)
 GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData *data)
 {
     EMConfigTargetAccount *target = (EMConfigTargetAccount *)data->config->target;
-    const char *name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+    const char *name = e_account_get_string(target->original_account, E_ACCOUNT_ID_ADDRESS);
     GtkWidget *panel, *section, *checkbutton_status, *label;
 
     if (data->old)
@@ -653,7 +646,7 @@ GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
 gboolean eee_account_properties_check(EPlugin *epl, EConfigHookPageCheckData *data)
 {
     EMConfigTargetAccount *target = (EMConfigTargetAccount *)data->config->target;
-    const char *name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+    const char *name = e_account_get_string(target->original_account, E_ACCOUNT_ID_ADDRESS);
     int status = TRUE;
 
     if (data->pageid == NULL || !strcmp(data->pageid, "40.eee"))
@@ -666,7 +659,7 @@ gboolean eee_account_properties_check(EPlugin *epl, EConfigHookPageCheckData *da
 void eee_account_properties_commit(EPlugin *epl, EConfigHookItemFactoryData *data)
 {
     EMConfigTargetAccount *target = (EMConfigTargetAccount *)data->config->target;
-    const char *name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+    const char *name = e_account_get_string(target->original_account, E_ACCOUNT_ID_ADDRESS);
 }
 
 gboolean wizard_eee_account_activated = TRUE;
@@ -750,7 +743,7 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
 gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
 {
     EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
-    const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+    const char* name = e_account_get_string(target->original_account, E_ACCOUNT_ID_ADDRESS);
     char *eee_host = NULL;
     GtkWidget *page;
     
@@ -790,7 +783,7 @@ gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
 void eee_account_wizard_commit(EPlugin *epl, EConfigHookItemFactoryData *data)
 {
     EMConfigTargetAccount* target = (EMConfigTargetAccount*)data->config->target;
-    const char* name = e_account_get_string(target->account, E_ACCOUNT_ID_ADDRESS);
+    const char* name = e_account_get_string(target->original_account, E_ACCOUNT_ID_ADDRESS);
         if ((wizard_eee_account_activated == TRUE) && (dns_resolv_successful == TRUE)) 
             eee_accounts_manager_enable_account(mgr(), name);
         else
