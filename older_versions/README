@@ -1,0 +1,36 @@
+ABOUT
+-----
+
+3e calendar plugin for Evolution is implementation of 
+Easy Event Exchange (EEE) calendaring protocol for popular opensource 
+groupware suite Evolution. It allows you to access calendars stored 
+on a 3e server and schedule meetings.
+
+Features:
+ - Automatic 3e account setup via DNS TXT records
+ - Online and offline calendar access with automatic switchover on server
+   failure
+ - Add and remove calendars from your account
+ - Calendar list synchronization with server (admin can remotely subscribe or
+   add calendars for users, setup ACLs, etc.)
+ - Modify calendar access control list (ACL)
+ - Subscribe or unsubscribe from shared calendars
+ - Free/busy information retrieval
+ - Meeting scheduling (with "act on behalf of" feature for shared calendars)
+ - Appointment and meeting request attachments support
+  
+
+MORE INFORMATION
+----------------
+Get more information about 3e and its functionalities at http://zonio.net. 
+Browse through resources wiki at http://zonio.net/wiki to get the 
+information how to build, install, configure and run the server.
+
+Source code is available as a tarball of latest stable release at 
+http://zonio.net/releases For latest development snapshot there is a 
+GIT repository of Evolution 3e plugin at http://git.zonio.net 
+
+CONTRIBUTE
+----------
+If you have any bug fixes, patches, new functionality etc. please send 
+them to developers@zonio.net.

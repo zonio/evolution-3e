@@ -1,0 +1,6 @@
+evolution-plugin/acl.c
+evolution-plugin/eee-calendar-config.c
+evolution-plugin/org-gnome-evolution-eee.glade
+evolution-plugin/subscribe.c
+evolution-plugin/utils.c
+evolution-plugin/org-gnome-eee-cal-subscription.xml.in
