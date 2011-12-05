@@ -361,7 +361,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
 
         // find ESourceGroup and EeeAccount
 #if EVOLUTION_VERSION >= 232
-        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name);
+        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
 #else
         group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
 #endif /* EVOLUTION_VERSION >= 232 */
@@ -751,7 +751,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager *self)
 
         // find ESourceGroup and EeeAccount
 #if EVOLUTION_VERSION >= 232
-        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name);
+        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
 #else
         group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
 #endif /* EVOLUTION_VERSION >= 232 */

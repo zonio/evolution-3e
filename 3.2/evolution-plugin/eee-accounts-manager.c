@@ -360,11 +360,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
         char *group_name = g_strdup_printf("3e: %s", account->name);
 
         // find ESourceGroup and EeeAccount
-#if EVOLUTION_VERSION >= 232
-        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name);
-#else
-        group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
-#endif /* EVOLUTION_VERSION >= 232 */
+        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
         current_account = eee_accounts_manager_find_account_by_name(self, account->name);
 
         if (account->state == EEE_ACCOUNT_STATE_DISABLED)
@@ -750,11 +746,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager *self)
         char *group_name = g_strdup_printf("3e: %s", name);
 
         // find ESourceGroup and EeeAccount
-#if EVOLUTION_VERSION >= 232
-        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name);
-#else
-        group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
-#endif /* EVOLUTION_VERSION >= 232 */
+        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
         account = eee_accounts_manager_find_account_by_name(self, name);
 
         // create account if it does not exist
