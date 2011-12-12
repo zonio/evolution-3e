@@ -1,0 +1,16 @@
+<Root>
+
+  <commands>
+    <cmd name="EeeCalSubscription" _label="Subscribe to 3e calendar..."
+      _tip="Subscribe to other user's 3e calendar." />
+  </commands>
+
+  <menu>
+    <submenu name="File">
+      <placeholder name="FileOps">
+        <menuitem name="EeeCalSubscription" verb=""/>
+      </placeholder>
+    </submenu>
+  </menu>
+
+</Root>
