@@ -322,7 +322,7 @@ void eee_calendar_properties_commit(EPlugin *epl, ECalConfigTargetSource *target
         }
         eee_account_disconnect(account);
 
-        e_source_set_3e_properties(source, calname, account->name, account, "write", NULL, 0); // title and color are already set
+        e_source_set_3e_properties(source, calname, account->name, account, "write", NULL, NULL); // title and color are already set
         eee_accounts_manager_add_source(mgr(), account->name, g_object_ref(source));
         g_free(calname);
     }

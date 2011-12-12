@@ -41,13 +41,13 @@ void                   e_source_set_3e_properties(ESource *source,
                                                   EeeAccount *account,
                                                   const char *perm,
                                                   const char *title,
-                                                  guint32 color);
+                                                  const char *color);
 ESource *e_source_new_3e(const char *calname,
                          const char *owner,
                          EeeAccount *account,
                          const char *perm,
                          const char *title,
-                         guint32 color);
+                         const char *color);
 ESource *e_source_new_3e_with_attrs(const char *calname,
                                     const char *owner,
                                     EeeAccount *account,

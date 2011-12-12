@@ -361,7 +361,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
 
         // find ESourceGroup and EeeAccount
 #if EVOLUTION_VERSION >= 232
-        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name);
+        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
 #else
         group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
 #endif /* EVOLUTION_VERSION >= 232 */
@@ -447,7 +447,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
                     char *owner_group_name = g_strdup_printf("3e: %s", cal->owner);
                     // shared calendar, it should be put into another group
 #if EVOLUTION_VERSION >= 232
-                    ESourceGroup *owner_group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", owner_group_name);
+                    ESourceGroup *owner_group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", owner_group_name, NULL);
 #else
                     ESourceGroup *owner_group = e_source_list_peek_group_by_name(self->priv->eslist, owner_group_name);
 #endif /* EVOLUTION_VERSION >= 232 */
@@ -530,7 +530,7 @@ void eee_accounts_manager_add_source(EeeAccountsManager *self, const char *group
 
     real_group_name = g_strdup_printf("3e: %s", group_name);
 #if EVOLUTION_VERSION >= 232
-    group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", real_group_name);
+    group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", real_group_name, NULL);
 #else
     group = e_source_list_peek_group_by_name(self->priv->eslist, real_group_name);
 #endif /* EVOLUTION_VERSION >= 232 */
@@ -751,7 +751,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager *self)
 
         // find ESourceGroup and EeeAccount
 #if EVOLUTION_VERSION >= 232
-        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name);
+        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
 #else
         group = e_source_list_peek_group_by_name(self->priv->eslist, group_name);
 #endif /* EVOLUTION_VERSION >= 232 */
@@ -784,7 +784,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager *self)
                 if (e_source_is_3e(source))
                 {
                     const char *calname = e_source_get_property(source, "eee-calname");
-                    e_source_set_3e_properties(source, calname, account->name, account, NULL, NULL, 0);
+                    e_source_set_3e_properties(source, calname, account->name, account, NULL, NULL, NULL);
                 }
                 else
                 {
