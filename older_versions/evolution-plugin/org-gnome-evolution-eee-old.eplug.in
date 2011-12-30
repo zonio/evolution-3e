@@ -73,7 +73,7 @@
       </group>
       <group
         target="account"
-        id="org.gnome.evolution.mail.config.accountDruid"
+        id="org.gnome.evolution.mail.config.accountAssistant"
         commit="eee_account_wizard_commit"
         check="eee_account_wizard_check">
         <item
@@ -83,7 +83,7 @@
       </group>
       <group
         target="account"
-        id="org.gnome.evolution.mail.config.accountWizard"
+        id="org.gnome.evolution.mail.config.accountDruid"
         commit="eee_account_wizard_commit"
         check="eee_account_wizard_check">
         <item 
