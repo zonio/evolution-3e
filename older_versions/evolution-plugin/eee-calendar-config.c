@@ -564,14 +564,14 @@ static void popup_free(EPopup *ep, GSList *items, void *data)
 #endif /* EVOLUTION_VERSION >= 230 */
 
 #if EVOLUTION_VERSION >= 230
-static void eee_calendar_popup_source_factory(EShellView *shell_view)
+void eee_calendar_popup_source_factory(EShellView *shell_view)
 {
     EShellSidebar *shell_sidebar = e_shell_view_get_shell_sidebar(shell_view);
     ESourceSelector *selector;
     g_object_get(shell_sidebar, "selector", &selector, NULL);
     ESource *source = e_source_selector_peek_primary_selection(selector);
 #else
-static void eee_calendar_popup_source_factory(EPlugin *ep, ECalPopupTargetSource *target)
+void eee_calendar_popup_source_factory(EPlugin *ep, ECalPopupTargetSource *target)
 {
     ESource *source = e_source_selector_peek_primary_selection(E_SOURCE_SELECTOR(target->selector));
 #endif /* EVOLUTION_VERSION >= 230 */

@@ -77,6 +77,11 @@ static gboolean calendar_exists(GSList *cals, ESCalendarInfo *ref_cal)
     return FALSE;
 }
 
+static gint compare_names(ESCalendarInfo* a, ESCalendarInfo* b, gpointer data)
+{
+    return g_strcmp0(a->owner, b->owner);
+}
+
 static gboolean reload_data(struct subscribe_context *ctx, const char *query)
 {
     GSList *cals, *existing_cals, *iter;
@@ -91,6 +96,8 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
         eee_account_disconnect(ctx->account);
         return FALSE;
     }
+
+    cals = g_slist_sort_with_data(cals, compare_names, NULL);
 
     // for each user get his calendars
     char *prev_owner = NULL;
@@ -115,11 +122,11 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
             realname = eee_find_attribute_value(attrs, "realname");
             if (realname)
             {
-                title = g_strdup_printf("%s (%s)", cal->owner, realname);
+                title = g_strdup_printf("%s <%s>", realname, cal->owner);
             }
             else
             {
-                title = g_strdup_printf("%s", cal->owner);
+                title = g_strdup_printf("<%s>", cal->owner);
             }
 
             gtk_tree_store_append(ctx->model, &titer_user, NULL);
