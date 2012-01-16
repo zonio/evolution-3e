@@ -85,27 +85,27 @@ msgstr "Používat 3e účet"
 msgid "3e Settings"
 msgstr "Nastavení 3e"
 
-#: ../evolution-plugin/eee-calendar-config.c:818
-msgid "3e Calendar Account"
-msgstr "Účet 3e kalendáře"
+#: ../evolution-plugin/eee-calendar-config.c:819
+msgid "3e calendar"
+msgstr "3e calendar"
 
 #: ../evolution-plugin/eee-calendar-config.c:830
-msgid "Enable 3e calendar account"
-msgstr "Zapnout účet 3e kalendáře"
+msgid "Enable 3e calendar"
+msgstr "Zapnout 3e kalendář"
 
 #: ../evolution-plugin/eee-calendar-config.c:888
 msgid ""
-"3e calendar server has been found for your domain. You can enable\n"
-"calendar account for your account <i>%s</i>,\n"
-"if you have it. If you don't know ask your system administrator or\n"
-"provider of your email service. Go to email account preferences to\n" 
-"change this setting later."
+"3e calendar server has been found for your domain. You can\n"
+"enable 3e calendar for your account:\n"
+"<i>%s</i>\n"
+"If you are not sure you have 3e calendar, ask your system\n"
+"administrator or provider of your email service. Go to email\n"
+"account preferences to change this setting later."
 msgstr ""
-"Pro váš doménu byl nalezen server 3e kalendáře. Můžete zapnout\n"
-"kalendářový účet pro vaši adresu <i>%s</i>,\n"
-"pokud ho máte. Jestliže nevíte, kontaktujte administátora či\n"
-"poskytovatele vaší emailové služby. Jděte do možností emailového"
-"účtu pro změnu tohoto nastavení později."
+"No 3e calendar server has been found for your domain. Ask\n"
+"your system administrator or provider of your email service\n"
+"for more about 3e calendar. Go to email account preferences\n"
+"to change this setting later."
 
 #: ../evolution-plugin/org-gnome-evolution-eee.glade.h:1
 msgid "<b>Selected Users</b>"

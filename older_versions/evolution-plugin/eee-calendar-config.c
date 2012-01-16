@@ -816,7 +816,7 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
 {
     GtkWidget *page, *panel, *section, *label;
 
-    char *title = _("3e Calendar Account");
+    char *title = _("3e calendar");
 
     if (data->old)
         return data->old;
@@ -827,7 +827,8 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
     // groups
 
     // Status group
-    section = add_section(page, _("Enable 3e calendar account"));
+    // *** section = add_section(page, _("Enable 3e calendar"));
+
     label = (GtkWidget*)gtk_object_new(GTK_TYPE_LABEL, 
              "label", "", 
              "use-markup", TRUE,
@@ -837,12 +838,14 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
              NULL); 
     lbl = (GtkLabel*)label;
 
-    gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
+    // *** section removed, place it back = replace page by section
 
-    checkbutton_status = gtk_check_button_new_with_label(_("Enable 3e calendar account"));
-    gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(page), label, FALSE, FALSE, 0);
 
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), TRUE);
+    checkbutton_status = gtk_check_button_new_with_label(_("Enable 3e calendar"));
+    gtk_box_pack_start(GTK_BOX(page), checkbutton_status, FALSE, FALSE, 0);
+    // ***
+
     g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(wizard_chb_status_changed), (gpointer)title);
 
     gtk_widget_show_all(page);
@@ -855,8 +858,9 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
     return GTK_WIDGET(page);
 #else
     GtkWidget *page_container = gnome_druid_page_standard_new();
-    gtk_container_add(GTK_CONTAINER(GNOME_DRUID_PAGE_STANDARD(page_container)->vbox), page);
+    gnome_druid_page_standard_set_title(GNOME_DRUID_PAGE_STANDARD(page_container), title);
 
+    gtk_container_add(GTK_CONTAINER(GNOME_DRUID_PAGE_STANDARD(page_container)->vbox), page);
     gnome_druid_append_page(GNOME_DRUID(data->parent), GNOME_DRUID_PAGE(page_container));
 
     return GTK_WIDGET(page_container);
@@ -890,24 +894,26 @@ gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
     if (eee_host != NULL)
     {
         dns_resolv_successful = TRUE;
-        gtk_label_set_text(lbl, g_strdup_printf(_("3e calendar server has been found for your domain. You can enable\n"
-                                                  "calendar account for your account <i>%s</i>,\n"
-                                                  "if you have it. If you don't know ask your system administrator or\n"
-                                                  "provider of your email service. Go to email account preferences to\n"
-                                                  "change this setting later."), name));
+        gtk_label_set_text(lbl, g_strdup_printf(_("3e calendar server has been found for your domain. You can\n"
+                                                  "enable 3e calendar for your account:\n"
+                                                  "<i>%s</i>\n"
+                                                  "If you are not sure you have 3e calendar, ask your system\n"
+                                                  "administrator or provider of your email service. Go to email\n"
+                                                  "account preferences to change this setting later."), name));
         gtk_label_set_use_markup(lbl, TRUE);
-        gtk_widget_show(checkbutton_status);
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), TRUE);
+        gtk_widget_set_sensitive(checkbutton_status, TRUE);
     }
     else
     {
         dns_resolv_successful = FALSE;
-        gtk_label_set_text(lbl, g_strdup_printf(_("3e calendar server was not found for domain of your email eddress:\n"
-                                                  "\n<i>%s</i>\n\n"
-                                                  "Please, check your email address. If you don't know ask your system\n"
-                                                  "administrator or provider of your email service. Go to email account\n"
-                                                  "preferences to change this setting later."), name));
+        gtk_label_set_text(lbl, g_strdup_printf(_("No 3e calendar server has been found for your domain. Ask\n"
+                                                  "your system administrator or provider of your email service\n"
+                                                  "for more about 3e calendar. Go to email account preferences\n"
+                                                  "to change this setting later.")));
         gtk_label_set_use_markup(lbl, TRUE);
-        gtk_widget_hide(checkbutton_status);
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), FALSE);
+        gtk_widget_set_sensitive(checkbutton_status, FALSE);
     }
 
     return TRUE;
