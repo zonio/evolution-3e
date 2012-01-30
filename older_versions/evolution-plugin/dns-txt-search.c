@@ -244,7 +244,7 @@ gchar *get_eee_web_hostname(const gchar *email)
             server = g_strdup(txt_list[i]);
             // Check if it is 3e server type
             if (!(g_strrstr(server, "type="))
-                    || (g_strrstr(server, "type=3e")))
+                    || (g_strrstr(server, "type=eee")))
             {
                 // Search for server record
                 if ((server = g_strrstr(server, "web=")))
