@@ -1,36 +1,3 @@
-/* Copyright (c) 1996 by Internet Software Consortium.
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS
- * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE
- * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
- * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
- * SOFTWARE.
- */
-
-/* Copyright 1996, 2000 by the Massachusetts Institute of Technology.
- *
- * Permission to use, copy, modify, and distribute this
- * software and its documentation for any purpose and without
- * fee is hereby granted, provided that the above copyright
- * notice appear in all copies and that both that copyright
- * notice and this permission notice appear in supporting
- * documentation, and that the name of M.I.T. not be used in
- * advertising or publicity pertaining to distribution of the
- * software without specific, written prior permission.
- * M.I.T. makes no representations about the suitability of
- * this software for any purpose.  It is provided "as is"
- * without express or implied warranty.
- */
-
-/* ripped off from hesiod */
-
 #include <stdlib.h>
 #include <errno.h>
 #include <resolv.h>
@@ -170,7 +137,7 @@ static char * *_parse_result(const unsigned char *abuf, int alen)
     return list;
 }
 
-char * *get_txt_records(const char *name)
+gchar * *get_txt_records(const gchar *name)
 {
     unsigned char qbuf[PACKETSZ], abuf[1024];
     int n;
@@ -197,10 +164,11 @@ char * *get_txt_records(const char *name)
     return _parse_result(abuf, n);
 }
 
-char *get_eee_server_hostname(const char *email)
+gchar *get_eee_server_hostname(const gchar *email)
 {
-    char *domain = strchr(email, '@');
-    char * *txt_list;
+    gchar *server;
+    gchar *domain = strchr(email, '@');
+    gchar **txt_list;
     guint i;
 
     if (!domain) // invalid email address
@@ -211,20 +179,91 @@ char *get_eee_server_hostname(const char *email)
     txt_list = get_txt_records(++domain);
     if (txt_list == NULL)
     {
-        g_debug("** EEE ** 3e server hostname can't be determined for '%s'. Your admin forgot to setup 3e TXT records in DNS?", email);
         return NULL;
     }
 
     for (i = 0; i < g_strv_length(txt_list); i++)
     {
         // parse TXT records if any
-        if (g_str_has_prefix(txt_list[i], "eee type=eee server="))
+        if (g_str_has_prefix(txt_list[i], "eee "))
         {
-            char *server = g_strstrip(g_strdup(txt_list[i] + sizeof("eee type=eee server=") - 1));
+            server = g_strdup(txt_list[i]);
+            // Check if it is 3e server type
+            if (!(g_strrstr(server, "type="))
+                    || (g_strrstr(server, "type=eee")))
+            {
+                // Search for server record
+                if ((server = g_strrstr(server, "server=")))
+                {
+                    int j;
+                    server += sizeof("server=") - 1;
+
+                    for(j = 0; ((server[j] != ' ')
+                            && (server[j] != '\0')); j++);
+
+                    server = g_strndup(server, j);
+                }
+
             //XXX: check format (hostname:port)
             return server;
+            }
         }
     }
     g_strfreev(txt_list);
     return NULL;
 }
+
+gchar *get_eee_web_hostname(const gchar *email)
+{
+    gchar *server;
+    gchar **txt_list;
+    guint i;
+
+    gchar *domain = strchr(email, '@');
+
+    if (!domain)
+    {
+        domain = email; // Email is only domain.
+    }
+    else
+    {
+        domain++;       // Skip '@' in email address.
+    }
+
+    txt_list = get_txt_records(domain);
+    if (txt_list == NULL)
+    {
+        return NULL;
+    }
+
+    for (i = 0; i < g_strv_length(txt_list); i++)
+    {
+        // parse TXT records if any
+        if (g_str_has_prefix(txt_list[i], "eee "))
+        {
+            server = g_strdup(txt_list[i]);
+            // Check if it is 3e server type
+            if (!(g_strrstr(server, "type="))
+                    || (g_strrstr(server, "type=eee")))
+            {
+                // Search for server record
+                if ((server = g_strrstr(server, "web=")))
+                {
+                    int j;
+                    server += sizeof("web=") - 1;
+
+                    for(j = 0; ((server[j] != ' ')
+                            && (server[j] != '\0')); j++);
+
+                    server = g_strndup(server, j);
+                }
+
+            //XXX: check format (hostname:port)
+            return server;
+            }
+        }
+    }
+    g_strfreev(txt_list);
+    return NULL;
+}
+
