@@ -166,6 +166,7 @@ gchar * *get_txt_records(const gchar *name)
 
 gchar *get_eee_server_hostname(const gchar *email)
 {
+    gchar *server;
     gchar *domain = strchr(email, '@');
     gchar **txt_list;
     guint i;
@@ -186,7 +187,7 @@ gchar *get_eee_server_hostname(const gchar *email)
         // parse TXT records if any
         if (g_str_has_prefix(txt_list[i], "eee "))
         {
-            gchar *server = g_strdup(txt_list[i]);
+            server = g_strdup(txt_list[i]);
             // Check if it is 3e server type
             if (!(g_strrstr(server, "type="))
                     || (g_strrstr(server, "type=eee")))
@@ -200,7 +201,7 @@ gchar *get_eee_server_hostname(const gchar *email)
                     for(j = 0; ((server[j] != ' ')
                             && (server[j] != '\0')); j++);
 
-                    server[j] = '\0';
+                    server = g_strndup(server, j);
                 }
 
             //XXX: check format (hostname:port)
@@ -214,6 +215,7 @@ gchar *get_eee_server_hostname(const gchar *email)
 
 gchar *get_eee_web_hostname(const gchar *email)
 {
+    gchar *server;
     gchar **txt_list;
     guint i;
 
@@ -239,7 +241,7 @@ gchar *get_eee_web_hostname(const gchar *email)
         // parse TXT records if any
         if (g_str_has_prefix(txt_list[i], "eee "))
         {
-            gchar *server = g_strdup(txt_list[i]);
+            server = g_strdup(txt_list[i]);
             // Check if it is 3e server type
             if (!(g_strrstr(server, "type="))
                     || (g_strrstr(server, "type=3e")))
@@ -253,7 +255,7 @@ gchar *get_eee_web_hostname(const gchar *email)
                     for(j = 0; ((server[j] != ' ')
                             && (server[j] != '\0')); j++);
 
-                    server[j] = '\0';
+                    server = g_strndup(server, j);
                 }
 
             //XXX: check format (hostname:port)
