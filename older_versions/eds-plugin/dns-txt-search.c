@@ -218,9 +218,9 @@ char *get_eee_server_hostname(const char *email)
     for (i = 0; i < g_strv_length(txt_list); i++)
     {
         // parse TXT records if any
-        if (g_str_has_prefix(txt_list[i], "eee server="))
+        if (g_str_has_prefix(txt_list[i], "eee type=eee server="))
         {
-            char *server = g_strstrip(g_strdup(txt_list[i] + sizeof("eee server=") - 1));
+            char *server = g_strstrip(g_strdup(txt_list[i] + sizeof("eee type=eee server=") - 1));
             //XXX: check format (hostname:port)
             return server;
         }
