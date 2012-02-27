@@ -400,7 +400,7 @@ void icalcomponent_collect_recipients(icalcomponent *icomp, const char *sender, 
     case ICAL_METHOD_COUNTER:
     case ICAL_METHOD_DECLINECOUNTER:
         to_list = g_slist_append(to_list, g_strdup(strip_mailto(organizer.value)));
-        //XXX: send the status to delegatee to the delegate also
+        // send the status to delegatee to the delegate also is missing
         break;
 
     case ICAL_METHOD_PUBLISH:
