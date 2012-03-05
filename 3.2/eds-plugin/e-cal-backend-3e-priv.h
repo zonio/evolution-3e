@@ -61,6 +61,7 @@ struct _ECalBackend3ePrivate
     char *cache_path;
     ECalBackendCache *cache;        /**< Calendar cache object. */
     GStaticRWLock cache_lock;       /**< RW mutex for backend cache object. */
+    EDataCalView *last_view;        /**< Pointer on last_view requested by client. */
     icaltimezone *default_zone;     /**< Temporary store for this session's default timezone. */
     gboolean sync_immediately;      /**< If TRUE, e_cal_backend_3e_sync_cache_to_server() is run after cache mod operations. */
     GQueue *message_queue;          /**< iTIP messages queue. */
