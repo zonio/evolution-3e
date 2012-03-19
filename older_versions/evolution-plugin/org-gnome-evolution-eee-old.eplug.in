@@ -5,10 +5,10 @@
     id="org.gnome.evolution.eee" 
     location="@plugindir@/liborg-gnome-evolution-eee@SOEXT@" 
     load-on-startup="true" 
-    name="3e Calendar Plugin">
+    name="3e Calendar">
 
-    <author name="Ondrej Jirman" email="oss@zonio.net"/>
-    <description>3e Calendar sources</description>
+    <author name="Zonio" email="developers@zonio.net"/>
+    <description>3e is new open source calendaring solution which allows users to get and share calendar and schedule data with other users. It provides full set of robust enterprise calendaring features such as planning, calendar sharing, scheduling, offline mode and much more.</description>
 
 <!--
     List of available popup menus:
