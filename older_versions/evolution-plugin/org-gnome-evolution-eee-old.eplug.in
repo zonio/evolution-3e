@@ -5,7 +5,7 @@
     id="org.gnome.evolution.eee" 
     location="@plugindir@/liborg-gnome-evolution-eee@SOEXT@" 
     load-on-startup="true" 
-    name="3e Calendar Accounts Manager">
+    name="3e Calendar Plugin">
 
     <author name="Ondrej Jirman" email="oss@zonio.net"/>
     <description>3e Calendar sources</description>
