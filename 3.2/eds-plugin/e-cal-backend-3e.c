@@ -112,7 +112,7 @@ static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
         e_cal_backend_notify_auth_required(E_CAL_BACKEND(backend), TRUE, NULL);
     }
 
-    return;
+    e_cal_backend_notify_online(E_CAL_BACKEND(backend), TRUE);
 }
 
 /**
@@ -124,14 +124,14 @@ static void e_cal_backend_3e_authenticate_user(ECalBackendSync *backend,
                                                GError **err)
 {
     BACKEND_METHOD_CHECKED_NORETVAL("username=%s, password=%s",
-                    e_credentials_get(credentials, E_CREDENTIALS_KEY_USERNAME),
-                    e_credentials_get(credentials, E_CREDENTIALS_KEY_PASSWORD)
+                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_USERNAME),
+                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_PASSWORD)
                                    );
 
     /* setup connection info */
     if (e_cal_backend_3e_setup_connection(cb,
-                    e_credentials_get(credentials, E_CREDENTIALS_KEY_USERNAME),
-                    e_credentials_get(credentials, E_CREDENTIALS_KEY_PASSWORD))
+                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_USERNAME),
+                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_PASSWORD))
        )
     {
         /* enable sync */
@@ -147,8 +147,6 @@ static void e_cal_backend_3e_authenticate_user(ECalBackendSync *backend,
         g_propagate_error (err, EDC_ERROR (AuthenticationFailed));
         return;
     }
-
-    return;
 }
 
 /** Remove the calendar.
@@ -419,7 +417,6 @@ static void e_cal_backend_3e_get_object_list(ECalBackendSync *backend,
 
         if (e_cal_backend_sexp_match_comp(cbsexp, comp, E_CAL_BACKEND(backend)))
         {
-            g_print("Pridavam\n");
             *objects = g_slist_append(*objects, e_cal_component_get_as_string(comp));
         }
 
@@ -430,25 +427,6 @@ static void e_cal_backend_3e_get_object_list(ECalBackendSync *backend,
     g_object_unref(cbsexp);
 
     return;
-}
-
-/**
- * This callback removes all calendar views except the last_view.
- */
-static gboolean remove_views_cb(EDataCalView *view, gpointer backend)
-{
-    g_print("view=%p\n", view);
-
-/*    ECalBackend3e *cb = (ECalBackend3e *)backend;
-
-    if (e_data_cal_view_is_completed(view) && (view != cb->priv->last_view))
-    {
-        g_print("Deleting view=%p\n", view);
-        e_cal_backend_remove_view((ECalBackend *)backend, view);
-      //  g_object_unref(view);
-    }
-
-    return TRUE;*/
 }
 
 /**
@@ -463,8 +441,6 @@ static void e_cal_backend_3e_start_view(ECalBackend *backend,
 
     BACKEND_METHOD_CHECKED_NORETVAL("view=%p", view);
 
-    priv->last_view = view;
-
     e_cal_backend_3e_get_object_list(E_CAL_BACKEND_SYNC(backend),
                                               NULL,
                                               NULL,
@@ -472,9 +448,8 @@ static void e_cal_backend_3e_start_view(ECalBackend *backend,
                                               &objects,
                                               &local_err);
 
-    if ((!local_err) && (!e_data_cal_view_is_completed(view)))
+    if (!local_err)
     {
-        e_cal_backend_foreach_view(backend, remove_views_cb, (gpointer)backend);
         e_data_cal_view_notify_objects_added(view, objects);
         g_slist_foreach(objects, (GFunc)g_free, NULL);
         g_slist_free(objects);
@@ -496,7 +471,7 @@ static void e_cal_backend_3e_get_object(ECalBackendSync *backend,
 {
     BACKEND_METHOD_CHECKED_NORETVAL("uid=%s  rid=%s", uid, rid);
 
-    g_return_if_fail(*object != NULL);
+    //g_return_if_fail(*object != NULL);
     g_return_if_fail(uid != NULL);
 
     if (rid && *rid)
@@ -510,7 +485,8 @@ static void e_cal_backend_3e_get_object(ECalBackendSync *backend,
             return;
         }
 
-        *object = e_cal_component_get_as_string(dinst);
+        //*object = e_cal_component_get_as_string(dinst);
+        *object = g_strdup(icalcomponent_as_ical_string(e_cal_component_get_icalcomponent(dinst)));
         g_object_unref(dinst);
     }
     else
@@ -526,7 +502,8 @@ static void e_cal_backend_3e_get_object(ECalBackendSync *backend,
         if (!e_cal_component_has_recurrences(master))
         {
             /* normal non-recurring object */
-            *object = e_cal_component_get_as_string(master);
+            //*object = e_cal_component_get_as_string(master);
+            *object = g_strdup(icalcomponent_as_ical_string(e_cal_component_get_icalcomponent(master)));
         }
         else
         {
@@ -949,39 +926,26 @@ static void e_cal_backend_3e_add_timezone(ECalBackendSync *backend,
 /** Sets the timezone to be used as the default. It is called before opening
  * connection, before creating cache.
  */
-#if EVOLUTION_VERSION >= 232
 static EDataCalCallStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *backend, EDataCal *cal, const char *tzobj)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *backend, EDataCal *cal, const char *tzobj)
-#endif /* EVOLUTION_VERSION >= 232 */
 {
     icalcomponent *icalcomp;
     icaltimezone *zone;
 
     BACKEND_METHOD_CHECKED("tzobj=%s", tzobj);
-#if EVOLUTION_VERSION >= 232
+
     g_return_val_if_fail(tzobj != NULL, OtherError);
-#else
-    g_return_val_if_fail(tzobj != NULL, GNOME_Evolution_Calendar_OtherError);
-#endif /* EVOLUTION_VERSION >= 232 */
+
     icalcomp = icalparser_parse_string(tzobj);
+
     if (icalcomp == NULL)
     {
-#if EVOLUTION_VERSION >= 232
         return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
     }
 
     if (icalcomponent_isa(icalcomp) != ICAL_VTIMEZONE_COMPONENT)
     {
         icalcomponent_free(icalcomp);
-#if EVOLUTION_VERSION >= 232
         return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
     }
 
     zone = icaltimezone_new();
@@ -993,13 +957,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *
     }
     priv->default_zone = zone;
 
-#if EVOLUTION_VERSION >= 232
     return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
-
-
 }
 
 /** Returns the default timezone.
@@ -1016,14 +974,19 @@ static icaltimezone *e_cal_backend_3e_internal_get_default_timezone(ECalBackend 
 static icaltimezone *e_cal_backend_3e_internal_get_timezone(ECalBackend *backend, const char *tzid)
 {
     icaltimezone *zone;
+    //icaltimezone *def_zone = icaltimezone_new();
 
-  //  BACKEND_METHOD_CHECKED_RETVAL(NULL, "tzid=%s", tzid);
+    BACKEND_METHOD_CHECKED_RETVAL(NULL, "tzid=%s", tzid);
 
     zone = icaltimezone_get_builtin_timezone_from_tzid(tzid);
+    //zone = (icaltimezone *)e_cal_backend_cache_get_timezone(priv->cache, tzid);
+
     if (!zone)
     {
         return icaltimezone_get_utc_timezone();
     }
+    
+    priv->default_zone = zone;
 
     return zone;
 }
@@ -1080,6 +1043,8 @@ static void e_cal_backend_3e_get_free_busy(ECalBackendSync *backend,
 
     zone = icalcomponent_as_ical_string(icaltimezone_get_component(priv->default_zone));
 
+g_print("Timezona = %s\n", zone);
+
     for (iter = users; iter; iter = iter->next)
     {
         char *username = iter->data;
@@ -1103,8 +1068,6 @@ static void e_cal_backend_3e_get_free_busy(ECalBackendSync *backend,
     }
 
     e_cal_backend_3e_close_connection(cb);
-
-    return Success;
 }
 
 // }}}
@@ -1625,6 +1588,11 @@ static void e_cal_backend_3e_class_init(ECalBackend3eClass *class )
 
     sync_class->get_free_busy_sync = e_cal_backend_3e_get_free_busy;
 
+    backend_class->set_online = e_cal_backend_3e_set_online;
+    backend_class->start_view = e_cal_backend_3e_start_view;
+
+    backend_class->internal_get_timezone = e_cal_backend_3e_internal_get_timezone;
+
 // Empty methods
     sync_class->refresh_sync = e_cal_backend_3e_refresh;
 /*    sync_class->get_backend_property_sync = e_cal_backend_3e_get_backend_property;
@@ -1646,13 +1614,10 @@ static void e_cal_backend_3e_class_init(ECalBackend3eClass *class )
 //    sync_class->get_changes_sync = e_cal_backend_3e_get_changes;
 //    sync_class->get_attachment_list_sync = e_cal_backend_3e_get_attachment_list;
 
-    backend_class->set_online = e_cal_backend_3e_set_online;
-    backend_class->start_view = e_cal_backend_3e_start_view;
 //    backend_class->is_loaded = e_cal_backend_3e_is_loaded;
 //    backend_class->get_mode = e_cal_backend_3e_get_mode;
 //    backend_class->set_mode = e_cal_backend_3e_set_mode;
 //    backend_class->internal_get_default_timezone = e_cal_backend_3e_internal_get_default_timezone;
-    backend_class->internal_get_timezone = e_cal_backend_3e_internal_get_timezone;
 }
 
 // }}}

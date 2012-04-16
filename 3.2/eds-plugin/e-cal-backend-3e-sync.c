@@ -825,11 +825,7 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e *cb, const char *object, GE
         if (!e_cal_backend_3e_open_connection(cb, &local_err))
         {
             g_error_free(local_err);
-#if EVOLUTION_VERSION >= 232
             return OtherError;
-#else
-            return GNOME_Evolution_Calendar_OtherError;
-#endif /* EVOLUTION_VERSION >= 232 */
         }
 
         ESClient_sendMessage(cb->priv->conn, recipients, remote_object, &local_err);
@@ -991,8 +987,6 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
         return FALSE;
     }
 
-    g_print("Parsing cache objects\n");
-
     sync_timezones_to_server(cb);
 
     g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
@@ -1045,8 +1039,6 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
             e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), object, new_object);
             g_free(new_object);
 
-            g_print("New cache object\n");
-
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
             e_cal_backend_cache_put_component(cb->priv->cache, comp);
             g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
@@ -1066,8 +1058,6 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
             char *new_object = e_cal_component_get_as_string(comp);
             e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), object, new_object);
             g_free(new_object);
-
-            g_print("Modified cache object\n");
 
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
             e_cal_backend_cache_put_component(cb->priv->cache, comp);
@@ -1095,8 +1085,6 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
                     break;
                 }
             }
-
-            g_print("Remove cache object\n");
 
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
             e_cal_backend_cache_remove_component(cb->priv->cache, id->uid, id->rid);
@@ -1193,8 +1181,6 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
     gmtime_r(&stamp, &tm);
     strftime(filter, sizeof(filter), "date_from('%F %T')", &tm);
 
-    g_print("Parsing server objects to cache.\n");
-
     ical = get_server_objects(cb, filter);
     if (ical == NULL)
     {
@@ -1207,8 +1193,6 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
     {
         icalcomponent_kind kind = icalcomponent_isa(icomp);
         icalcomponent_set_cache_state(icomp, E_CAL_COMPONENT_CACHE_STATE_NONE);
-
-        g_print("Next object\n");
 
         if (kind == ICAL_VEVENT_COMPONENT)
         {
@@ -1227,8 +1211,6 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
 
             if (server_deleted)
             {
-                g_print("Deleted by server\n");
-
                 /* deleted by the server */
                 if (comp && e_cal_component_get_cache_state(comp) != E_CAL_COMPONENT_CACHE_STATE_CREATED &&
                     e_cal_component_get_cache_state(comp) != E_CAL_COMPONENT_CACHE_STATE_MODIFIED)
@@ -1263,8 +1245,6 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
 
                 if (old_object == NULL)
                 {
-                    g_print("Old object not in cache\n");
-
                     if (e_cal_backend_3e_download_attachments(cb, new_comp, &local_err))
                     {
                         /* not in cache yet */
@@ -1283,8 +1263,6 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
                 }
                 else if (strcmp(old_object, object))
                 {
-                    g_print("Old object in cache\n");
-
                     /* what is in cache and what is on server differs */
                     if (comp_state != E_CAL_COMPONENT_CACHE_STATE_NONE)
                     {
@@ -1292,8 +1270,6 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
                     }
                     else
                     {
-                        g_print("In cache with state = %s\n", comp_state);
-
                         if (e_cal_backend_3e_download_attachments(cb, new_comp, &local_err))
                         {
                             /* sync with server */
