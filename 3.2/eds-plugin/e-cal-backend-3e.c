@@ -26,8 +26,8 @@
 #include <libedataserver/e-xml-hash-utils.h>
 #include <gio/gio.h>
 
-//#define T(fmt, args...) g_print("TRACE[%p]: %s(backend=%p " fmt ")\n", g_thread_self(), G_STRFUNC, backend, ## args)
-#define T(fmt, args...)
+#define T(fmt, args...) g_print("TRACE[%p]: %s(backend=%p " fmt ")\n", g_thread_self(), G_STRFUNC, backend, ## args)
+//#define T(fmt, args...)
 
 #define BACKEND_METHOD_CHECKED_RETVAL(val, args...) \
     GError * local_err = NULL; \
@@ -48,6 +48,11 @@
     priv = cb->priv; \
     T(args)
 
+/* error wrapers */
+
+#define EDC_ERROR(_code) e_data_cal_create_error (_code, NULL)
+#define EDC_ERROR_EX(_code, _msg) e_data_cal_create_error (_code, _msg)
+
 /* cache API wrappers */
 
 #define e_cal_backend_cache_get_components(cache) e_cal_backend_3e_cache_get_components(cb, cache)
@@ -65,52 +70,91 @@
 
 // {{{ Calendar manipulation
 
-/** Open the calendar.
+/**
+ * Open the calendar backend.
  */
-static EDataCalCallStatus e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal, gboolean only_if_exists, const char *username, const char *password)
+static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
+                                  GCancellable *cancellable,
+                                  gboolean only_if_exists, GError * *err)
 {
-    BACKEND_METHOD_CHECKED("only_if_exists=%d, username=%s, password=%s", only_if_exists, username, password);
+    BACKEND_METHOD_CHECKED_NORETVAL("only_if_exists=%d", only_if_exists);
 
     if (!priv->is_loaded)
     {
         /* load calendar info */
         if (!e_cal_backend_3e_calendar_info_load(cb))
         {
-            e_cal_backend_notify_error(E_CAL_BACKEND(cb), "Trying to open non-3e source using 3e backend.");
-            return OtherError;
+            g_propagate_error(err, EDC_ERROR_EX(OtherError,
+                "Trying to open non-3e source using 3e backend."));
+            e_cal_backend_notify_error(E_CAL_BACKEND(backend),
+                "Trying to open non-3e source using 3e backend.");
+            return;
         }
 
-        /* setup connection info */
-        e_cal_backend_3e_setup_connection(cb, username, password);
-
         /* open/create cache */
-        priv->cache = e_cal_backend_cache_new(e_cal_backend_get_uri(E_CAL_BACKEND(cb)));
+        priv->cache = e_cal_backend_cache_new(
+                          e_cal_backend_get_uri(E_CAL_BACKEND(cb))
+                                             );
         if (priv->cache == NULL)
         {
-            e_cal_backend_notify_error(E_CAL_BACKEND(cb), "Failed to open local calendar cache.");
-            return OtherError;
+            g_propagate_error(err, EDC_ERROR_EX(OtherError,
+                              "Failed to open local calendar cache."));
+            e_cal_backend_notify_error(E_CAL_BACKEND(cb),
+                                       "Failed to open local calendar cache.");
+            return;
         }
 
         e_cal_backend_3e_messages_queue_load(cb);
         e_cal_backend_3e_attachment_store_load(cb);
 
         priv->is_loaded = TRUE;
+
+        e_cal_backend_notify_auth_required(E_CAL_BACKEND(backend), TRUE, NULL);
     }
 
-    /* enable sync */
-    if (e_cal_backend_3e_calendar_is_online(cb))
+    e_cal_backend_notify_online(E_CAL_BACKEND(backend), TRUE);
+}
+
+/**
+ * Authenticate user.
+ */
+static void e_cal_backend_3e_authenticate_user(ECalBackendSync *backend,
+                                               GCancellable *cancellable,
+                                               ECredentials *credentials,
+                                               GError **err)
+{
+    BACKEND_METHOD_CHECKED_NORETVAL("username=%s, password=%s",
+                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_USERNAME),
+                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_PASSWORD)
+                                   );
+
+    /* setup connection info */
+    if (e_cal_backend_3e_setup_connection(cb,
+                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_USERNAME),
+                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_PASSWORD))
+       )
     {
-        e_cal_backend_3e_periodic_sync_enable(cb);
+        /* enable sync */
+        if (e_cal_backend_3e_calendar_is_online(cb))
+        {
+            e_cal_backend_3e_periodic_sync_enable(cb);
+            e_cal_backend_notify_readonly(E_CAL_BACKEND(backend), FALSE);
+            e_cal_backend_notify_opened(E_CAL_BACKEND(backend), NULL);
+        }
     }
-
-    return Success;
+    else
+    {
+        g_propagate_error (err, EDC_ERROR (AuthenticationFailed));
+        return;
+    }
 }
 
 /** Remove the calendar.
  */
-static EDataCalCallStatus e_cal_backend_3e_remove(ECalBackendSync *backend, EDataCal *cal)
+static void e_cal_backend_3e_remove(ECalBackendSync *backend, EDataCal *cal,
+                                    GCancellable *cancellable, GError **err)
 {
-    BACKEND_METHOD_CHECKED();
+    BACKEND_METHOD_CHECKED_NORETVAL();
 
     if (priv->is_loaded)
     {
@@ -121,7 +165,17 @@ static EDataCalCallStatus e_cal_backend_3e_remove(ECalBackendSync *backend, EDat
         priv->cache = NULL;
     }
 
-    return Success;
+    return;
+}
+
+/** Refresh sync
+ */
+static void e_cal_backend_3e_refresh(ECalBackendSync *backend, EDataCal *cal,
+                                    GCancellable *cancellable, GError **err)
+{
+    BACKEND_METHOD_CHECKED_NORETVAL();
+    
+    return;
 }
 
 // }}}
@@ -200,6 +254,53 @@ static EDataCalCallStatus e_cal_backend_3e_get_ldap_attribute(ECalBackendSync *b
     *attribute = NULL;
     return UnsupportedMethod;
 }
+
+/** Sets the current online/offline mode.
+ * @todo handle sync on transitions between online/offline mode
+ */
+static void e_cal_backend_3e_set_online(ECalBackend *backend, gboolean is_online)
+{
+    BACKEND_METHOD_CHECKED_NORETVAL("online=%d", is_online);
+
+    CalMode mode;
+
+    if (is_online)
+    {
+        mode = CAL_MODE_REMOTE;
+    }
+    else
+    {
+        mode = CAL_MODE_LOCAL;
+    }
+
+    if (priv->mode != mode)
+    {
+        priv->mode = mode;
+
+        if (mode == CAL_MODE_REMOTE)
+        {
+            /* mode changed to remote */
+            if (priv->is_loaded)
+            {
+                e_cal_backend_3e_periodic_sync_enable(cb);
+            }
+        }
+        else if (mode == CAL_MODE_LOCAL)
+        {
+            /* mode changed to local */
+            e_cal_backend_3e_periodic_sync_disable(cb);
+        }
+        else
+        {
+            /* some bug */
+            //e_cal_backend_notify_mode(backend, NotSupported, cal_mode_to_corba(priv->mode));
+            return;
+        }
+    }
+
+    e_cal_backend_notify_online(backend, is_online);
+}
+
 
 /** Returns TRUE if the the passed-in backend is already in a loaded state,
  * otherwise FALSE
@@ -283,34 +384,30 @@ static EDataCalCallStatus e_cal_backend_3e_get_default_object(ECalBackendSync *b
     return Success;
 }
 
-/** Returns a list of events/tasks given a set of conditions.
+/**
+ * Returns a list of events/tasks given a set of conditions.
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_get_object_list(ECalBackendSync *backend, EDataCal *cal, const char *sexp, GList * *objects)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_get_object_list(ECalBackendSync *backend, EDataCal *cal, const char *sexp, GList * *objects)
-#endif /* EVOLUTION_VERSION >= 232 */
+static void e_cal_backend_3e_get_object_list(ECalBackendSync *backend,
+                                             EDataCal *cal,
+                                             GCancellable *cancellable,
+                                             const gchar *sexp,
+                                             GSList **objects,
+                                             GError **err)
 {
     GList *all_objects;
     GList *iter;
     ECalBackendSExp *cbsexp;
 
-    BACKEND_METHOD_CHECKED("sexp=%s", sexp);
-#if EVOLUTION_VERSION >= 232
-    g_return_val_if_fail(objects != NULL, OtherError);
-    g_return_val_if_fail(sexp != NULL, OtherError);
-#else
-    g_return_val_if_fail(objects != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(sexp != NULL, GNOME_Evolution_Calendar_OtherError);
-#endif /* EVOLUTION_VERSION >= 232 */
+    BACKEND_METHOD_CHECKED_NORETVAL("sexp=%s", sexp);
+
+    g_return_if_fail(objects != NULL);
+    g_return_if_fail(sexp != NULL);
+
     cbsexp = e_cal_backend_sexp_new(sexp);
     if (cbsexp == NULL)
     {
-#if EVOLUTION_VERSION >= 232
-        return InvalidQuery;
-#else
-        return GNOME_Evolution_Calendar_InvalidQuery;
-#endif /* EVOLUTION_VERSION >= 232 */
+        g_propagate_error(err, EDC_ERROR(InvalidQuery));
+        return;
     }
 
     all_objects = e_cal_backend_cache_get_components(priv->cache);
@@ -320,7 +417,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object_list(ECalBackendSync *b
 
         if (e_cal_backend_sexp_match_comp(cbsexp, comp, E_CAL_BACKEND(backend)))
         {
-            *objects = g_list_append(*objects, e_cal_component_get_as_string(comp));
+            *objects = g_slist_append(*objects, e_cal_component_get_as_string(comp));
         }
 
         g_object_unref(comp);
@@ -329,78 +426,67 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object_list(ECalBackendSync *b
     g_list_free(all_objects);
     g_object_unref(cbsexp);
 
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
-
+    return;
 }
 
-/** Starts a live query on the backend.
+/**
+ * Starts a live query on the backend.
  */
-static void e_cal_backend_3e_start_query(ECalBackend *backend, EDataCalView *query)
+static void e_cal_backend_3e_start_view(ECalBackend *backend,
+                                        EDataCalView *view)
 {
-#if EVOLUTION_VERSION >= 232
     EDataCalCallStatus status;
-#else
-    ECalBackendSyncStatus status;
-#endif /* EVOLUTION_VERSION >= 232 */
-    GList *objects = NULL;
+    GSList *objects = NULL;
+    GError **err = NULL;
 
-    BACKEND_METHOD_CHECKED_NORETVAL();
+    BACKEND_METHOD_CHECKED_NORETVAL("view=%p", view);
 
-    status = e_cal_backend_3e_get_object_list(E_CAL_BACKEND_SYNC(backend), NULL, e_data_cal_view_get_text(query), &objects);
-#if EVOLUTION_VERSION >= 232
-    if (status == Success)
-#else
-    if (status == GNOME_Evolution_Calendar_Success)
-#endif /* EVOLUTION_VERSION >= 232 */
+    e_cal_backend_3e_get_object_list(E_CAL_BACKEND_SYNC(backend),
+                                              NULL,
+                                              NULL,
+                                              e_data_cal_view_get_text(view),
+                                              &objects,
+                                              &local_err);
+
+    if (!local_err)
     {
-        e_data_cal_view_notify_objects_added(query, objects);
-        g_list_foreach(objects, (GFunc)g_free, NULL);
-        g_list_free(objects);
+        e_data_cal_view_notify_objects_added(view, objects);
+        g_slist_foreach(objects, (GFunc)g_free, NULL);
+        g_slist_free(objects);
     }
 
-#if EVOLUTION_VERSION >= 232
-    e_data_cal_view_notify_done(query, &local_err);
-#else
-    e_data_cal_view_notify_done(query, status);
-#endif /* EVOLUTION_VERSION >= 232 */
+    e_data_cal_view_notify_complete(view, NULL);
 }
 
-/** Returns a list of events/tasks given a set of conditions.
- */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_get_object(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, char * *object)
+/**
+ * Returns a list of events/tasks given a set of conditions.
+*/
+static void e_cal_backend_3e_get_object(ECalBackendSync *backend,
+                                        EDataCal *cal,
+                                        GCancellable *cancellable,
+                                        const gchar *uid,
+                                        const gchar *rid,
+                                        gchar **object,
+                                        GError **err)
 {
-    BACKEND_METHOD_CHECKED("uid=%s  rid=%s", uid, rid);
+    BACKEND_METHOD_CHECKED_NORETVAL("uid=%s  rid=%s", uid, rid);
 
-    g_return_val_if_fail(object != NULL, OtherError);
-    g_return_val_if_fail(uid != NULL, ObjectNotFound);
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_get_object(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, char * *object)
-{
-    BACKEND_METHOD_CHECKED("uid=%s  rid=%s", uid, rid);
-
-    g_return_val_if_fail(object != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(uid != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
-#endif /* EVOLUTION_VERSION >= 232 */
+    //g_return_if_fail(*object != NULL);
+    g_return_if_fail(uid != NULL);
 
     if (rid && *rid)
     {
         /* get single detached instance */
         ECalComponent *dinst = e_cal_backend_cache_get_component(priv->cache, uid, rid);
+
         if (!dinst)
         {
-#if EVOLUTION_VERSION >= 232
-            return ObjectNotFound;
-#else
-            return GNOME_Evolution_Calendar_ObjectNotFound;
-#endif /* EVOLUTION_VERSION >= 232 */
+            g_propagate_error(err, EDC_ERROR(ObjectNotFound));
+            return;
         }
 
-        *object = e_cal_component_get_as_string(dinst);
+        //*object = e_cal_component_get_as_string(dinst);
+        *object = g_strdup(icalcomponent_as_ical_string(e_cal_component_get_icalcomponent(dinst)));
         g_object_unref(dinst);
     }
     else
@@ -409,18 +495,15 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object(ECalBackendSync *backen
         ECalComponent *master = e_cal_backend_cache_get_component(priv->cache, uid, rid);
         if (!master)
         {
-#if EVOLUTION_VERSION >= 232
-            return ObjectNotFound;
-#else
-            return GNOME_Evolution_Calendar_ObjectNotFound;
-#endif /* EVOLUTION_VERSION >= 232 */
-
+            g_propagate_error(err, EDC_ERROR(ObjectNotFound));
+            return;
         }
 
         if (!e_cal_component_has_recurrences(master))
         {
             /* normal non-recurring object */
-            *object = e_cal_component_get_as_string(master);
+            //*object = e_cal_component_get_as_string(master);
+            *object = g_strdup(icalcomponent_as_ical_string(e_cal_component_get_icalcomponent(master)));
         }
         else
         {
@@ -432,8 +515,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object(ECalBackendSync *backen
             dinst_list = e_cal_backend_cache_get_components_by_uid(priv->cache, uid);
             for (iter = dinst_list; iter; iter = iter->next)
             {
-                ECalComponent *dinst = E_CAL_COMPONENT(iter->data);
-                icalcomponent_add_component(icalcomp, icalcomponent_new_clone(e_cal_component_get_icalcomponent(dinst)));
+	        ECalComponent *dinst = E_CAL_COMPONENT(iter->data);
+	        icalcomponent_add_component(icalcomp, icalcomponent_new_clone(e_cal_component_get_icalcomponent(dinst)));
                 g_object_unref(dinst);
             }
             g_slist_free(dinst_list);
@@ -445,72 +528,55 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_object(ECalBackendSync *backen
         g_object_unref(master);
     }
 
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
-
+    return;
 }
 
 /** Creates a new event/task in the calendar.
- */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_create_object(ECalBackendSync *backend, EDataCal *cal, char * *calobj, char * *uid)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_create_object(ECalBackendSync *backend, EDataCal *cal, char * *calobj, char * *uid)
-#endif /* EVOLUTION_VERSION >= 232 */
+*/
+static void e_cal_backend_3e_create_object(ECalBackendSync *backend,
+                                           EDataCal *cal,
+                                           GCancellable *cancellable,
+                                           const gchar *calobj,
+                                           gchar **uid,
+                                           gchar **new_object,
+                                           GError **err)
 {
     ECalComponent *comp;
 
-    BACKEND_METHOD_CHECKED("calobj=%s, uid=%s", *calobj, *uid);
-#if EVOLUTION_VERSION >= 232
-    g_return_val_if_fail(calobj != NULL && *calobj != NULL, OtherError);
-#else
-    g_return_val_if_fail(calobj != NULL && *calobj != NULL, GNOME_Evolution_Calendar_OtherError);
-#endif /* EVOLUTION_VERSION >= 232 */
+    BACKEND_METHOD_CHECKED_NORETVAL("calobj=\n%suid=%s",
+                                    calobj, *uid);
+
+    g_return_if_fail(calobj != NULL);
 
     if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
     {
-#if EVOLUTION_VERSION >= 232
-        return PermissionDenied;
-#else
-        return GNOME_Evolution_Calendar_PermissionDenied;
-#endif /* EVOLUTION_VERSION >= 232 */
+        g_propagate_error(err, EDC_ERROR(PermissionDenied));
+        return;
     }
 
-    comp = e_cal_component_new_from_string(*calobj);
+    comp = e_cal_component_new_from_string(calobj);
+
     if (comp == NULL)
     {
-#if EVOLUTION_VERSION >= 232
-        return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
+        g_propagate_error(err, EDC_ERROR(InvalidObject));
+        return;
     }
 
     e_cal_component_set_x_property(comp, "X-EVOLUTION-STATUS", "outofsync");
-    *calobj = e_cal_component_get_as_string(comp);
+
+    calobj = e_cal_component_get_as_string(comp);
 
     if (!e_cal_backend_cache_put_component(priv->cache, comp))
     {
         g_object_unref(comp);
-#if EVOLUTION_VERSION >= 232
-            return OtherError;
-#else
-            return GNOME_Evolution_Calendar_OtherError;
-#endif /* EVOLUTION_VERSION >= 232 */
+        return; // OtherError;
     }
 
     e_cal_backend_3e_do_immediate_sync(cb);
 
     g_object_unref(comp);
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
-
+    
+    return; // Success;
 }
 
 /** Modifies an existing event/task.
@@ -518,50 +584,36 @@ static ECalBackendSyncStatus e_cal_backend_3e_create_object(ECalBackendSync *bac
  * @todo be smarter about 'modify all instances' sitaution
  * @todo add error checking for cache operations
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_modify_object(ECalBackendSync *backend, EDataCal *cal, const char *calobj, CalObjModType mod, char * *old_object, char * *new_object)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_modify_object(ECalBackendSync *backend, EDataCal *cal, const char *calobj, CalObjModType mod, char * *old_object, char * *new_object)
-#endif /* EVOLUTION_VERSION >= 232 */
+static void e_cal_backend_3e_modify_object(ECalBackendSync *backend,
+                                           EDataCal *cal,
+                                           GCancellable *cancellable,
+                                           const gchar *calobj,
+                                           CalObjModType mod,
+                                           gchar **old_object,
+                                           gchar **new_object,
+                                           GError **err)
 {
     ECalComponent *cache_comp;
     ECalComponent *new_comp;
     ECalComponentId *new_id;
 
-    BACKEND_METHOD_CHECKED("calobj=%s mod=%d", calobj, mod);
-#if EVOLUTION_VERSION >= 232
-    g_return_val_if_fail(calobj != NULL, OtherError);
-    g_return_val_if_fail(old_object != NULL, OtherError);
-    g_return_val_if_fail(new_object != NULL, OtherError);
+    BACKEND_METHOD_CHECKED_NORETVAL("calobj=%s mod=%d", calobj, mod);
+
+    g_return_if_fail(calobj != NULL);
+    g_return_if_fail(old_object != NULL);
+    g_return_if_fail(new_object != NULL);
 
     if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
     {
-        return PermissionDenied;
+        return; // PermissionDenied;
     }
 
     /* parse new object */
     new_comp = e_cal_component_new_from_string(calobj);
     if (new_comp == NULL)
     {
-        return InvalidObject;
+        return; // InvalidObject;
     }
-#else
-    g_return_val_if_fail(calobj != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(old_object != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(new_object != NULL, GNOME_Evolution_Calendar_OtherError);
-
-    if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
-    {
-        return GNOME_Evolution_Calendar_PermissionDenied;
-    }
-
-    /* parse new object */
-    new_comp = e_cal_component_new_from_string(calobj);
-    if (new_comp == NULL)
-    {
-        return GNOME_Evolution_Calendar_InvalidObject;
-    }
-#endif /* EVOLUTION_VERSION >= 232 */
 
     new_id = e_cal_component_get_id(new_comp);
 
@@ -633,39 +685,32 @@ static ECalBackendSyncStatus e_cal_backend_3e_modify_object(ECalBackendSync *bac
 
     g_object_unref(new_comp);
     e_cal_component_free_id(new_id);
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
 
+    return; // Success;
 }
 
 /** Removes an object from the calendar.
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_remove_object(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, CalObjModType mod, char * *old_object, char * *object)
+static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
+                                           EDataCal *cal,
+                                           GCancellable *cancellable,
+                                           const gchar *uid,
+                                           const gchar *rid,
+                                           CalObjModType mod,
+                                           gchar **old_object,
+                                           gchar **object,
+                                           GError *err)
 {
-    BACKEND_METHOD_CHECKED("uid=%s rid=%s mod=%d", uid, rid, mod);
-    g_return_val_if_fail(uid != NULL, OtherError);
-    g_return_val_if_fail(old_object != NULL, OtherError);
-    g_return_val_if_fail(object != NULL, OtherError);
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, CalObjModType mod, char * *old_object, char * *object)
-{
-    BACKEND_METHOD_CHECKED("uid=%s rid=%s mod=%d", uid, rid, mod);
-    g_return_val_if_fail(uid != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(old_object != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(object != NULL, GNOME_Evolution_Calendar_OtherError);
-#endif /* EVOLUTION_VERSION >= 232 */
+    BACKEND_METHOD_CHECKED_NORETVAL("uid=%s rid=%s mod=%d", uid, rid, mod);
+
+    g_return_if_fail(uid != NULL);
+    g_return_if_fail(old_object != NULL);
+    g_return_if_fail(object != NULL);
 
     if (!e_cal_backend_3e_calendar_has_perm(cb, "write"))
     {
-#if EVOLUTION_VERSION >= 232
-        return PermissionDenied;
-#else
-        return GNOME_Evolution_Calendar_PermissionDenied;
-#endif /* EVOLUTION_VERSION >= 232 */
+        g_propagate_error(err, EDC_ERROR(PermissionDenied));
+        return;
     }
 
     if (mod == CALOBJ_MOD_THIS)
@@ -680,11 +725,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync *bac
             master = e_cal_backend_cache_get_component(priv->cache, uid, NULL);
             if (master == NULL)
             {
-#if EVOLUTION_VERSION >= 232
-                return ObjectNotFound;
-#else
-                return GNOME_Evolution_Calendar_ObjectNotFound;
-#endif /* EVOLUTION_VERSION >= 232 */
+                g_propagate_error(err, EDC_ERROR(ObjectNotFound));
+                return;
             }
 
             /* was a detached instance? remove it and set old_object */
@@ -698,10 +740,16 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync *bac
 
             /* add EXDATE to the master and notify clients */
             old_master = e_cal_component_get_as_string(master);
-            e_cal_util_remove_instances(e_cal_component_get_icalcomponent(master), icaltime_from_string(rid), CALOBJ_MOD_THIS);
+            e_cal_util_remove_instances(
+                e_cal_component_get_icalcomponent(master),
+                icaltime_from_string(rid),
+                CALOBJ_MOD_THIS);
+
             new_master = e_cal_component_get_as_string(master);
             e_cal_backend_cache_put_component(priv->cache, master);
-            e_cal_backend_notify_object_modified(E_CAL_BACKEND(backend), old_master, new_master);
+            e_cal_backend_notify_object_modified(E_CAL_BACKEND(backend),
+                                                 old_master,
+                                                 new_master);
             g_object_unref(master);
             g_free(old_master);
             g_free(new_master);
@@ -711,15 +759,12 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync *bac
             /* remove one object (this will be non-recurring) */
             ECalComponent *cache_comp;
 
-            cache_comp = e_cal_backend_cache_get_component(priv->cache, uid, rid);
+            cache_comp = e_cal_backend_cache_get_component(priv->cache,
+                                                           uid, rid);
             if (cache_comp == NULL)
             {
-#if EVOLUTION_VERSION >= 232
-                return ObjectNotFound;
-#else
-                return GNOME_Evolution_Calendar_ObjectNotFound;
-#endif /* EVOLUTION_VERSION >= 232 */
-
+                g_propagate_error(err, EDC_ERROR(ObjectNotFound));
+                return;
             }
 
             *old_object = e_cal_component_get_as_string(cache_comp);
@@ -738,15 +783,12 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync *bac
         cache_comp = e_cal_backend_cache_get_component(priv->cache, uid, rid);
         if (cache_comp == NULL)
         {
-#if EVOLUTION_VERSION >= 232
-            return ObjectNotFound;
-#else
-            return GNOME_Evolution_Calendar_ObjectNotFound;
-#endif /* EVOLUTION_VERSION >= 232 */
-
+            g_propagate_error(err, EDC_ERROR(ObjectNotFound));
+            return;
         }
 
-        comp_list = e_cal_backend_cache_get_components_by_uid(priv->cache, uid);
+        comp_list = e_cal_backend_cache_get_components_by_uid(priv->cache,
+                                                              uid);
         e_cal_backend_cache_remove_component(priv->cache, uid, rid);
 
         for (iter = comp_list; iter; iter = iter->next)
@@ -754,9 +796,11 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync *bac
             ECalComponent *comp = E_CAL_COMPONENT(iter->data);
             ECalComponentId *id = e_cal_component_get_id(comp);
 
-            if (e_cal_backend_cache_remove_component(priv->cache, id->uid, id->rid))
+            if (e_cal_backend_cache_remove_component(priv->cache, id->uid,
+                                                     id->rid))
             {
-                e_cal_backend_notify_object_removed(E_CAL_BACKEND(backend), id, e_cal_component_get_as_string(comp), NULL);
+                e_cal_backend_notify_object_removed(E_CAL_BACKEND(backend),
+                    id, e_cal_component_get_as_string(comp), NULL);
             }
 
             e_cal_component_free_id(id);
@@ -769,20 +813,13 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync *bac
     }
     else
     {
-#if EVOLUTION_VERSION >= 232
-        return UnsupportedMethod;
-#else
-        return GNOME_Evolution_Calendar_UnsupportedMethod;
-#endif /* EVOLUTION_VERSION >= 232 */
+        g_propagate_error(err, EDC_ERROR(UnsupportedMethod));
+        return;
     }
 
     e_cal_backend_3e_do_immediate_sync(cb);
 
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
+    return; // Success;
 
 }
 
@@ -792,39 +829,33 @@ static ECalBackendSyncStatus e_cal_backend_3e_remove_object(ECalBackendSync *bac
 /** Returns timezone objects for a given TZID.
  * @todo free timezone data somehow?
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_get_timezone(ECalBackendSync *backend, EDataCal *cal, const char *tzid, char * *object)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_get_timezone(ECalBackendSync *backend, EDataCal *cal, const char *tzid, char * *object)
-#endif /* EVOLUTION_VERSION >= 232 */
+static void e_cal_backend_3e_get_timezone(ECalBackendSync *backend,
+                                          EDataCal *cal,
+                                          GCancellable * cancellable,
+                                          const gchar *tzid,
+                                          gchar **object,
+                                          GError **err)
 {
     icaltimezone *zone;
     icalcomponent *icalcomp;
 
-    BACKEND_METHOD_CHECKED("tzid=%s", tzid);
-#if EVOLUTION_VERSION >= 232
-    g_return_val_if_fail(tzid != NULL, ObjectNotFound);
-    g_return_val_if_fail(object != NULL, ObjectNotFound);
-#else
-    g_return_val_if_fail(tzid != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
-    g_return_val_if_fail(object != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
-#endif /* EVOLUTION_VERSION >= 232 */
+    BACKEND_METHOD_CHECKED_NORETVAL("tzid=%s", tzid);
+
+    g_return_if_fail(tzid != NULL);
+    g_return_if_fail(object != NULL);
+
     zone = (icaltimezone *)e_cal_backend_cache_get_timezone(priv->cache, tzid);
     if (zone == NULL)
     {
         zone = icaltimezone_get_builtin_timezone_from_tzid(tzid);
         if (zone == NULL)
         {
-#if EVOLUTION_VERSION >= 232
-            return ObjectNotFound;
-#else
-            return GNOME_Evolution_Calendar_ObjectNotFound;
-#endif /* EVOLUTION_VERSION >= 232 */
-
+            g_propagate_error(err, EDC_ERROR(ObjectNotFound));
+            return;
         }
 
         /* if zone was not found in cache but was found in builtin table, add it to
-           cache, and it will be synced to the 3E server */
+           cache, and it will be synced to the 3e server */
         e_cal_backend_cache_put_timezone(priv->cache, zone);
 
         e_cal_backend_3e_do_immediate_sync(cb);
@@ -833,113 +864,88 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_timezone(ECalBackendSync *back
     icalcomp = icaltimezone_get_component(zone);
     if (!icalcomp)
     {
-#if EVOLUTION_VERSION >= 232
-        return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
+        g_propagate_error(err, EDC_ERROR(InvalidObject));
+        return;
     }
 
     *object = g_strdup(icalcomponent_as_ical_string(icalcomp));
 
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
+    return; // Success;
 }
 
-/** Adds a timezone to the backend.
+/**
+ * Adds a timezone to the backend.
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_add_timezone(ECalBackendSync *backend, EDataCal *cal, const char *tzobj)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_add_timezone(ECalBackendSync *backend, EDataCal *cal, const char *tzobj)
-#endif /* EVOLUTION_VERSION >= 232 */
+static void e_cal_backend_3e_add_timezone(ECalBackendSync *backend,
+                                          EDataCal *cal,
+                                          GCancellable *cancellable,
+                                          const gchar *tzobj,
+                                          GError **err)
 {
     icalcomponent *icalcomp;
     icaltimezone *zone;
 
-    BACKEND_METHOD_CHECKED("tzobj=%s", tzobj);
-#if EVOLUTION_VERSION >= 232
-    g_return_val_if_fail(tzobj != NULL, OtherError);
-#else
-    g_return_val_if_fail(tzobj != NULL, GNOME_Evolution_Calendar_OtherError);
-#endif /* EVOLUTION_VERSION >= 232 */
+    BACKEND_METHOD_CHECKED_NORETVAL("tzobj=%s", tzobj);
+
+    g_return_if_fail(tzobj != NULL);
+
     icalcomp = icalparser_parse_string(tzobj);
+
     if (icalcomp == NULL)
     {
-#if EVOLUTION_VERSION >= 232
-        return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
+        g_propagate_error(err, EDC_ERROR(InvalidObject));
+        return;
     }
 
     if (icalcomponent_isa(icalcomp) != ICAL_VTIMEZONE_COMPONENT)
     {
         icalcomponent_free(icalcomp);
-#if EVOLUTION_VERSION >= 232
-        return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
+        g_propagate_error(err, EDC_ERROR(InvalidObject));
+        return;
     }
 
     zone = icaltimezone_new();
     icaltimezone_set_component(zone, icalcomp);
-    const char *tzid = icaltimezone_get_tzid(zone);
+    const gchar *tzid = icaltimezone_get_tzid(zone);
+
+    T("tzid_new = %s", tzid);
+
     if (!e_cal_backend_cache_get_timezone(priv->cache, tzid))
     {
+        T("Pushing timezone");
         e_cal_backend_cache_put_timezone(priv->cache, zone);
     }
+
     icaltimezone_free(zone, TRUE);
 
     e_cal_backend_3e_do_immediate_sync(cb);
 
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
+    return;
 }
 
 /** Sets the timezone to be used as the default. It is called before opening
  * connection, before creating cache.
  */
-#if EVOLUTION_VERSION >= 232
 static EDataCalCallStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *backend, EDataCal *cal, const char *tzobj)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *backend, EDataCal *cal, const char *tzobj)
-#endif /* EVOLUTION_VERSION >= 232 */
 {
     icalcomponent *icalcomp;
     icaltimezone *zone;
 
     BACKEND_METHOD_CHECKED("tzobj=%s", tzobj);
-#if EVOLUTION_VERSION >= 232
+
     g_return_val_if_fail(tzobj != NULL, OtherError);
-#else
-    g_return_val_if_fail(tzobj != NULL, GNOME_Evolution_Calendar_OtherError);
-#endif /* EVOLUTION_VERSION >= 232 */
+
     icalcomp = icalparser_parse_string(tzobj);
+
     if (icalcomp == NULL)
     {
-#if EVOLUTION_VERSION >= 232
         return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
     }
 
     if (icalcomponent_isa(icalcomp) != ICAL_VTIMEZONE_COMPONENT)
     {
         icalcomponent_free(icalcomp);
-#if EVOLUTION_VERSION >= 232
         return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
     }
 
     zone = icaltimezone_new();
@@ -951,13 +957,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *
     }
     priv->default_zone = zone;
 
-#if EVOLUTION_VERSION >= 232
     return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
-
-
 }
 
 /** Returns the default timezone.
@@ -974,14 +974,19 @@ static icaltimezone *e_cal_backend_3e_internal_get_default_timezone(ECalBackend 
 static icaltimezone *e_cal_backend_3e_internal_get_timezone(ECalBackend *backend, const char *tzid)
 {
     icaltimezone *zone;
+    //icaltimezone *def_zone = icaltimezone_new();
 
     BACKEND_METHOD_CHECKED_RETVAL(NULL, "tzid=%s", tzid);
 
     zone = icaltimezone_get_builtin_timezone_from_tzid(tzid);
+    //zone = (icaltimezone *)e_cal_backend_cache_get_timezone(priv->cache, tzid);
+
     if (!zone)
     {
         return icaltimezone_get_utc_timezone();
     }
+    
+    priv->default_zone = zone;
 
     return zone;
 }
@@ -1003,50 +1008,42 @@ static char *gmtime_to_iso(time_t t)
 
 /** Returns F/B information for a list of users.
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_get_free_busy(ECalBackendSync *backend, EDataCal *cal, GList *users, time_t start, time_t end, GList * *freebusy)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy(ECalBackendSync *backend, EDataCal *cal, GList *users, time_t start, time_t end, GList * *freebusy)
-#endif /* EVOLUTION_VERSION >= 232 */
+static void e_cal_backend_3e_get_free_busy(ECalBackendSync *backend,
+                                           EDataCal *cal,
+                                           GCancellable *cancellable,
+                                           GSList *users,
+                                           time_t start, time_t end,
+                                           GSList **freebusy,
+                                           GError **err)
 {
     char *zone;
     GList *iter;
 
-    BACKEND_METHOD_CHECKED("users=%p start=%d end=%d", users, (int)start, (int)end);
-#if EVOLUTION_VERSION >= 232
-    g_return_val_if_fail(users != NULL, OtherError);
-    g_return_val_if_fail(start != -1 && end != -1, InvalidRange);
-    g_return_val_if_fail(start <= end, InvalidRange);
-    g_return_val_if_fail(freebusy != NULL, OtherError);
+    BACKEND_METHOD_CHECKED_NORETVAL("users=%p start=%d end=%d",
+                                    users, (int)start, (int)end);
+
+    g_return_if_fail(users != NULL);
+    g_return_if_fail(start != -1 && end != -1);
+    g_return_if_fail(start <= end);
+    g_return_if_fail(freebusy != NULL);
 
     if (!e_cal_backend_3e_calendar_is_online(cb))
     {
-        return RepositoryOffline;
-#else
-    g_return_val_if_fail(users != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(start != -1 && end != -1, GNOME_Evolution_Calendar_InvalidRange);
-    g_return_val_if_fail(start <= end, GNOME_Evolution_Calendar_InvalidRange);
-    g_return_val_if_fail(freebusy != NULL, GNOME_Evolution_Calendar_OtherError);
-
-    if (!e_cal_backend_3e_calendar_is_online(cb))
-    {
-        return GNOME_Evolution_Calendar_RepositoryOffline;
-#endif /* EVOLUTION_VERSION >= 232 */
+        return; // RepositoryOffline;
     }
 
     if (!e_cal_backend_3e_open_connection(cb, &local_err))
     {
-        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "Can't connect to the server to get freebusy.", local_err);
+        e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb),
+            "Can't connect to the server to get freebusy.", local_err);
         g_error_free(local_err);
 
-#if EVOLUTION_VERSION >= 232
-        return OtherError;
-#else
-        return GNOME_Evolution_Calendar_OtherError;
-#endif /* EVOLUTION_VERSION >= 232 */
+        return; // OtherError;
     }
 
     zone = icalcomponent_as_ical_string(icaltimezone_get_component(priv->default_zone));
+
+g_print("Timezona = %s\n", zone);
 
     for (iter = users; iter; iter = iter->next)
     {
@@ -1063,7 +1060,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy(ECalBackendSync *bac
 
         if (vfb)
         {
-            *freebusy = g_list_append(*freebusy, vfb);
+            *freebusy = g_slist_append(*freebusy, vfb);
         }
 
         g_free(iso_start);
@@ -1071,14 +1068,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_free_busy(ECalBackendSync *bac
     }
 
     e_cal_backend_3e_close_connection(cb);
-
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
-
-
 }
 
 // }}}
@@ -1217,25 +1206,20 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_object(ECalBackendSync *ba
 /** Import a set of events/tasks in one go.
  * @todo needs testing
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_receive_objects(ECalBackendSync *backend, EDataCal *cal, const char *calobj)
+static void e_cal_backend_3e_receive_objects(ECalBackendSync *backend,
+                                             EDataCal *cal,
+                                             GCancellable *cancellable,
+                                             const gchar *calobj,
+                                             GError **err)
 {
     EDataCalCallStatus status = Success;
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_receive_objects(ECalBackendSync *backend, EDataCal *cal, const char *calobj)
-{
-    ECalBackendSyncStatus status = GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
     icalcomponent *vtop = NULL;
 
-    BACKEND_METHOD_CHECKED("calobj=%s", calobj);
-#if EVOLUTION_VERSION >= 232
-    g_return_val_if_fail(cal != NULL, OtherError);
-    g_return_val_if_fail(calobj != NULL, InvalidObject);
-#else
-    g_return_val_if_fail(cal != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(calobj != NULL, GNOME_Evolution_Calendar_InvalidObject);
-#endif /* EVOLUTION_VERSION >= 232 */
+    BACKEND_METHOD_CHECKED_NORETVAL("calobj=%s", calobj);
+
+    g_return_if_fail(cal != NULL);
+    g_return_if_fail(calobj != NULL);
+
     /* parse calobj */
     vtop = icalparser_parse_string(calobj);
     if (icalcomponent_isa(vtop) == ICAL_VCALENDAR_COMPONENT)
@@ -1271,11 +1255,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_objects(ECalBackendSync *b
             }
 
             status = e_cal_backend_3e_receive_object(backend, vevent, method);
-#if EVOLUTION_VERSION >= 232
             if (status != Success)
-#else
-            if (status != GNOME_Evolution_Calendar_Success)
-#endif /* EVOLUTION_VERSION >= 232 */
             {
                 break;
             }
@@ -1287,52 +1267,43 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_objects(ECalBackendSync *b
     }
     else
     {
-#if EVOLUTION_VERSION >= 232
         status = InvalidObject;
-#else
-        status = GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
     }
 
     e_cal_backend_3e_do_immediate_sync(cb);
 
     icalcomponent_free(vtop);
 
-    return status;
+    return; // status;
 }
 
 // }}}
 // {{{ Sending iTIPs
 
-/** Send a set of meetings in one go, which means, for backends that do support
- * it, sending information about the meeting to all attendees.
+/** Send a set of meetings in one go, which means, for backends that
+ * do support it, sending information about the meeting to all attendees.
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_send_objects(ECalBackendSync *backend, EDataCal *cal, const char *calobj, GList * *users, char * *modified_calobj)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_send_objects(ECalBackendSync *backend, EDataCal *cal, const char *calobj, GList * *users, char * *modified_calobj)
-#endif /* EVOLUTION_VERSION >= 232 */
+static void e_cal_backend_3e_send_objects(ECalBackendSync *backend,
+                                          EDataCal *cal,
+                                          GCancellable *cancellable,
+                                          const gchar *calobj,
+                                          GSList **users,
+                                          gchar **modified_calobj,
+                                          GError **err)
 {
     icalcomponent *comp;
     GSList *recipients = NULL, *iter;
 
-    BACKEND_METHOD_CHECKED("calobj=%s", calobj);
-#if EVOLUTION_VERSION >= 232
-    g_return_val_if_fail(cal != NULL, OtherError);
-    g_return_val_if_fail(calobj != NULL, InvalidObject);
-#else
-    g_return_val_if_fail(cal != NULL, GNOME_Evolution_Calendar_OtherError);
-    g_return_val_if_fail(calobj != NULL, GNOME_Evolution_Calendar_InvalidObject);
-#endif /* EVOLUTION_VERSION >= 232 */
+    BACKEND_METHOD_CHECKED_NORETVAL("calobj=%s", calobj);
+
+    g_return_if_fail(cal != NULL);
+    g_return_if_fail(calobj != NULL);
+
     /* parse calobj */
     comp = icalparser_parse_string(calobj);
     if (comp == NULL)
     {
-#if EVOLUTION_VERSION >= 232
-        return InvalidObject;
-#else
-        return GNOME_Evolution_Calendar_InvalidObject;
-#endif /* EVOLUTION_VERSION >= 232 */
+        return; // InvalidObject;
     }
 
     icalcomponent_collect_recipients(comp, priv->username, &recipients);
@@ -1354,12 +1325,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects(ECalBackendSync *back
 
     *modified_calobj = g_strdup(calobj);
 
-#if EVOLUTION_VERSION >= 232
-    return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
-
+    return; // Success;
 }
 
 // }}}
@@ -1427,7 +1393,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_changes(ECalBackendSync *backe
     g_free(filename);
     g_free(path);
 
-    status = e_cal_backend_3e_get_object_list(backend, NULL, "#t", &list);
+//    status = e_cal_backend_3e_get_object_list(backend, NULL, "#t", &list);
 #if EVOLUTION_VERSION >= 232
     if (status != Success)
 #else
@@ -1471,6 +1437,8 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_changes(ECalBackendSync *backe
     r.cb = cb;
     r.deletes = NULL;
     r.ehash = ehash;
+
+    T("check");
     e_xmlhash_foreach_key(ehash, calculate_removals, &r);
 
     *deletes = r.deletes;
@@ -1513,21 +1481,18 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_attachment_list(ECalBackendSyn
  *
  * XXX: This method is probably not necessary.
  */
-#if EVOLUTION_VERSION >= 232
-static EDataCalCallStatus e_cal_backend_3e_discard_alarm(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *auid)
+static void e_cal_backend_3e_discard_alarm(ECalBackendSync *backend,
+                                           EDataCal *cal,
+                                           GCancellable *cancellable,
+                                           const gchar *uid,
+                                           const gchar *rid,
+                                           const char *auid,
+                                           GError **err)
 {
-    BACKEND_METHOD_CHECKED();
+    BACKEND_METHOD_CHECKED_NORETVAL();
 
-    return UnsupportedMethod;
+    return; // UnsupportedMethod;
 }
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_discard_alarm(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *auid)
-{
-    BACKEND_METHOD_CHECKED();
-
-    return GNOME_Evolution_Calendar_UnsupportedMethod;
-}
-#endif /* EVOLUTION_VERSION >= 232 */
 
 // }}}
 // {{{ GObject foo
@@ -1602,35 +1567,57 @@ static void e_cal_backend_3e_class_init(ECalBackend3eClass *class )
 
     object_class->finalize = e_cal_backend_3e_finalize;
 
+// Remade methods
+    sync_class->open_sync = e_cal_backend_3e_open;
+    sync_class->authenticate_user_sync = e_cal_backend_3e_authenticate_user;
+    sync_class->remove_sync = e_cal_backend_3e_remove;
+
+    sync_class->get_object_sync = e_cal_backend_3e_get_object;
+    sync_class->get_object_list_sync = e_cal_backend_3e_get_object_list;
+
+    sync_class->create_object_sync = e_cal_backend_3e_create_object;
+    sync_class->remove_object_sync = e_cal_backend_3e_remove_object;
+    sync_class->modify_object_sync = e_cal_backend_3e_modify_object;
+
+    sync_class->receive_objects_sync = e_cal_backend_3e_receive_objects;
+    sync_class->send_objects_sync = e_cal_backend_3e_send_objects;
+    sync_class->discard_alarm_sync = e_cal_backend_3e_discard_alarm;
+
+    sync_class->add_timezone_sync = e_cal_backend_3e_add_timezone;
+    sync_class->get_timezone_sync = e_cal_backend_3e_get_timezone;
+
+    sync_class->get_free_busy_sync = e_cal_backend_3e_get_free_busy;
+
+    backend_class->set_online = e_cal_backend_3e_set_online;
+    backend_class->start_view = e_cal_backend_3e_start_view;
+
+    backend_class->internal_get_timezone = e_cal_backend_3e_internal_get_timezone;
+
+// Empty methods
+    sync_class->refresh_sync = e_cal_backend_3e_refresh;
+/*    sync_class->get_backend_property_sync = e_cal_backend_3e_get_backend_property;
+    sync_class->set_backend_property_sync = e_cal_backend_3e_set_backend_property;
+    sync_class-> = e_cal_backend_3e_;
+    sync_class-> = e_cal_backend_3e_;
+    sync_class-> = e_cal_backend_3e_;
+    sync_class-> = e_cal_backend_3e_;
+    sync_class-> = e_cal_backend_3e_;
+*/
+
 //    sync_class->is_read_only_sync = e_cal_backend_3e_is_read_only;
 //    sync_class->get_cal_address_sync = e_cal_backend_3e_get_cal_address;
 //    sync_class->get_alarm_email_address_sync = e_cal_backend_3e_get_alarm_email_address;
 //    sync_class->get_ldap_attribute_sync = e_cal_backend_3e_get_ldap_attribute;
 //    sync_class->get_static_capabilities_sync = e_cal_backend_3e_get_static_capabilities;
-    sync_class->open_sync = e_cal_backend_3e_open;
-    sync_class->remove_sync = e_cal_backend_3e_remove;
-    sync_class->create_object_sync = e_cal_backend_3e_create_object;
-    sync_class->modify_object_sync = e_cal_backend_3e_modify_object;
-    sync_class->remove_object_sync = e_cal_backend_3e_remove_object;
-    sync_class->discard_alarm_sync = e_cal_backend_3e_discard_alarm;
-    sync_class->receive_objects_sync = e_cal_backend_3e_receive_objects;
-    sync_class->send_objects_sync = e_cal_backend_3e_send_objects;
 //    sync_class->get_default_object_sync = e_cal_backend_3e_get_default_object;
-    sync_class->get_object_sync = e_cal_backend_3e_get_object;
-    sync_class->get_object_list_sync = e_cal_backend_3e_get_object_list;
-    sync_class->get_timezone_sync = e_cal_backend_3e_get_timezone;
-    sync_class->add_timezone_sync = e_cal_backend_3e_add_timezone;
 //    sync_class->set_default_zone_sync = e_cal_backend_3e_set_default_zone;
-//    sync_class->get_freebusy_sync = e_cal_backend_3e_get_free_busy;
 //    sync_class->get_changes_sync = e_cal_backend_3e_get_changes;
 //    sync_class->get_attachment_list_sync = e_cal_backend_3e_get_attachment_list;
 
 //    backend_class->is_loaded = e_cal_backend_3e_is_loaded;
-//    backend_class->start_query = e_cal_backend_3e_start_query;
 //    backend_class->get_mode = e_cal_backend_3e_get_mode;
 //    backend_class->set_mode = e_cal_backend_3e_set_mode;
 //    backend_class->internal_get_default_timezone = e_cal_backend_3e_internal_get_default_timezone;
-//    backend_class->internal_get_timezone = e_cal_backend_3e_internal_get_timezone;
 }
 
 // }}}

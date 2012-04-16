@@ -24,14 +24,14 @@
 #include "e-cal-backend-3e-priv.h"
 #include "dns-txt-search.h"
 
-// {{{ 3E server connection API
+// {{{ 3e server connection API
 
 /** @addtogroup eds_conn */
 /** @{ */
 
-/** Setup 3E server connection information.
+/** Setup 3e server connection information.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  * @param username Username used for authentication.
  * @param password Password.
  * @param err Error pointer.
@@ -61,7 +61,7 @@ gboolean e_cal_backend_3e_setup_connection(ECalBackend3e *cb, const char *userna
     return TRUE;
 }
 
-/** Open connection to the 3E server and authenticate user.
+/** Open connection to the 3e server and authenticate user.
  *
  * This function will do nothing and return TRUE if connection is already
  * opened.
@@ -154,7 +154,7 @@ err:
 
 /** Close connection to the server.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  */
 void e_cal_backend_3e_close_connection(ECalBackend3e *cb)
 {
@@ -171,7 +171,7 @@ void e_cal_backend_3e_close_connection(ECalBackend3e *cb)
 
 /** Close conenction and free private data.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  */
 void e_cal_backend_3e_free_connection(ECalBackend3e *cb)
 {
@@ -206,7 +206,7 @@ void e_cal_backend_3e_free_connection(ECalBackend3e *cb)
 
 /** Load calendar name, owner and permission from the ESource.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  *
  * @return TRUE on success, FALSE otherwise.
  */
@@ -239,7 +239,7 @@ gboolean e_cal_backend_3e_calendar_info_load(ECalBackend3e *cb)
 
 /** Check if calendar is owned by the user who accesses it.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  *
  * @return TRUE if owned, FALSE if shared.
  */
@@ -254,7 +254,7 @@ gboolean e_cal_backend_3e_calendar_is_owned(ECalBackend3e *cb)
 
 /** Check if calendar has given permission.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  * @param perm Permission string ("read", "write").
  *
  * @return TRUE if @a perm is equal to or subset of calendar's permission.
@@ -278,7 +278,7 @@ gboolean e_cal_backend_3e_calendar_has_perm(ECalBackend3e *cb, const char *perm)
 
 /** Set permission in the priv structure of calendar backend.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  * @param perm Permission string ("read", "write").
  */
 void e_cal_backend_3e_calendar_set_perm(ECalBackend3e *cb, const char *perm)
@@ -289,7 +289,7 @@ void e_cal_backend_3e_calendar_set_perm(ECalBackend3e *cb, const char *perm)
 
 /** Check if calendar is online (i.e. network operations should be enabled).
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  *
  * @return TRUE if it is OK to run network communication.
  */
@@ -301,7 +301,7 @@ gboolean e_cal_backend_3e_calendar_is_online(ECalBackend3e *cb)
 /** Check if backend method should call sync immediately after cache
  * modification.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  *
  * @return TRUE if sync is needed.
  */
@@ -312,7 +312,7 @@ gboolean e_cal_backend_3e_calendar_needs_immediate_sync(ECalBackend3e *cb)
 
 /** Load permission from the calendar list.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  *
  * @return TRUE if user has read or write access, FALSE on error or no
  * permission.
@@ -372,7 +372,7 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb)
 /** @addtogroup eds_sync */
 /** @{ */
 
-// {{{ 3E Cache Wrappers - Used to track state of objects in cache.
+// {{{ 3e Cache Wrappers - Used to track state of objects in cache.
 
 /** Wrapper for e_cal_backend_cache_put_component().
  *
@@ -382,7 +382,7 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb)
  * be set to E_CAL_COMPONENT_CACHE_STATE_MODIFIED, in all other cases it will be
  * set to will be set to E_CAL_COMPONENT_CACHE_STATE_CREATED.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  * @param cache Calendar backend cache object.
  * @param comp ECalComponent object.
  *
@@ -427,7 +427,7 @@ gboolean e_cal_backend_3e_cache_put_component(ECalBackend3e *cb, ECalBackendCach
  * E_CAL_COMPONENT_CACHE_STATE_CREATED, its state will be set to
  * E_CAL_COMPONENT_CACHE_STATE_REMOVED, otherwise it will be removed from cache.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  * @param cache Calendar backend cache object.
  * @param uid UID of the calendar component.
  * @param rid RID of the detached instance of recurring event.
@@ -825,11 +825,7 @@ gboolean e_cal_backend_3e_send_message(ECalBackend3e *cb, const char *object, GE
         if (!e_cal_backend_3e_open_connection(cb, &local_err))
         {
             g_error_free(local_err);
-#if EVOLUTION_VERSION >= 232
             return OtherError;
-#else
-            return GNOME_Evolution_Calendar_OtherError;
-#endif /* EVOLUTION_VERSION >= 232 */
         }
 
         ESClient_sendMessage(cb->priv->conn, recipients, remote_object, &local_err);
@@ -927,7 +923,7 @@ static GSList *e_cal_backend_cache_get_timezones(ECalBackend3e *cb, ECalBackendC
  *
  * Assumes caller opened connection using e_cal_backend_3e_open_connection().
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  *
  * @return TRUE on success.
  */
@@ -1163,7 +1159,7 @@ static icalcomponent *get_server_objects(ECalBackend3e *cb, const char *query)
 
 /** Sync changes from the server to the cache.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  *
  * @return TRUE on success.
  *
@@ -1346,7 +1342,7 @@ enum { SYNC_NORMAL, SYNC_NOW, SYNC_PAUSE, SYNC_STOP };
 
 /** Periodic sync callback.
  *
- * @param cb 3E calendar backend.
+ * @param cb 3e calendar backend.
  *
  * @return Always TRUE (continue sync).
  */

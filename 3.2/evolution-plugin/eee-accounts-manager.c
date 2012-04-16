@@ -43,7 +43,7 @@
  * Situations:
  *
  * 1) User opens evolution:
- *  - there may be preexisting ESources and ESourceGroups for 3E accounts
+ *  - there may be preexisting ESources and ESourceGroups for 3e accounts
  *  - some accounts may be disabled and should be hidden from the list
  *  - there may be extra accounts in the list
  *  - evolution may be started in online or offline mode
@@ -325,6 +325,25 @@ static void eee_accounts_manager_sync_phase1(EeeAccountsManager *self)
     }
 }
 
+/* Find ESourceGroup in ESourceList
+   e_source_list_peek_group_by_name is deprecated, so this function if for that */
+static ESourceGroup *find_group_in_list(ESourceList *eslist, const gchar* group_name)
+{
+    GSList *iter;
+
+    for (iter = e_source_list_peek_groups(eslist); iter; iter = iter->next)
+    {
+        ESourceGroup *group = E_SOURCE_GROUP(iter->data);
+
+        if (!(g_strcmp0(e_source_group_peek_name(group), group_name)))
+        {
+            return group;
+        }
+    }
+
+    return NULL;
+}
+
 /* sync finish phase */
 static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
 {
@@ -360,7 +379,8 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
         char *group_name = g_strdup_printf("3e: %s", account->name);
 
         // find ESourceGroup and EeeAccount
-        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
+        group = find_group_in_list(self->priv->eslist, group_name);
+//        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
         current_account = eee_accounts_manager_find_account_by_name(self, account->name);
 
         if (account->state == EEE_ACCOUNT_STATE_DISABLED)
@@ -442,11 +462,8 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
                 {
                     char *owner_group_name = g_strdup_printf("3e: %s", cal->owner);
                     // shared calendar, it should be put into another group
-#if EVOLUTION_VERSION >= 232
-                    ESourceGroup *owner_group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", owner_group_name);
-#else
-                    ESourceGroup *owner_group = e_source_list_peek_group_by_name(self->priv->eslist, owner_group_name);
-#endif /* EVOLUTION_VERSION >= 232 */
+                    ESourceGroup *owner_group = find_group_in_list(self->priv->eslist, owner_group_name);
+
                     if (owner_group == NULL)
                     {
                         owner_group = e_source_group_new(owner_group_name, EEE_URI_PREFIX);
@@ -525,11 +542,8 @@ void eee_accounts_manager_add_source(EeeAccountsManager *self, const char *group
     g_return_if_fail(e_source_is_3e(source));
 
     real_group_name = g_strdup_printf("3e: %s", group_name);
-#if EVOLUTION_VERSION >= 232
-    group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", real_group_name);
-#else
-    group = e_source_list_peek_group_by_name(self->priv->eslist, real_group_name);
-#endif /* EVOLUTION_VERSION >= 232 */
+    group = find_group_in_list(self->priv->eslist, real_group_name);
+
     if (group == NULL)
     {
         group = e_source_group_new(real_group_name, EEE_URI_PREFIX);
@@ -746,7 +760,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager *self)
         char *group_name = g_strdup_printf("3e: %s", name);
 
         // find ESourceGroup and EeeAccount
-        group = e_source_list_peek_group_by_properties(self->priv->eslist, "name", group_name, NULL);
+        group = find_group_in_list(self->priv->eslist, group_name);
         account = eee_accounts_manager_find_account_by_name(self, name);
 
         // create account if it does not exist
