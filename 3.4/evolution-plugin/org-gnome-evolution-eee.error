@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<error-list domain="eee">
+
+ <error id="generic-error" type="error">
+   <primary>3e Error {0}.</primary>
+ </error>
+
+ <error id="multiple-auth-failures" type="error">
+   <primary>Can't authenticate to 3e account {0}.</primary>
+   <secondary>Account was disabled. To re-enable it, go to account preferences and click on enable account.</secondary>
+ </error>
+
+ <error id="subscribe-offline" type="error">
+   <primary>Can't subscribe to other calendars in offline mode.</primary>
+   <secondary>Switch to on-line mode first.</secondary>
+ </error>
+
+ <!--
+ <error type="question" id="question1" default="GTK_RESPONSE_CANCEL">
+  <title>{0}?</title>
+  <primary>{0}?</primary>
+  <secondary xml:space="preserve">Bla bla.
+
+Bla bla?
+</secondary>
+  <button response="GTK_RESPONSE_CANCEL" label="_Remind Me Later"></button>
+  <button response="GTK_RESPONSE_ACCEPT" label="_Keep Data"></button>
+  <button stock="gtk-delete" response="GTK_RESPONSE_OK"/>
+ </error>
+ -->
+
+</error-list>
