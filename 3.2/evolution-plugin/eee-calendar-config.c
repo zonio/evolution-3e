@@ -621,13 +621,13 @@ GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
     // Status group
     section = add_section(panel, _("3e Account Status"));
     char *note = g_strdup_printf(_("If you have 3e account <i>%s</i>, you can turn it on/off here."), name);
-    label = (GtkWidget *)gtk_object_new(GTK_TYPE_LABEL,
+    label = GTK_WIDGET(g_object_new(GTK_TYPE_LABEL,
                                         "label", note,
                                         "use-markup", TRUE,
                                         "justify", GTK_JUSTIFY_LEFT,
                                         "xalign", 0,
                                         "yalign", 0.5,
-                                        NULL);
+                                        NULL));
     g_free(note);
     gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
     checkbutton_status = gtk_check_button_new_with_label(_("Enable 3e Account"));
@@ -711,13 +711,13 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
 //                            "calendar account if you have it. If you don't know ask your system\n"
 //                            "administrator or provider of your email service. Go to email account\n"
 //                            "preferences to change this setting later."));
-    label = (GtkWidget*)gtk_object_new(GTK_TYPE_LABEL, 
+    label = GTK_WIDGET(g_object_new(GTK_TYPE_LABEL, 
              "label", "", 
              "use-markup", TRUE,
              "justify", GTK_JUSTIFY_LEFT, 
              "xalign", 0, 
              "yalign", 0.5, 
-             NULL); 
+             NULL));
 //    g_free(note);
     lbl = (GtkLabel*)label;
 

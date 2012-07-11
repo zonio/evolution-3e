@@ -104,12 +104,12 @@ static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
             return;
         }
 
-        e_cal_backend_3e_messages_queue_load(cb);
         e_cal_backend_3e_attachment_store_load(cb);
 
         priv->is_loaded = TRUE;
 
         e_cal_backend_notify_auth_required(E_CAL_BACKEND(backend), TRUE, NULL);
+        return;
     }
 
     e_cal_backend_notify_online(E_CAL_BACKEND(backend), TRUE);
@@ -140,6 +140,7 @@ static void e_cal_backend_3e_authenticate_user(ECalBackendSync *backend,
             e_cal_backend_3e_periodic_sync_enable(cb);
             e_cal_backend_notify_readonly(E_CAL_BACKEND(backend), FALSE);
             e_cal_backend_notify_opened(E_CAL_BACKEND(backend), NULL);
+            e_cal_backend_notify_online(E_CAL_BACKEND(backend), TRUE);
         }
     }
     else
@@ -1114,15 +1115,9 @@ static void fetch_attachments(ECalBackend3e *cb, ECalComponent *comp)
     g_object_unref(target_store);
 }
 
-#if EVOLUTION_VERSION >= 232
 static EDataCalCallStatus e_cal_backend_3e_receive_object(ECalBackendSync *backend, icalcomponent *icalcomp, icalproperty_method method)
 {
     EDataCalCallStatus status = Success;
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_receive_object(ECalBackendSync *backend, icalcomponent *icalcomp, icalproperty_method method)
-{
-    ECalBackendSyncStatus status = GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
     ECalComponent *new_comp;
     ECalComponentId *new_id;
     ECalComponent *cache_comp;
@@ -1178,21 +1173,13 @@ static ECalBackendSyncStatus e_cal_backend_3e_receive_object(ECalBackendSync *ba
         }
         else
         {
-#if EVOLUTION_VERSION >= 232
             status = ObjectNotFound;
-#else
-            status = GNOME_Evolution_Calendar_ObjectNotFound;
-#endif /* EVOLUTION_VERSION >= 232 */
 
         }
         break;
 
     default:
-#if EVOLUTION_VERSION >= 232
         status = UnsupportedMethod;
-#else
-        status = GNOME_Evolution_Calendar_UnsupportedMethod;
-#endif /* EVOLUTION_VERSION >= 232 */
         break;
     }
 
@@ -1309,8 +1296,6 @@ static void e_cal_backend_3e_send_objects(ECalBackendSync *backend,
     icalcomponent_collect_recipients(comp, priv->username, &recipients);
     icalcomponent_free(comp);
 
-    e_cal_backend_3e_push_message(E_CAL_BACKEND_3E(backend), calobj);
-
     e_cal_backend_3e_do_immediate_sync(cb);
 
     /* this tells evolution that it should not send emails (iMIPs) by itself */
@@ -1363,11 +1348,7 @@ static void calculate_removals(const char *key, const char *value, gpointer data
 /** Returns a list of changes made since last check.
  * @todo fix recurring detached instances
  */
-#if EVOLUTION_VERSION >= 232
 static EDataCalCallStatus e_cal_backend_3e_get_changes(ECalBackendSync *backend, EDataCal *cal, const char *change_id, GList * *adds, GList * *modifies, GList * *deletes)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_get_changes(ECalBackendSync *backend, EDataCal *cal, const char *change_id, GList * *adds, GList * *modifies, GList * *deletes)
-#endif /* EVOLUTION_VERSION >= 232 */
 {
     char *filename;
     char *path;
@@ -1375,17 +1356,10 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_changes(ECalBackendSync *backe
     GList *iter;
     GList *list = NULL;
     struct _removals_data r;
-#if EVOLUTION_VERSION >= 232
     EDataCalCallStatus status;
 
     BACKEND_METHOD_CHECKED();
     g_return_val_if_fail(change_id != NULL, ObjectNotFound);
-#else
-    ECalBackendSyncStatus status;
-
-    BACKEND_METHOD_CHECKED();
-    g_return_val_if_fail(change_id != NULL, GNOME_Evolution_Calendar_ObjectNotFound);
-#endif /* EVOLUTION_VERSION >= 232 */
 
     filename = g_strdup_printf("snapshot-%s.db", change_id);
     path = g_build_filename(g_get_home_dir(), ".evolution/cache/calendar", priv->calname, filename, NULL);
@@ -1394,11 +1368,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_changes(ECalBackendSync *backe
     g_free(path);
 
 //    status = e_cal_backend_3e_get_object_list(backend, NULL, "#t", &list);
-#if EVOLUTION_VERSION >= 232
     if (status != Success)
-#else
-    if (status != GNOME_Evolution_Calendar_Success)
-#endif /* EVOLUTION_VERSION >= 232 */
     {
         e_xmlhash_destroy(ehash);
         return status;
@@ -1446,11 +1416,7 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_changes(ECalBackendSync *backe
     e_xmlhash_write(ehash);
     e_xmlhash_destroy(ehash);
 
-#if EVOLUTION_VERSION >= 232
     return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
 
 }
 
@@ -1461,20 +1427,11 @@ static ECalBackendSyncStatus e_cal_backend_3e_get_changes(ECalBackendSync *backe
  *
  * XXX: This backend method is not used at all by evolution.
  */
-#if EVOLUTION_VERSION >= 232
 static EDataCalCallStatus e_cal_backend_3e_get_attachment_list(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, GSList * *list)
-#else
-static ECalBackendSyncStatus e_cal_backend_3e_get_attachment_list(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, GSList * *list)
-#endif /* EVOLUTION_VERSION >= 232 */
 {
     BACKEND_METHOD_CHECKED();
 
-#if EVOLUTION_VERSION >= 232
     return Success;
-#else
-    return GNOME_Evolution_Calendar_Success;
-#endif /* EVOLUTION_VERSION >= 232 */
-
 }
 
 /** Discards an alarm (removes it or marks it as already displayed to the user).
@@ -1507,8 +1464,6 @@ static void e_cal_backend_3e_init(ECalBackend3e *cb)
     g_static_rec_mutex_init(&cb->priv->conn_mutex);
     cb->priv->sync_mutex = g_mutex_new();
 
-    e_cal_backend_3e_messages_queue_init(cb);
-
     e_cal_backend_sync_set_lock(E_CAL_BACKEND_SYNC(cb), TRUE);
 }
 
@@ -1518,7 +1473,6 @@ static void e_cal_backend_3e_finalize(GObject *backend)
 
     e_cal_backend_3e_periodic_sync_stop(cb);
     e_cal_backend_3e_free_connection(cb);
-    e_cal_backend_3e_messages_queue_free(cb);
     e_cal_backend_3e_attachment_store_free(cb);
 
     g_static_rw_lock_free(&priv->cache_lock);
@@ -1570,54 +1524,25 @@ static void e_cal_backend_3e_class_init(ECalBackend3eClass *class )
 // Remade methods
     sync_class->open_sync = e_cal_backend_3e_open;
     sync_class->authenticate_user_sync = e_cal_backend_3e_authenticate_user;
+    sync_class->refresh_sync = e_cal_backend_3e_refresh;
     sync_class->remove_sync = e_cal_backend_3e_remove;
-
-    sync_class->get_object_sync = e_cal_backend_3e_get_object;
-    sync_class->get_object_list_sync = e_cal_backend_3e_get_object_list;
 
     sync_class->create_object_sync = e_cal_backend_3e_create_object;
     sync_class->remove_object_sync = e_cal_backend_3e_remove_object;
     sync_class->modify_object_sync = e_cal_backend_3e_modify_object;
 
+
     sync_class->receive_objects_sync = e_cal_backend_3e_receive_objects;
     sync_class->send_objects_sync = e_cal_backend_3e_send_objects;
-    sync_class->discard_alarm_sync = e_cal_backend_3e_discard_alarm;
-
+    sync_class->get_object_sync = e_cal_backend_3e_get_object;
+    sync_class->get_object_list_sync = e_cal_backend_3e_get_object_list;
     sync_class->add_timezone_sync = e_cal_backend_3e_add_timezone;
-    sync_class->get_timezone_sync = e_cal_backend_3e_get_timezone;
-
     sync_class->get_free_busy_sync = e_cal_backend_3e_get_free_busy;
 
-    backend_class->set_online = e_cal_backend_3e_set_online;
     backend_class->start_view = e_cal_backend_3e_start_view;
+    backend_class->set_online = e_cal_backend_3e_set_online;
 
     backend_class->internal_get_timezone = e_cal_backend_3e_internal_get_timezone;
-
-// Empty methods
-    sync_class->refresh_sync = e_cal_backend_3e_refresh;
-/*    sync_class->get_backend_property_sync = e_cal_backend_3e_get_backend_property;
-    sync_class->set_backend_property_sync = e_cal_backend_3e_set_backend_property;
-    sync_class-> = e_cal_backend_3e_;
-    sync_class-> = e_cal_backend_3e_;
-    sync_class-> = e_cal_backend_3e_;
-    sync_class-> = e_cal_backend_3e_;
-    sync_class-> = e_cal_backend_3e_;
-*/
-
-//    sync_class->is_read_only_sync = e_cal_backend_3e_is_read_only;
-//    sync_class->get_cal_address_sync = e_cal_backend_3e_get_cal_address;
-//    sync_class->get_alarm_email_address_sync = e_cal_backend_3e_get_alarm_email_address;
-//    sync_class->get_ldap_attribute_sync = e_cal_backend_3e_get_ldap_attribute;
-//    sync_class->get_static_capabilities_sync = e_cal_backend_3e_get_static_capabilities;
-//    sync_class->get_default_object_sync = e_cal_backend_3e_get_default_object;
-//    sync_class->set_default_zone_sync = e_cal_backend_3e_set_default_zone;
-//    sync_class->get_changes_sync = e_cal_backend_3e_get_changes;
-//    sync_class->get_attachment_list_sync = e_cal_backend_3e_get_attachment_list;
-
-//    backend_class->is_loaded = e_cal_backend_3e_is_loaded;
-//    backend_class->get_mode = e_cal_backend_3e_get_mode;
-//    backend_class->set_mode = e_cal_backend_3e_set_mode;
-//    backend_class->internal_get_default_timezone = e_cal_backend_3e_internal_get_default_timezone;
 }
 
 // }}}

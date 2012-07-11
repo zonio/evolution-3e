@@ -23,10 +23,10 @@
 # include "config.h"
 #endif
 
+#include <libedataserver/eds-version.h>
 #include <string.h>
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-#include <glade/glade.h>
 #include <libintl.h>
 
 #define _(String) gettext(String)
@@ -64,7 +64,7 @@ struct acl_context
     ESource *source;
     EeeAccount *account;
 
-    GladeXML *xml;
+    GtkBuilder *builder;
     GtkWindow *win;
     GtkWidget *rb_private;
     GtkWidget *rb_public;
@@ -231,16 +231,16 @@ void acl_perm_free(struct acl_perm *p)
     ESUserPermission_free((ESUserPermission *)p);
 }
 
-#if EVOLUTION_VERSION >= 300
+#if EDS_CHECK_VERSION(3,0,0)
 static void on_acl_window_destroy(GtkWidget *object, struct acl_context *ctx)
-#else
+#else /* !EDS_CHECK_VERSION(3,0,0) */
 static void on_acl_window_destroy(GtkObject *object, struct acl_context *ctx)
-#endif /* EVOLUTION_VERSION >= 300 */
+#endif /* !EDS_CHECK_VERSION(3,0,0) */
 {
     g_object_unref(ctx->win);
     g_object_unref(ctx->source);
     g_object_unref(ctx->account);
-    g_object_unref(ctx->xml);
+    g_object_unref(ctx->builder);
     g_slist_foreach(ctx->initial_perms, (GFunc)acl_perm_free, NULL);
     g_slist_free(ctx->initial_perms);
     acl_contexts = g_slist_remove(acl_contexts, ctx);
@@ -485,11 +485,11 @@ static gboolean on_tview_clicked(GtkTreeView *tv, GdkEventButton *event, struct 
 // user pressed enter on the entry
 static gboolean combo_entry_keypress(GtkEntry *entry, GdkEventKey *event, struct acl_context *ctx)
 {
-#if EVOLUTION_VERSION >= 300
+#if EDS_CHECK_VERSION(3,0,0)
     if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter)
-#else
+#else /* !EDS_CHECK_VERSION(3,0,0) */
     if (event->keyval == GDK_Return || event->keyval == GDK_KP_Enter)
-#endif /* EVOLUTION_VERSION >= 300 */
+#endif /* !EDS_CHECK_VERSION(3,0,0) */
     {
         add_user(gtk_entry_get_text(entry), ctx);
     }
@@ -508,11 +508,11 @@ static gboolean user_selected(GtkEntryCompletion *widget, GtkTreeModel *model, G
 }
 
 // combo box item selected
-#if EVOLUTION_VERSION >= 300
+#if EDS_CHECK_VERSION(3,0,0)
 static void cbe_changed(GtkComboBox *cbe, struct acl_context *ctx)
-#else
+#else /* !EDS_CHECK_VERSION(3,0,0) */
 static void cbe_changed(GtkComboBoxEntry *cbe, struct acl_context *ctx)
-#endif /* EVOLUTION_VERSION >= 300 */
+#endif /* !EDS_CHECK_VERSION(3,0,0) */
 {
     GtkTreeIter iter;
 
@@ -527,11 +527,11 @@ static void cbe_changed(GtkComboBoxEntry *cbe, struct acl_context *ctx)
 }
 
 // add compeltion to the combobox entry
-#if EVOLUTION_VERSION >= 300
+#if EDS_CHECK_VERSION(3,0,0)
 static void combo_add_completion(GtkComboBox *cbe, struct acl_context *ctx)
-#else
+#else /* !EDS_CHECK_VERSION(3,0,0) */
 static void combo_add_completion(GtkComboBoxEntry *cbe, struct acl_context *ctx)
-#endif /* EVOLUTION_VERSION >= 300 */
+#endif /* !EDS_CHECK_VERSION(3,0,0) */
 {
     GtkEntry *entry;
     GtkEntryCompletion *completion;
@@ -558,13 +558,34 @@ static void combo_add_completion(GtkComboBoxEntry *cbe, struct acl_context *ctx)
     g_object_unref(completion);
 }
 
+static void connect_signals (GtkBuilder *b, GObject *obj, const gchar *name, const gchar *handler,
+                             GObject *cnct_obj, GConnectFlags flags, gpointer c)
+{
+    GCallback cb = NULL;
+
+    if (!g_strcmp0 (handler, "on_rb_perm_private_toggled"))
+        cb = G_CALLBACK(on_rb_perm_toggled);
+    else if (!g_strcmp0 (handler, "on_rb_perm_shared_toggled"))
+        cb = G_CALLBACK(on_rb_perm_toggled);
+    else if (!g_strcmp0 (handler, "on_rb_perm_public_toggled"))
+        cb = G_CALLBACK(on_rb_perm_toggled);
+    else if (!g_strcmp0 (handler, "on_acl_button_cancel_clicked"))
+        cb = G_CALLBACK(on_acl_button_cancel_clicked);
+    else if (!g_strcmp0 (handler, "on_acl_button_ok_clicked"))
+        cb = G_CALLBACK(on_acl_button_ok_clicked);
+    else if (!g_strcmp0 (handler, "on_acl_window_destroy"))
+        cb = G_CALLBACK(on_acl_window_destroy);
+
+    if (cb)
+        g_signal_connect (obj, name, cb, c);
+}
+
 // buid acl dialog
 void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *source)
 {
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
     GtkWidget *menu_item;
-    int col_id;
     struct acl_context *c;
 
     if (!eee_plugin_online || account == NULL || !e_source_is_3e_owned_calendar(source))
@@ -576,23 +597,24 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
     c = g_new0(struct acl_context, 1);
     c->source = g_object_ref(source);
     c->account = g_object_ref(account);
-    c->xml = glade_xml_new(PLUGINDIR "/org-gnome-evolution-eee.glade", "acl_window", NULL);
-    c->win = GTK_WINDOW(g_object_ref(glade_xml_get_widget(c->xml, "acl_window")));
-    c->rb_private = glade_xml_get_widget(c->xml, "rb_perm_private");
-    c->rb_public = glade_xml_get_widget(c->xml, "rb_perm_public");
-    c->rb_shared = glade_xml_get_widget(c->xml, "rb_perm_shared");
-    c->users_frame = glade_xml_get_widget(c->xml, "frame2");
-    c->tview = GTK_TREE_VIEW(glade_xml_get_widget(c->xml, "treeview_acl_users"));
-    c->user_entry = glade_xml_get_widget(c->xml, "comboboxentry1");
+    c->builder = gtk_builder_new ();
+    gtk_builder_add_from_file (c->builder, PLUGINDIR "/org-gnome-evolution-eee.glade", NULL);
+    c->win = GTK_WINDOW(g_object_ref(gtk_builder_get_object(c->builder, "acl_window")));
+    c->rb_private = GTK_WIDGET(gtk_builder_get_object(c->builder, "rb_perm_private"));
+    c->rb_public = GTK_WIDGET(gtk_builder_get_object(c->builder, "rb_perm_public"));
+    c->rb_shared = GTK_WIDGET(gtk_builder_get_object(c->builder, "rb_perm_shared"));
+    c->users_frame = GTK_WIDGET(gtk_builder_get_object(c->builder, "frame2"));
+    c->tview = GTK_TREE_VIEW(gtk_builder_get_object(c->builder, "treeview_acl_users"));
+    c->user_entry = GTK_WIDGET(gtk_builder_get_object(c->builder, "comboboxentry1"));
 
     // users list for autocompletion inside acl table combo cells
     c->users_model = gtk_list_store_new(USERS_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
     gtk_combo_box_set_model(GTK_COMBO_BOX(c->user_entry), GTK_TREE_MODEL(c->users_model));
-#if EVOLUTION_VERSION >= 300
+#if EDS_CHECK_VERSION(3,0,0)
     combo_add_completion(GTK_COMBO_BOX(c->user_entry), c);
-#else
+#else /* !EDS_CHECK_VERSION(3,0,0) */
     combo_add_completion(GTK_COMBO_BOX_ENTRY(c->user_entry), c);
-#endif /* EVOLUTION_VERSION >= 300 */
+#endif /* !EDS_CHECK_VERSION(3,0,0) */
     g_object_set(c->user_entry, "text-column", USERS_USERNAME_COLUMN, NULL);
 
     // acl list
@@ -601,8 +623,8 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
     // add columns to the tree view
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer, "xalign", 0.0, NULL);
-    col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Username"), renderer, "text", ACL_USERNAME_COLUMN, NULL);
-    col_id = gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Real Name"), renderer, "text", ACL_REALNAME_COLUMN, NULL);
+    (void) gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Username"), renderer, "text", ACL_USERNAME_COLUMN, NULL);
+    (void) gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Real Name"), renderer, "text", ACL_REALNAME_COLUMN, NULL);
     //column = gtk_tree_view_get_column(c->tview, col_id);
     renderer = gtk_cell_renderer_combo_new();
     g_signal_connect(renderer, "editing-started", G_CALLBACK(editing_started), c);
@@ -622,12 +644,7 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
     gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Permission"), renderer, "text", ACL_PERM_COLUMN, NULL);
     g_signal_connect(c->tview, "button-press-event", G_CALLBACK(on_tview_clicked), c);
 
-    glade_xml_signal_connect_data(c->xml, "on_rb_perm_private_toggled", G_CALLBACK(on_rb_perm_toggled), c);
-    glade_xml_signal_connect_data(c->xml, "on_rb_perm_shared_toggled", G_CALLBACK(on_rb_perm_toggled), c);
-    glade_xml_signal_connect_data(c->xml, "on_rb_perm_public_toggled", G_CALLBACK(on_rb_perm_toggled), c);
-    glade_xml_signal_connect_data(c->xml, "on_acl_button_cancel_clicked", G_CALLBACK(on_acl_button_cancel_clicked), c);
-    glade_xml_signal_connect_data(c->xml, "on_acl_button_ok_clicked", G_CALLBACK(on_acl_button_ok_clicked), c);
-    glade_xml_signal_connect_data(c->xml, "on_acl_window_destroy", G_CALLBACK(on_acl_window_destroy), c);
+    gtk_builder_connect_signals_full (c->builder, connect_signals, c);
 
     if (!load_state(c))
     {

@@ -72,7 +72,6 @@ else
 fi
 
 PKG_CHECK_MODULES(EVO3E, [
-  libglade-2.0
   evolution-plugin-3.0 >= 2.12.0
 ])
 

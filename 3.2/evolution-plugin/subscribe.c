@@ -23,9 +23,9 @@
 # include "config.h"
 #endif
 
+#include <libedataserver/eds-version.h>
 #include <string.h>
 #include <gtk/gtk.h>
-#include <glade/glade.h>
 #include <libintl.h>
 
 #define _(String) gettext(String)
@@ -46,7 +46,7 @@ enum
 
 struct subscribe_context
 {
-    GladeXML *xml;
+    GtkBuilder *builder;
     GtkWindow *win;
     GtkTreeStore *model;
     GtkTreeView *tview;
@@ -284,21 +284,36 @@ static void on_subs_button_cancel_clicked(GtkButton *button, struct subscribe_co
     gtk_widget_destroy(GTK_WIDGET(ctx->win));
 }
 
-#if EVOLUTION_VERSION >= 300
+#if EDS_CHECK_VERSION(3,0,0)
 static void on_subs_window_destroy(GtkWidget *object, struct subscribe_context *ctx)
-#else
+#else /* !EDS_CHECK_VERSION(3,0,0) */
 static void on_subs_window_destroy(GtkObject *object, struct subscribe_context *ctx)
-#endif /* EVOLUTION_VERSION >= 300 */
+#endif /* !EDS_CHECK_VERSION(3,0,0) */
 {
     g_object_unref(ctx->win);
-    g_object_unref(ctx->xml);
+    g_object_unref(ctx->builder);
     g_free(ctx);
     active_ctx = NULL;
 }
 
+static void connect_signals (GtkBuilder *b, GObject *obj, const gchar *name, const gchar *handler,
+                             GObject *cnct_obj, GConnectFlags flags, gpointer c)
+{
+    GCallback cb = NULL;
+
+    if (!g_strcmp0 (handler, "on_subs_button_subscribe_clicked"))
+        cb = G_CALLBACK(on_subs_button_subscribe_clicked);
+    else if (!g_strcmp0 (handler, "on_subs_button_cancel_clicked"))
+        cb = G_CALLBACK(on_subs_button_cancel_clicked);
+    else if (!g_strcmp0 (handler, "on_subs_window_destroy"))
+        cb = G_CALLBACK(on_subs_window_destroy);
+
+    if (cb)
+        g_signal_connect (obj, name, cb, c);
+}
+
 void subscribe_gui_create(EeeAccountsManager *mgr)
 {
-    int col_offset;
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
 
@@ -314,10 +329,11 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
 
     struct subscribe_context *c = g_new0(struct subscribe_context, 1);
     c->mgr = mgr;
-    c->xml = glade_xml_new(PLUGINDIR "/org-gnome-evolution-eee.glade", "subs_window", NULL);
+    c->builder = gtk_builder_new ();
+    gtk_builder_add_from_file (c->builder, PLUGINDIR "/org-gnome-evolution-eee.glade", NULL);
 
-    c->win = GTK_WINDOW(g_object_ref(glade_xml_get_widget(c->xml, "subs_window")));
-    c->tview = GTK_TREE_VIEW(glade_xml_get_widget(c->xml, "treeview_calendars"));
+    c->win = GTK_WINDOW(g_object_ref(gtk_builder_get_object(c->builder, "subs_window")));
+    c->tview = GTK_TREE_VIEW(gtk_builder_get_object(c->builder, "treeview_calendars"));
 
     // create model for calendar list
     c->model = gtk_tree_store_new(SUB_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN, G_TYPE_STRING);
@@ -325,10 +341,10 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
     // add columns to the tree view
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer, "xalign", 0.0, NULL);
-    col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Calendar Name"), renderer, "text", SUB_TITLE_COLUMN, NULL);
+    (void) gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Calendar Name"), renderer, "text", SUB_TITLE_COLUMN, NULL);
     renderer = gtk_cell_renderer_text_new();
     g_object_set(renderer, "xalign", 0.0, NULL);
-    col_offset = gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Permission"), renderer, "text", SUB_PERM_COLUMN, NULL);
+    (void) gtk_tree_view_insert_column_with_attributes(c->tview, -1, _("Permission"), renderer, "text", SUB_PERM_COLUMN, NULL);
     // setup the selection handler
     c->selection = gtk_tree_view_get_selection(c->tview);
     gtk_tree_selection_set_mode(c->selection, GTK_SELECTION_SINGLE);
@@ -337,7 +353,7 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
     // setup account list combo box
     GSList *iter, *list;
     GtkListStore *accounts_store = gtk_list_store_new(2, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
-    GtkWidget *accounts_combo = glade_xml_get_widget(c->xml, "combo_account");
+    GtkWidget *accounts_combo = GTK_WIDGET(gtk_builder_get_object(c->builder, "combo_account"));
     list = eee_accounts_manager_peek_accounts_list(mgr);
     for (iter = list; iter; iter = iter->next)
     {
@@ -358,15 +374,14 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
     g_signal_connect(accounts_combo, "changed", G_CALLBACK(account_selected), c);
     gtk_combo_box_set_active(GTK_COMBO_BOX(accounts_combo), 0);
 
-    c->search = GTK_EDITABLE(glade_xml_get_widget(c->xml, "entry_search"));
+    c->search = GTK_EDITABLE(gtk_builder_get_object(c->builder, "entry_search"));
     g_signal_connect(c->search, "changed", G_CALLBACK(search_entry_changed), c);
 
     // activate buttons
-    c->subscribe_button = glade_xml_get_widget(c->xml, "subs_button_subscribe");
+    c->subscribe_button = GTK_WIDGET(gtk_builder_get_object(c->builder, "subs_button_subscribe"));
     g_object_set(c->subscribe_button, "sensitive", FALSE, NULL);
-    glade_xml_signal_connect_data(c->xml, "on_subs_button_subscribe_clicked", G_CALLBACK(on_subs_button_subscribe_clicked), c);
-    glade_xml_signal_connect_data(c->xml, "on_subs_button_cancel_clicked", G_CALLBACK(on_subs_button_cancel_clicked), c);
-    glade_xml_signal_connect_data(c->xml, "on_subs_window_destroy", G_CALLBACK(on_subs_window_destroy), c);
+
+    gtk_builder_connect_signals_full (c->builder, connect_signals, c);
 
     active_ctx = c;
 }
