@@ -75,6 +75,8 @@ static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
 
     if (!priv->is_loaded)
     {
+        const gchar * cache_dir;
+
         /* load calendar info */
         if (!e_cal_backend_3e_calendar_info_load(cb))
         {
@@ -85,10 +87,15 @@ static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
             return;
         }
 
+        cache_dir = e_cal_backend_get_cache_dir(E_CAL_BACKEND(cb));
+
+        g_mkdir_with_parents (cache_dir, 0700);
+
         /* open/create cache */
-        priv->store = e_cal_backend_file_store_new(
-                          e_cal_backend_get_cache_dir(E_CAL_BACKEND(cb))
-                                             );
+        priv->store = e_cal_backend_file_store_new(cache_dir);
+
+        e_cal_backend_store_load (priv->store);
+
         if (priv->store == NULL)
         {
             g_propagate_error(err, EDC_ERROR_EX(OtherError,
@@ -165,7 +172,7 @@ static void e_cal_backend_3e_remove(ECalBackendSync *backend, EDataCal *cal,
 /** Refresh sync
  */
 static void e_cal_backend_3e_refresh(ECalBackendSync *backend, EDataCal *cal,
-                                    GCancellable *cancellable, GError **err)
+                                     GCancellable *cancellable, GError **err)
 {
     BACKEND_METHOD_CHECKED_NORETVAL();
     
