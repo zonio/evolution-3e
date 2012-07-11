@@ -55,13 +55,13 @@
 
 /* cache API wrappers */
 
-#define e_cal_backend_cache_get_components(cache) e_cal_backend_3e_cache_get_components(cb, cache)
-#define e_cal_backend_cache_get_components_by_uid(cache, uid) e_cal_backend_3e_cache_get_components_by_uid(cb, cache, uid)
-#define e_cal_backend_cache_get_component(cache, uid, rid) e_cal_backend_3e_cache_get_component(cb, cache, uid, rid)
-#define e_cal_backend_cache_put_component(cache, c) e_cal_backend_3e_cache_put_component(cb, cache, c)
-#define e_cal_backend_cache_remove_component(cache, uid, rid) e_cal_backend_3e_cache_remove_component(cb, cache, uid, rid)
-#define e_cal_backend_cache_get_timezone(cache, tzid) e_cal_backend_3e_cache_get_timezone(cb, cache, tzid)
-#define e_cal_backend_cache_put_timezone(cache, tzobj) e_cal_backend_3e_cache_put_timezone(cb, cache, tzobj)
+#define e_cal_backend_store_get_components(cache) e_cal_backend_3e_store_get_components(cb, cache)
+#define e_cal_backend_store_get_components_by_uid(cache, uid) e_cal_backend_3e_store_get_components_by_uid(cb, cache, uid)
+#define e_cal_backend_store_get_component(cache, uid, rid) e_cal_backend_3e_store_get_component(cb, cache, uid, rid)
+#define e_cal_backend_store_put_component(cache, c) e_cal_backend_3e_store_put_component(cb, cache, c)
+#define e_cal_backend_store_remove_component(cache, uid, rid) e_cal_backend_3e_store_remove_component(cb, cache, uid, rid)
+#define e_cal_backend_store_get_timezone(cache, tzid) e_cal_backend_3e_store_get_timezone(cb, cache, tzid)
+#define e_cal_backend_store_put_timezone(cache, tzobj) e_cal_backend_3e_store_put_timezone(cb, cache, tzobj)
 
 // }}}
 
@@ -81,6 +81,8 @@ static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
 
     if (!priv->is_loaded)
     {
+        const gchar *cache_dir;
+
         /* load calendar info */
         if (!e_cal_backend_3e_calendar_info_load(cb))
         {
@@ -91,11 +93,15 @@ static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
             return;
         }
 
-        /* open/create cache */
-        priv->cache = e_cal_backend_cache_new(
-                          e_cal_backend_get_uri(E_CAL_BACKEND(cb))
-                                             );
-        if (priv->cache == NULL)
+        cache_dir = e_cal_backend_get_cache_dir (E_CAL_BACKEND(cb));
+
+        g_mkdir_with_parents (cache_dir, 0700);
+
+        priv->store = e_cal_backend_file_store_new (cache_dir);
+
+        e_cal_backend_store_load (priv->store);
+
+        if (priv->store == NULL)
         {
             g_propagate_error(err, EDC_ERROR_EX(OtherError,
                               "Failed to open local calendar cache."));
@@ -161,9 +167,8 @@ static void e_cal_backend_3e_remove(ECalBackendSync *backend, EDataCal *cal,
     {
         priv->is_loaded = FALSE;
         e_cal_backend_3e_periodic_sync_stop(cb);
-        e_file_cache_remove(E_FILE_CACHE(priv->cache));
-        g_object_unref(priv->cache);
-        priv->cache = NULL;
+        e_cal_backend_store_remove (priv->store);
+        priv->store = NULL;
     }
 
     return;
@@ -182,83 +187,6 @@ static void e_cal_backend_3e_refresh(ECalBackendSync *backend, EDataCal *cal,
 // }}}
 // {{{ Calendar metadata extraction
 
-/** Returns the capabilities provided by the backend, like whether it supports
- * recurrences or not, for instance
- * @todo figure out what caps are needed
- */
-static EDataCalCallStatus e_cal_backend_3e_get_static_capabilities(ECalBackendSync *backend, EDataCal *cal, char * *capabilities)
-{
-    BACKEND_METHOD_CHECKED();
-    g_return_val_if_fail(capabilities != NULL, OtherError);
-
-    *capabilities = g_strdup(
-        CAL_STATIC_CAPABILITY_NO_EMAIL_ALARMS ","
-        CAL_STATIC_CAPABILITY_NO_THISANDFUTURE ","
-        CAL_STATIC_CAPABILITY_NO_THISANDPRIOR ","
-        CAL_STATIC_CAPABILITY_NO_CONV_TO_RECUR ","
-        CAL_STATIC_CAPABILITY_NO_SEND_IMIP
-        );
-
-    return Success;
-}
-
-/** Returns whether the calendar is read only or not.
- *
- * The problem with this method is that it is not called as often as we would like to
- * (not by every object manipulation). Therefore, when evolution is running and permission
- * is changed on the server, we cannot reflect this situation by this method.
- */
-static EDataCalCallStatus e_cal_backend_3e_is_read_only(ECalBackendSync *backend, EDataCal *cal, gboolean *read_only, GError **err)
-{
-    BACKEND_METHOD_CHECKED();
-    g_return_val_if_fail(read_only != NULL, OtherError);
-
-    *read_only = !e_cal_backend_3e_calendar_has_perm(cb, "write");
-
-    return Success;
-}
-
-/** Returns the email address of the owner of the calendar.
- *
- * If owner differs from username, ORGANIZER;SENT-BY=xxx will be set by the
- * event-page.c:event_page_fill_component() code.
- */
-static EDataCalCallStatus e_cal_backend_3e_get_cal_address(ECalBackendSync *backend, EDataCal *cal, char * *address)
-{
-    BACKEND_METHOD_CHECKED();
-    g_return_val_if_fail(address != NULL, OtherError);
-
-    *address = g_strdup(priv->owner);
-
-    return Success;
-}
-
-/** Returns the email address to be used for alarms.
- */
-static EDataCalCallStatus e_cal_backend_3e_get_alarm_email_address(ECalBackendSync *backend, EDataCal *cal, char * *address)
-{
-    BACKEND_METHOD_CHECKED();
-    g_return_val_if_fail(address != NULL, OtherError);
-
-    *address = g_strdup(priv->username);
-
-    return Success;
-}
-
-/** Returns specific LDAP attributes.
- * @todo huh?
- */
-static EDataCalCallStatus e_cal_backend_3e_get_ldap_attribute(ECalBackendSync *backend, EDataCal *cal, char * *attribute)
-{
-    BACKEND_METHOD_CHECKED();
-
-    *attribute = NULL;
-    return UnsupportedMethod;
-}
-
-/** Sets the current online/offline mode.
- * @todo handle sync on transitions between online/offline mode
- */
 static void e_cal_backend_3e_set_online(ECalBackend *backend, gboolean is_online)
 {
     BACKEND_METHOD_CHECKED_NORETVAL("online=%d", is_online);
@@ -303,87 +231,8 @@ static void e_cal_backend_3e_set_online(ECalBackend *backend, gboolean is_online
 }
 
 
-/** Returns TRUE if the the passed-in backend is already in a loaded state,
- * otherwise FALSE
- *
- * @todo priv->is_loaded may need to be protected
- */
-static gboolean e_cal_backend_3e_is_loaded(ECalBackend *backend)
-{
-    BACKEND_METHOD_CHECKED_RETVAL(FALSE);
-
-    return priv->is_loaded;
-}
-
-// }}}
-// {{{ Mode switching (online/offline)
-
-/** Returns the current online/offline mode for the backend.
- */
-static CalMode e_cal_backend_3e_get_mode(ECalBackend *backend)
-{
-    BACKEND_METHOD_CHECKED_RETVAL(CAL_MODE_INVALID);
-
-    return priv->mode;
-}
-
-/** Sets the current online/offline mode.
- * @todo handle sync on transitions between online/offline mode
- */
-static void e_cal_backend_3e_set_mode(ECalBackend *backend, CalMode mode)
-{
-    BACKEND_METHOD_CHECKED_NORETVAL("mode=%d", mode);
-
-    if (priv->mode != mode)
-    {
-        priv->mode = mode;
-
-        if (mode == CAL_MODE_REMOTE)
-        {
-            /* mode changed to remote */
-            if (priv->is_loaded)
-            {
-                e_cal_backend_3e_periodic_sync_enable(cb);
-            }
-        }
-        else if (mode == CAL_MODE_LOCAL)
-        {
-            /* mode changed to local */
-            e_cal_backend_3e_periodic_sync_disable(cb);
-        }
-        else
-        {
-            /* some bug */
-            e_cal_backend_notify_mode(backend, NotSupported, cal_mode_to_corba(priv->mode));
-            return;
-        }
-    }
-/* FIXME: Disabled due to version diversion
-    e_cal_backend_notify_mode(backend, ModeSet, cal_mode_to_corba(priv->mode));
-*/
-}
-
 // }}}
 // {{{ Objects manipulation
-
-/** Returns an empty object with the default values used for the backend called
- * when creating new object, for example.
- */
-static EDataCalCallStatus e_cal_backend_3e_get_default_object(ECalBackendSync *backend, EDataCal *cal, char * *object)
-{
-    icalcomponent *icalcomp;
-    icalcomponent_kind kind;
-
-    BACKEND_METHOD_CHECKED("object=%s", *object);
-    g_return_val_if_fail(object != NULL, OtherError);
-
-    kind = e_cal_backend_get_kind(E_CAL_BACKEND(backend));
-    icalcomp = e_cal_util_new_component(kind);
-    *object = g_strdup(icalcomponent_as_ical_string(icalcomp));
-    icalcomponent_free(icalcomp);
-
-    return Success;
-}
 
 /**
  * Returns a list of events/tasks given a set of conditions.
@@ -411,7 +260,7 @@ static void e_cal_backend_3e_get_object_list(ECalBackendSync *backend,
         return;
     }
 
-    all_objects = e_cal_backend_cache_get_components(priv->cache);
+    all_objects = e_cal_backend_store_get_components(priv->store);
     for (iter = all_objects; iter != NULL; iter = iter->next)
     {
         ECalComponent *comp = E_CAL_COMPONENT(iter->data);
@@ -478,7 +327,7 @@ static void e_cal_backend_3e_get_object(ECalBackendSync *backend,
     if (rid && *rid)
     {
         /* get single detached instance */
-        ECalComponent *dinst = e_cal_backend_cache_get_component(priv->cache, uid, rid);
+        ECalComponent *dinst = e_cal_backend_store_get_component(priv->store, uid, rid);
 
         if (!dinst)
         {
@@ -493,7 +342,7 @@ static void e_cal_backend_3e_get_object(ECalBackendSync *backend,
     else
     {
         /* get master object with detached instances */
-        ECalComponent *master = e_cal_backend_cache_get_component(priv->cache, uid, rid);
+        ECalComponent *master = e_cal_backend_store_get_component(priv->store, uid, rid);
         if (!master)
         {
             g_propagate_error(err, EDC_ERROR(ObjectNotFound));
@@ -513,7 +362,7 @@ static void e_cal_backend_3e_get_object(ECalBackendSync *backend,
             GSList *dinst_list;
             GSList *iter;
 
-            dinst_list = e_cal_backend_cache_get_components_by_uid(priv->cache, uid);
+            dinst_list = e_cal_backend_store_get_components_by_uid(priv->store, uid);
             for (iter = dinst_list; iter; iter = iter->next)
             {
 	        ECalComponent *dinst = E_CAL_COMPONENT(iter->data);
@@ -567,7 +416,7 @@ static void e_cal_backend_3e_create_object(ECalBackendSync *backend,
 
     calobj = e_cal_component_get_as_string(comp);
 
-    if (!e_cal_backend_cache_put_component(priv->cache, comp))
+    if (!e_cal_backend_store_put_component(priv->store, comp))
     {
         g_object_unref(comp);
         return; // OtherError;
@@ -623,7 +472,7 @@ static void e_cal_backend_3e_modify_object(ECalBackendSync *backend,
     {
         /* remove detached instances if evolution requested to modify all recurrences and
            update master object */
-        GSList *comp_list = e_cal_backend_cache_get_components_by_uid(priv->cache, new_id->uid);
+        GSList *comp_list = e_cal_backend_store_get_components_by_uid(priv->store, new_id->uid);
         GSList *iter;
 
         for (iter = comp_list; iter; iter = iter->next)
@@ -634,7 +483,7 @@ static void e_cal_backend_3e_modify_object(ECalBackendSync *backend,
 
             if (!e_cal_component_has_recurrences(inst) && e_cal_component_is_instance(inst))
             {
-                e_cal_backend_cache_remove_component(priv->cache, inst_id->uid, inst_id->rid);
+                e_cal_backend_store_remove_component(priv->store, inst_id->uid, inst_id->rid);
                 e_cal_backend_notify_object_removed(E_CAL_BACKEND(backend), inst_id, inst_str, NULL);
             }
             else
@@ -652,7 +501,7 @@ static void e_cal_backend_3e_modify_object(ECalBackendSync *backend,
                 e_cal_component_set_recurid(inst, NULL);
                 e_cal_component_set_exdate_list(inst, NULL);
                 e_cal_component_commit_sequence(inst);
-                e_cal_backend_cache_put_component(priv->cache, inst);
+                e_cal_backend_store_put_component(priv->store, inst);
 
                 e_cal_component_set_x_property(inst, "X-EVOLUTION-STATUS", "outofsync");
                 char *new_inst_str = e_cal_component_get_as_string(inst);
@@ -670,7 +519,7 @@ static void e_cal_backend_3e_modify_object(ECalBackendSync *backend,
     else
     {
         /* find object we are trying to modify in cache and update it */
-        cache_comp = e_cal_backend_cache_get_component(priv->cache, new_id->uid, new_id->rid);
+        cache_comp = e_cal_backend_store_get_component(priv->store, new_id->uid, new_id->rid);
         if (cache_comp)
         {
             *old_object = e_cal_component_get_as_string(cache_comp);
@@ -679,7 +528,7 @@ static void e_cal_backend_3e_modify_object(ECalBackendSync *backend,
 
         e_cal_component_set_x_property(new_comp, "X-EVOLUTION-STATUS", "outofsync");
         *new_object = e_cal_component_get_as_string(new_comp);
-        e_cal_backend_cache_put_component(priv->cache, new_comp);
+        e_cal_backend_store_put_component(priv->store, new_comp);
     }
 
     e_cal_backend_3e_do_immediate_sync(cb);
@@ -700,7 +549,7 @@ static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
                                            CalObjModType mod,
                                            gchar **old_object,
                                            gchar **object,
-                                           GError *err)
+                                           GError **err)
 {
     BACKEND_METHOD_CHECKED_NORETVAL("uid=%s rid=%s mod=%d", uid, rid, mod);
 
@@ -723,7 +572,7 @@ static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
             ECalComponent *dinst;
             char *old_master, *new_master;
 
-            master = e_cal_backend_cache_get_component(priv->cache, uid, NULL);
+            master = e_cal_backend_store_get_component(priv->store, uid, NULL);
             if (master == NULL)
             {
                 g_propagate_error(err, EDC_ERROR(ObjectNotFound));
@@ -731,10 +580,10 @@ static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
             }
 
             /* was a detached instance? remove it and set old_object */
-            dinst = e_cal_backend_cache_get_component(priv->cache, uid, rid);
+            dinst = e_cal_backend_store_get_component(priv->store, uid, rid);
             if (dinst)
             {
-                e_cal_backend_cache_remove_component(priv->cache, uid, rid);
+                e_cal_backend_store_remove_component(priv->store, uid, rid);
                 *old_object = e_cal_component_get_as_string(dinst);
                 g_object_unref(dinst);
             }
@@ -747,7 +596,7 @@ static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
                 CALOBJ_MOD_THIS);
 
             new_master = e_cal_component_get_as_string(master);
-            e_cal_backend_cache_put_component(priv->cache, master);
+            e_cal_backend_store_put_component(priv->store, master);
             e_cal_backend_notify_object_modified(E_CAL_BACKEND(backend),
                                                  old_master,
                                                  new_master);
@@ -760,7 +609,7 @@ static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
             /* remove one object (this will be non-recurring) */
             ECalComponent *cache_comp;
 
-            cache_comp = e_cal_backend_cache_get_component(priv->cache,
+            cache_comp = e_cal_backend_store_get_component(priv->store,
                                                            uid, rid);
             if (cache_comp == NULL)
             {
@@ -769,7 +618,7 @@ static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
             }
 
             *old_object = e_cal_component_get_as_string(cache_comp);
-            e_cal_backend_cache_remove_component(priv->cache, uid, rid);
+            e_cal_backend_store_remove_component(priv->store, uid, rid);
             g_object_unref(cache_comp);
         }
     }
@@ -781,23 +630,23 @@ static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
         GSList *iter;
 
         /* this will be master object */
-        cache_comp = e_cal_backend_cache_get_component(priv->cache, uid, rid);
+        cache_comp = e_cal_backend_store_get_component(priv->store, uid, rid);
         if (cache_comp == NULL)
         {
             g_propagate_error(err, EDC_ERROR(ObjectNotFound));
             return;
         }
 
-        comp_list = e_cal_backend_cache_get_components_by_uid(priv->cache,
+        comp_list = e_cal_backend_store_get_components_by_uid(priv->store,
                                                               uid);
-        e_cal_backend_cache_remove_component(priv->cache, uid, rid);
+        e_cal_backend_store_remove_component(priv->store, uid, rid);
 
         for (iter = comp_list; iter; iter = iter->next)
         {
             ECalComponent *comp = E_CAL_COMPONENT(iter->data);
             ECalComponentId *id = e_cal_component_get_id(comp);
 
-            if (e_cal_backend_cache_remove_component(priv->cache, id->uid,
+            if (e_cal_backend_store_remove_component(priv->store, id->uid,
                                                      id->rid))
             {
                 e_cal_backend_notify_object_removed(E_CAL_BACKEND(backend),
@@ -826,53 +675,6 @@ static void e_cal_backend_3e_remove_object(ECalBackendSync *backend,
 
 // }}}
 // {{{ Timezone manipulation
-
-/** Returns timezone objects for a given TZID.
- * @todo free timezone data somehow?
- */
-static void e_cal_backend_3e_get_timezone(ECalBackendSync *backend,
-                                          EDataCal *cal,
-                                          GCancellable * cancellable,
-                                          const gchar *tzid,
-                                          gchar **object,
-                                          GError **err)
-{
-    icaltimezone *zone;
-    icalcomponent *icalcomp;
-
-    BACKEND_METHOD_CHECKED_NORETVAL("tzid=%s", tzid);
-
-    g_return_if_fail(tzid != NULL);
-    g_return_if_fail(object != NULL);
-
-    zone = (icaltimezone *)e_cal_backend_cache_get_timezone(priv->cache, tzid);
-    if (zone == NULL)
-    {
-        zone = icaltimezone_get_builtin_timezone_from_tzid(tzid);
-        if (zone == NULL)
-        {
-            g_propagate_error(err, EDC_ERROR(ObjectNotFound));
-            return;
-        }
-
-        /* if zone was not found in cache but was found in builtin table, add it to
-           cache, and it will be synced to the 3e server */
-        e_cal_backend_cache_put_timezone(priv->cache, zone);
-
-        e_cal_backend_3e_do_immediate_sync(cb);
-    }
-
-    icalcomp = icaltimezone_get_component(zone);
-    if (!icalcomp)
-    {
-        g_propagate_error(err, EDC_ERROR(InvalidObject));
-        return;
-    }
-
-    *object = g_strdup(icalcomponent_as_ical_string(icalcomp));
-
-    return; // Success;
-}
 
 /**
  * Adds a timezone to the backend.
@@ -911,10 +713,10 @@ static void e_cal_backend_3e_add_timezone(ECalBackendSync *backend,
 
     T("tzid_new = %s", tzid);
 
-    if (!e_cal_backend_cache_get_timezone(priv->cache, tzid))
+    if (!e_cal_backend_store_get_timezone(priv->store, tzid))
     {
         T("Pushing timezone");
-        e_cal_backend_cache_put_timezone(priv->cache, zone);
+        e_cal_backend_store_put_timezone(priv->store, zone);
     }
 
     icaltimezone_free(zone, TRUE);
@@ -922,52 +724,6 @@ static void e_cal_backend_3e_add_timezone(ECalBackendSync *backend,
     e_cal_backend_3e_do_immediate_sync(cb);
 
     return;
-}
-
-/** Sets the timezone to be used as the default. It is called before opening
- * connection, before creating cache.
- */
-static EDataCalCallStatus e_cal_backend_3e_set_default_zone(ECalBackendSync *backend, EDataCal *cal, const char *tzobj)
-{
-    icalcomponent *icalcomp;
-    icaltimezone *zone;
-
-    BACKEND_METHOD_CHECKED("tzobj=%s", tzobj);
-
-    g_return_val_if_fail(tzobj != NULL, OtherError);
-
-    icalcomp = icalparser_parse_string(tzobj);
-
-    if (icalcomp == NULL)
-    {
-        return InvalidObject;
-    }
-
-    if (icalcomponent_isa(icalcomp) != ICAL_VTIMEZONE_COMPONENT)
-    {
-        icalcomponent_free(icalcomp);
-        return InvalidObject;
-    }
-
-    zone = icaltimezone_new();
-    icaltimezone_set_component(zone, icalcomp);
-
-    if (priv->default_zone)
-    {
-        icaltimezone_free(priv->default_zone, TRUE);
-    }
-    priv->default_zone = zone;
-
-    return Success;
-}
-
-/** Returns the default timezone.
- */
-static icaltimezone *e_cal_backend_3e_internal_get_default_timezone(ECalBackend *backend)
-{
-    BACKEND_METHOD_CHECKED_RETVAL(icaltimezone_get_utc_timezone());
-
-    return icaltimezone_get_utc_timezone();
 }
 
 /** Returns a given timezone
@@ -980,7 +736,7 @@ static icaltimezone *e_cal_backend_3e_internal_get_timezone(ECalBackend *backend
     BACKEND_METHOD_CHECKED_RETVAL(NULL, "tzid=%s", tzid);
 
     zone = icaltimezone_get_builtin_timezone_from_tzid(tzid);
-    //zone = (icaltimezone *)e_cal_backend_cache_get_timezone(priv->cache, tzid);
+    //zone = (icaltimezone *)e_cal_backend_store_get_timezone(priv->store, tzid);
 
     if (!zone)
     {
@@ -1012,13 +768,13 @@ static char *gmtime_to_iso(time_t t)
 static void e_cal_backend_3e_get_free_busy(ECalBackendSync *backend,
                                            EDataCal *cal,
                                            GCancellable *cancellable,
-                                           GSList *users,
+                                           const GSList *users,
                                            time_t start, time_t end,
                                            GSList **freebusy,
                                            GError **err)
 {
     char *zone;
-    GList *iter;
+    GSList *iter;
 
     BACKEND_METHOD_CHECKED_NORETVAL("users=%p start=%d end=%d",
                                     users, (int)start, (int)end);
@@ -1046,7 +802,7 @@ static void e_cal_backend_3e_get_free_busy(ECalBackendSync *backend,
 
 g_print("Timezona = %s\n", zone);
 
-    for (iter = users; iter; iter = iter->next)
+    for (iter = (GSList *) users; iter; iter = iter->next)
     {
         char *username = iter->data;
         char *iso_start = gmtime_to_iso(start);
@@ -1137,7 +893,7 @@ static EDataCalCallStatus e_cal_backend_3e_receive_object(ECalBackendSync *backe
     }
 
     new_id = e_cal_component_get_id(new_comp);
-    cache_comp = e_cal_backend_cache_get_component(priv->cache, new_id->uid, new_id->rid);
+    cache_comp = e_cal_backend_store_get_component(priv->store, new_id->uid, new_id->rid);
 
     /* process received components */
     switch (method)
@@ -1149,7 +905,7 @@ static EDataCalCallStatus e_cal_backend_3e_receive_object(ECalBackendSync *backe
         {
             char *old_object = e_cal_component_get_as_string(cache_comp);
             char *new_object = e_cal_component_get_as_string(new_comp);
-            e_cal_backend_cache_put_component(priv->cache, new_comp);
+            e_cal_backend_store_put_component(priv->store, new_comp);
             e_cal_backend_notify_object_modified(E_CAL_BACKEND(backend), old_object, new_object);
             g_free(old_object);
             g_free(new_object);
@@ -1157,7 +913,7 @@ static EDataCalCallStatus e_cal_backend_3e_receive_object(ECalBackendSync *backe
         else
         {
             char *new_object = e_cal_component_get_as_string(new_comp);
-            e_cal_backend_cache_put_component(priv->cache, new_comp);
+            e_cal_backend_store_put_component(priv->store, new_comp);
             e_cal_backend_notify_object_created(E_CAL_BACKEND(backend), new_object);
             g_free(new_object);
         }
@@ -1167,7 +923,7 @@ static EDataCalCallStatus e_cal_backend_3e_receive_object(ECalBackendSync *backe
         if (cache_comp)
         {
             char *old_object = e_cal_component_get_as_string(cache_comp);
-            e_cal_backend_cache_remove_component(priv->cache, new_id->uid, new_id->rid);
+            e_cal_backend_store_remove_component(priv->store, new_id->uid, new_id->rid);
             e_cal_backend_notify_object_removed(E_CAL_BACKEND(backend), new_id, old_object, NULL);
             g_free(old_object);
         }
@@ -1221,9 +977,9 @@ static void e_cal_backend_3e_receive_objects(ECalBackendSync *backend,
             icaltimezone *zone = icaltimezone_new();
             icaltimezone_set_component(zone, vevent);
             const char *tzid = icaltimezone_get_tzid(zone);
-            if (!e_cal_backend_cache_get_timezone(priv->cache, tzid))
+            if (!e_cal_backend_store_get_timezone(priv->store, tzid))
             {
-                e_cal_backend_cache_put_timezone(priv->cache, zone);
+                e_cal_backend_store_put_timezone(priv->store, zone);
             }
             icaltimezone_free(zone, TRUE);
         }
@@ -1302,7 +1058,7 @@ static void e_cal_backend_3e_send_objects(ECalBackendSync *backend,
     for (iter = recipients; iter; iter = iter->next)
     {
         //BUG: there is a bug in itip-utils.c:509, name requires MAILTO: for now
-        *users = g_list_append(*users, g_strdup_printf("MAILTO:%s", (char *)iter->data));
+        *users = g_slist_append(*users, g_strdup_printf("MAILTO:%s", (char *)iter->data));
     }
 
     g_slist_foreach(recipients, (GFunc)g_free, NULL);
@@ -1311,144 +1067,6 @@ static void e_cal_backend_3e_send_objects(ECalBackendSync *backend,
     *modified_calobj = g_strdup(calobj);
 
     return; // Success;
-}
-
-// }}}
-// {{{ Calendar synchronization with external devices
-
-struct _removals_data
-{
-    ECalBackend3e *cb;
-    GList *deletes;
-    EXmlHash *ehash;
-};
-
-/** @todo this will not handle detached recurring instances very vell
- */
-static void calculate_removals(const char *key, const char *value, gpointer data)
-{
-    struct _removals_data *r = data;
-    ECalBackend3e *cb = r->cb;
-
-    if (!e_cal_backend_cache_get_component(cb->priv->cache, key, NULL))
-    {
-        ECalComponent *comp;
-
-        comp = e_cal_component_new();
-        e_cal_component_set_new_vtype(comp, E_CAL_COMPONENT_EVENT);
-        e_cal_component_set_uid(comp, key);
-
-        r->deletes = g_list_prepend(r->deletes, e_cal_component_get_as_string(comp));
-
-        e_xmlhash_remove(r->ehash, key);
-        g_object_unref(comp);
-    }
-}
-
-/** Returns a list of changes made since last check.
- * @todo fix recurring detached instances
- */
-static EDataCalCallStatus e_cal_backend_3e_get_changes(ECalBackendSync *backend, EDataCal *cal, const char *change_id, GList * *adds, GList * *modifies, GList * *deletes)
-{
-    char *filename;
-    char *path;
-    EXmlHash *ehash;
-    GList *iter;
-    GList *list = NULL;
-    struct _removals_data r;
-    EDataCalCallStatus status;
-
-    BACKEND_METHOD_CHECKED();
-    g_return_val_if_fail(change_id != NULL, ObjectNotFound);
-
-    filename = g_strdup_printf("snapshot-%s.db", change_id);
-    path = g_build_filename(g_get_home_dir(), ".evolution/cache/calendar", priv->calname, filename, NULL);
-    ehash = e_xmlhash_new(path);
-    g_free(filename);
-    g_free(path);
-
-//    status = e_cal_backend_3e_get_object_list(backend, NULL, "#t", &list);
-    if (status != Success)
-    {
-        e_xmlhash_destroy(ehash);
-        return status;
-    }
-
-    /* calculate adds and modifies */
-    for (iter = list; iter != NULL; iter = iter->next)
-    {
-        const char *uid;
-        char *calobj;
-
-        e_cal_component_get_uid(iter->data, &uid);
-        calobj = e_cal_component_get_as_string(iter->data);
-
-        /* check what type of change has occurred, if any */
-        switch (e_xmlhash_compare(ehash, uid, calobj))
-        {
-        case E_XMLHASH_STATUS_SAME:
-            break;
-
-        case E_XMLHASH_STATUS_NOT_FOUND:
-            *adds = g_list_prepend(*adds, g_strdup(calobj));
-            e_xmlhash_add(ehash, uid, calobj);
-            break;
-
-        case E_XMLHASH_STATUS_DIFFERENT:
-            *modifies = g_list_prepend(*modifies, g_strdup(calobj));
-            e_xmlhash_add(ehash, uid, calobj);
-            break;
-        }
-
-        g_free(calobj);
-    }
-
-    /* calculate deletions */
-    r.cb = cb;
-    r.deletes = NULL;
-    r.ehash = ehash;
-
-    T("check");
-    e_xmlhash_foreach_key(ehash, calculate_removals, &r);
-
-    *deletes = r.deletes;
-
-    e_xmlhash_write(ehash);
-    e_xmlhash_destroy(ehash);
-
-    return Success;
-
-}
-
-// }}}
-// {{{ Garbage
-
-/** Get list of attachments.
- *
- * XXX: This backend method is not used at all by evolution.
- */
-static EDataCalCallStatus e_cal_backend_3e_get_attachment_list(ECalBackendSync *backend, EDataCal *cal, const char *uid, const char *rid, GSList * *list)
-{
-    BACKEND_METHOD_CHECKED();
-
-    return Success;
-}
-
-/** Discards an alarm (removes it or marks it as already displayed to the user).
- *
- * XXX: This method is probably not necessary.
- */
-static void e_cal_backend_3e_discard_alarm(ECalBackendSync *backend,
-                                           EDataCal *cal,
-                                           GCancellable *cancellable,
-                                           const gchar *uid,
-                                           const gchar *rid,
-                                           const char *auid,
-                                           GError **err)
-{
-    BACKEND_METHOD_CHECKED_NORETVAL();
-
-    return; // UnsupportedMethod;
 }
 
 // }}}
@@ -1490,10 +1108,10 @@ static void e_cal_backend_3e_finalize(GObject *backend)
     priv->perm = NULL;
 
     /* backend data */
-    if (priv->cache)
+    if (priv->store)
     {
-        g_object_unref(priv->cache);
-        priv->cache = NULL;
+        g_object_unref(priv->store);
+        priv->store = NULL;
     }
     g_free(priv->cache_path);
 

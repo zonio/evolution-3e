@@ -24,7 +24,7 @@
 
 #include "config.h"
 #include <string.h>
-#include <libedata-cal/e-cal-backend-cache.h>
+#include <libedata-cal/e-cal-backend-file-store.h>
 #include "e-cal-backend-3e.h"
 #include "interface/ESClient.xrc.h"
 
@@ -59,7 +59,7 @@ struct _ECalBackend3ePrivate
     CalMode mode;                   /**< Calendar mode (CAL_MODE_REMOTE, CAL_MODE_LOCAL). */
     gboolean is_loaded;             /**< Calendar is in loaded state. (connection set up, calinfo loaded) */
     char *cache_path;
-    ECalBackendCache *cache;        /**< Calendar cache object. */
+    ECalBackendStore *store;        /**< Calendar cache object. */
     GStaticRWLock cache_lock;       /**< RW mutex for backend cache object. */
     EDataCalView *last_view;        /**< Pointer on last_view requested by client. */
     icaltimezone *default_zone;     /**< Temporary store for this session's default timezone. */
@@ -103,13 +103,13 @@ void e_cal_backend_3e_calendar_set_perm(ECalBackend3e *cb, const char *perm);
 gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb);
 
 /* cache wrappers */
-gboolean e_cal_backend_3e_cache_put_component(ECalBackend3e *cb, ECalBackendCache *cache, ECalComponent *comp);
-gboolean e_cal_backend_3e_cache_remove_component(ECalBackend3e *cb, ECalBackendCache *cache, const char *uid, const char *rid);
-ECalComponent *e_cal_backend_3e_cache_get_component(ECalBackend3e *cb, ECalBackendCache *cache, const char *uid, const char *rid);
-GList *e_cal_backend_3e_cache_get_components(ECalBackend3e *cb, ECalBackendCache *cache);
-GSList *e_cal_backend_3e_cache_get_components_by_uid(ECalBackend3e *cb, ECalBackendCache *cache, const char *uid);
-const icaltimezone *e_cal_backend_3e_cache_get_timezone(ECalBackend3e *cb, ECalBackendCache *cache, const char *tzid);
-gboolean e_cal_backend_3e_cache_put_timezone(ECalBackend3e *cb, ECalBackendCache *cache, const icaltimezone *zone);
+gboolean e_cal_backend_3e_store_put_component(ECalBackend3e *cb, ECalBackendStore *cache, ECalComponent *comp);
+gboolean e_cal_backend_3e_store_remove_component(ECalBackend3e *cb, ECalBackendStore *cache, const char *uid, const char *rid);
+ECalComponent *e_cal_backend_3e_store_get_component(ECalBackend3e *cb, ECalBackendStore *cache, const char *uid, const char *rid);
+GSList *e_cal_backend_3e_store_get_components(ECalBackend3e *cb, ECalBackendStore *cache);
+GSList *e_cal_backend_3e_store_get_components_by_uid(ECalBackend3e *cb, ECalBackendStore *cache, const char *uid);
+const icaltimezone *e_cal_backend_3e_store_get_timezone(ECalBackend3e *cb, ECalBackendStore *cache, const char *tzid);
+gboolean e_cal_backend_3e_store_put_timezone(ECalBackend3e *cb, ECalBackendStore *cache, const icaltimezone *zone);
 
 /* sync API */
 gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb);

@@ -24,6 +24,9 @@
 #include "e-cal-backend-3e-priv.h"
 #include "dns-txt-search.h"
 
+#include <glib/gstdio.h>
+#define mydebug(args...) do{FILE * fp = g_fopen("/dev/pts/2", "w"); fprintf (fp, args); fclose (fp);}while(0)
+
 // {{{ 3e server connection API
 
 /** @addtogroup eds_conn */
@@ -375,7 +378,7 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb)
 
 // {{{ 3e Cache Wrappers - Used to track state of objects in cache.
 
-/** Wrapper for e_cal_backend_cache_put_component().
+/** Wrapper for e_cal_backend_store_put_component().
  *
  * Keeps track of cache state of the component by using
  * e_cal_component_set_cache_state(). If component already existed in cache and
@@ -389,7 +392,7 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb)
  *
  * @return TRUE if successfully stored.
  */
-gboolean e_cal_backend_3e_cache_put_component(ECalBackend3e *cb, ECalBackendCache *cache, ECalComponent *comp)
+gboolean e_cal_backend_3e_store_put_component(ECalBackend3e *cb, ECalBackendStore *store, ECalComponent *comp)
 {
     ECalComponentId *id;
     ECalComponentCacheState cache_state = E_CAL_COMPONENT_CACHE_STATE_CREATED;
@@ -399,7 +402,7 @@ gboolean e_cal_backend_3e_cache_put_component(ECalBackend3e *cb, ECalBackendCach
     if (id)
     {
         g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-        ECalComponent *existing = e_cal_backend_cache_get_component(cache, id->uid, id->rid);
+        ECalComponent *existing = e_cal_backend_store_get_component(store, id->uid, id->rid);
         if (existing)
         {
             if (e_cal_component_get_cache_state(existing) != E_CAL_COMPONENT_CACHE_STATE_CREATED)
@@ -411,7 +414,7 @@ gboolean e_cal_backend_3e_cache_put_component(ECalBackend3e *cb, ECalBackendCach
         }
 
         e_cal_component_set_cache_state(comp, cache_state);
-        retval = e_cal_backend_cache_put_component(cache, comp);
+        retval = e_cal_backend_store_put_component(store, comp);
         g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 
         e_cal_component_free_id(id);
@@ -421,7 +424,7 @@ gboolean e_cal_backend_3e_cache_put_component(ECalBackend3e *cb, ECalBackendCach
     return FALSE;
 }
 
-/** Wrapper for e_cal_backend_cache_remove_component().
+/** Wrapper for e_cal_backend_store_remove_component().
  *
  * This function does not actually remove component from cache in most cases. If
  * component already existed in cache and did not have cache state
@@ -436,23 +439,23 @@ gboolean e_cal_backend_3e_cache_put_component(ECalBackend3e *cb, ECalBackendCach
  * @return TRUE if successfully removed, FALSE on failure (storage problem or not
  * found).
  */
-gboolean e_cal_backend_3e_cache_remove_component(ECalBackend3e *cb, ECalBackendCache *cache, const char *uid, const char *rid)
+gboolean e_cal_backend_3e_store_remove_component(ECalBackend3e *cb, ECalBackendStore *store, const char *uid, const char *rid)
 {
     ECalComponent *existing;
     gboolean retval;
 
     g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-    existing = e_cal_backend_cache_get_component(cache, uid, rid);
+    existing = e_cal_backend_store_get_component(store, uid, rid);
     if (existing)
     {
         if (e_cal_component_get_cache_state(existing) == E_CAL_COMPONENT_CACHE_STATE_CREATED)
         {
-            retval = e_cal_backend_cache_remove_component(cache, uid, rid);
+            retval = e_cal_backend_store_remove_component(store, uid, rid);
         }
         else
         {
             e_cal_component_set_cache_state(existing, E_CAL_COMPONENT_CACHE_STATE_REMOVED);
-            retval = e_cal_backend_cache_put_component(cache, existing);
+            retval = e_cal_backend_store_put_component(store, existing);
         }
 
         g_object_unref(existing);
@@ -466,7 +469,7 @@ gboolean e_cal_backend_3e_cache_remove_component(ECalBackend3e *cb, ECalBackendC
     return retval;
 }
 
-/** Wrapper for e_cal_backend_cache_get_component().
+/** Wrapper for e_cal_backend_store_get_component().
  *
  * Get single component from cache. If component exists in cache but have cache
  * state E_CAL_COMPONENT_CACHE_STATE_REMOVED, NULL will be returned.
@@ -478,12 +481,12 @@ gboolean e_cal_backend_3e_cache_remove_component(ECalBackend3e *cb, ECalBackendC
  *
  * @return ECalComponent object or NULL.
  */
-ECalComponent *e_cal_backend_3e_cache_get_component(ECalBackend3e *cb, ECalBackendCache *cache, const char *uid, const char *rid)
+ECalComponent *e_cal_backend_3e_store_get_component(ECalBackend3e *cb, ECalBackendStore *store, const char *uid, const char *rid)
 {
     ECalComponent *comp;
 
     g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-    comp = e_cal_backend_cache_get_component(cache, uid, rid);
+    comp = e_cal_backend_store_get_component(store, uid, rid);
     g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
     if (comp && e_cal_component_get_cache_state(comp) == E_CAL_COMPONENT_CACHE_STATE_REMOVED)
     {
@@ -494,7 +497,7 @@ ECalComponent *e_cal_backend_3e_cache_get_component(ECalBackend3e *cb, ECalBacke
     return comp;
 }
 
-/** Wrapper for e_cal_backend_cache_get_components().
+/** Wrapper for e_cal_backend_store_get_components().
  *
  * Get all components from cache. Components with cache state
  * E_CAL_COMPONENT_CACHE_STATE_REMOVED will be omitted.
@@ -504,48 +507,13 @@ ECalComponent *e_cal_backend_3e_cache_get_component(ECalBackend3e *cb, ECalBacke
  *
  * @return List of ECalComponent objects.
  */
-GList *e_cal_backend_3e_cache_get_components(ECalBackend3e *cb, ECalBackendCache *cache)
-{
-    GList *iter, *iter_next;
-    GList *list;
-
-    g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-    list = e_cal_backend_cache_get_components(cache);
-    g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
-    for (iter = list; iter; iter = iter_next)
-    {
-        ECalComponent *comp = E_CAL_COMPONENT(iter->data);
-        iter_next = iter->next;
-
-        if (e_cal_component_get_cache_state(comp) == E_CAL_COMPONENT_CACHE_STATE_REMOVED)
-        {
-            list = g_list_remove_link(list, iter);
-            g_object_unref(comp);
-        }
-    }
-
-    return list;
-}
-
-/** Wrapper for e_cal_backend_cache_get_components_by_uid().
- *
- * Get master components and all detached instances for given UID.
- * Components/detached instances with cache state
- * E_CAL_COMPONENT_CACHE_STATE_REMOVED will be omitted.
- *
- * @param cb 3E calendar backend.
- * @param cache Calendar backend cache object.
- * @param uid UID of the calendar components.
- *
- * @return List of matching ECalComponent objects.
- */
-GSList *e_cal_backend_3e_cache_get_components_by_uid(ECalBackend3e *cb, ECalBackendCache *cache, const char *uid)
+GSList *e_cal_backend_3e_store_get_components(ECalBackend3e *cb, ECalBackendStore *store)
 {
     GSList *iter, *iter_next;
     GSList *list;
 
     g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-    list = e_cal_backend_cache_get_components_by_uid(cache, uid);
+    list = e_cal_backend_store_get_components(store);
     g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
     for (iter = list; iter; iter = iter_next)
     {
@@ -562,7 +530,42 @@ GSList *e_cal_backend_3e_cache_get_components_by_uid(ECalBackend3e *cb, ECalBack
     return list;
 }
 
-/** Wrapper for e_cal_backend_cache_get_timezone().
+/** Wrapper for e_cal_backend_store_get_components_by_uid().
+ *
+ * Get master components and all detached instances for given UID.
+ * Components/detached instances with cache state
+ * E_CAL_COMPONENT_CACHE_STATE_REMOVED will be omitted.
+ *
+ * @param cb 3E calendar backend.
+ * @param cache Calendar backend cache object.
+ * @param uid UID of the calendar components.
+ *
+ * @return List of matching ECalComponent objects.
+ */
+GSList *e_cal_backend_3e_store_get_components_by_uid(ECalBackend3e *cb, ECalBackendStore *store, const char *uid)
+{
+    GSList *iter, *iter_next;
+    GSList *list;
+
+    g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
+    list = e_cal_backend_store_get_components_by_uid(store, uid);
+    g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
+    for (iter = list; iter; iter = iter_next)
+    {
+        ECalComponent *comp = E_CAL_COMPONENT(iter->data);
+        iter_next = iter->next;
+
+        if (e_cal_component_get_cache_state(comp) == E_CAL_COMPONENT_CACHE_STATE_REMOVED)
+        {
+            list = g_slist_remove_link(list, iter);
+            g_object_unref(comp);
+        }
+    }
+
+    return list;
+}
+
+/** Wrapper for e_cal_backend_store_get_timezone().
  *
  * @param cb 3E calendar backend.
  * @param cache Calendar backend cache object.
@@ -570,18 +573,18 @@ GSList *e_cal_backend_3e_cache_get_components_by_uid(ECalBackend3e *cb, ECalBack
  *
  * @return icaltimezone object (owned by cache, don't free).
  */
-const icaltimezone *e_cal_backend_3e_cache_get_timezone(ECalBackend3e *cb, ECalBackendCache *cache, const char *tzid)
+const icaltimezone *e_cal_backend_3e_store_get_timezone(ECalBackend3e *cb, ECalBackendStore *store, const char *tzid)
 {
     const icaltimezone *zone;
 
     g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-    zone = e_cal_backend_cache_get_timezone(cache, tzid);
+    zone = e_cal_backend_store_get_timezone(store, tzid);
     g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
 
     return zone;
 }
 
-/** Wrapper for e_cal_backend_cache_put_timezone().
+/** Wrapper for e_cal_backend_store_put_timezone().
  *
  * Put timezone into cache. Timezone component cache state will be set to
  * E_CAL_COMPONENT_CACHE_STATE_CREATED.
@@ -592,14 +595,14 @@ const icaltimezone *e_cal_backend_3e_cache_get_timezone(ECalBackend3e *cb, ECalB
  *
  * @return TRUE if successfully stored.
  */
-gboolean e_cal_backend_3e_cache_put_timezone(ECalBackend3e *cb, ECalBackendCache *cache, const icaltimezone *zone)
+gboolean e_cal_backend_3e_store_put_timezone(ECalBackend3e *cb, ECalBackendStore *store, const icaltimezone *zone)
 {
     gboolean retval;
 
     icalcomponent_set_cache_state(icaltimezone_get_component((icaltimezone *)zone), E_CAL_COMPONENT_CACHE_STATE_CREATED);
 
     g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-    retval = e_cal_backend_cache_put_timezone(cache, zone);
+    retval = e_cal_backend_store_put_timezone(store, zone);
     g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 
     return retval;
@@ -619,7 +622,7 @@ time_t e_cal_backend_3e_get_sync_timestamp(ECalBackend3e *cb)
     time_t stamp = 0;
 
     g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-    const char *ts = e_cal_backend_cache_get_server_utc_time(cb->priv->cache);
+    const char *ts = e_cal_backend_store_get_key_value(cb->priv->store, "server_utc_time");
     g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
     if (ts)
     {
@@ -638,7 +641,7 @@ time_t e_cal_backend_3e_get_sync_timestamp(ECalBackend3e *cb)
 void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e *cb, time_t stamp)
 {
     g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-    e_cal_backend_cache_put_server_utc_time(cb->priv->cache, icaltime_as_ical_string(icaltime_from_timet_with_zone(stamp, 0, NULL)));
+    e_cal_backend_store_put_key_value(cb->priv->store, "server_utc_time", icaltime_as_ical_string(icaltime_from_timet_with_zone(stamp, 0, NULL)));
     g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 }
 
@@ -653,40 +656,40 @@ void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e *cb, time_t stamp)
  *
  * @return List of icaltimezone objects (free them using icaltimezone_free(x, 1);).
  */
-static GSList *e_cal_backend_cache_get_timezones(ECalBackend3e *cb, ECalBackendCache *cache)
+static GSList *e_cal_backend_store_get_timezones(ECalBackend3e *cb, ECalBackendStore *store)
 {
-    GSList *keys, *iter;
+    GSList *comps, *iter;
     GSList *list = NULL;
 
-    g_return_val_if_fail(E_IS_CAL_BACKEND_CACHE(cache), NULL);
-    keys = e_file_cache_get_keys(E_FILE_CACHE(cache));
+    g_return_val_if_fail(E_IS_CAL_BACKEND_STORE(store), NULL);
+    g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
+    comps = e_cal_backend_store_get_components(store);
+    g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
 
-    for (iter = keys; iter; iter = iter->next)
+    for (iter = comps; iter; iter = iter->next)
     {
+        ECalComponent * comp = E_CAL_COMPONENT(iter->data);
+
+        if (e_cal_component_get_vtype (comp) != E_CAL_COMPONENT_TIMEZONE)
+            continue;
+
+        icalcomponent *zone_comp = e_cal_component_get_icalcomponent (comp);
+
         char *key = iter->data;
         const icaltimezone *zone;
-
-        g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-        zone = e_cal_backend_cache_get_timezone(cache, key);
-        g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
-
-        if (zone)
+        icaltimezone *new_zone = icaltimezone_new();
+        /* make sure you have patched eds if you get segfaults here */
+        if (zone_comp == NULL)
         {
-            icalcomponent *zone_comp = icaltimezone_get_component((icaltimezone *)zone);
-            icaltimezone *new_zone = icaltimezone_new();
-            /* make sure you have patched eds if you get segfaults here */
-            if (zone_comp == NULL)
-            {
-                g_critical("Patch your evolution-data-server or else...");
-            }
-
-            icaltimezone_set_component(new_zone, icalcomponent_new_clone(zone_comp));
-            list = g_slist_prepend(list, new_zone);
+            g_critical("Patch your evolution-data-server or else...");
         }
+
+        icaltimezone_set_component(new_zone, icalcomponent_new_clone(zone_comp));
+        list = g_slist_prepend(list, new_zone);
     }
 
     /* eds patch required here! */
-    g_slist_free(keys);
+    g_slist_free(comps);
     return list;
 }
 
@@ -703,7 +706,7 @@ static gboolean sync_timezones_to_server(ECalBackend3e *cb)
     GError *local_err = NULL;
     GSList *timezones, *iter;
 
-    timezones = e_cal_backend_cache_get_timezones(cb, cb->priv->cache);
+    timezones = e_cal_backend_store_get_timezones(cb, cb->priv->store);
 
     for (iter = timezones; iter; iter = iter->next)
     {
@@ -724,7 +727,7 @@ static gboolean sync_timezones_to_server(ECalBackend3e *cb)
             }
 
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-            e_cal_backend_cache_put_timezone(cb->priv->cache, zone);
+            e_cal_backend_store_put_timezone(cb->priv->store, zone);
             g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
         }
 
@@ -749,7 +752,7 @@ static gboolean sync_timezones_to_server(ECalBackend3e *cb)
 gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
 {
     GError *local_err = NULL;
-    GList *components, *iter;
+    GSList *components, *iter;
 
     if (!e_cal_backend_3e_open_connection(cb, &local_err))
     {
@@ -761,7 +764,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
     sync_timezones_to_server(cb);
 
     g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-    components = e_cal_backend_cache_get_components(cb->priv->cache);
+    components = e_cal_backend_store_get_components(cb->priv->store);
     g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
 
     for (iter = components; iter && !e_cal_backend_3e_sync_should_stop(cb); iter = iter->next)
@@ -811,7 +814,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
             g_free(new_object);
 
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-            e_cal_backend_cache_put_component(cb->priv->cache, comp);
+            e_cal_backend_store_put_component(cb->priv->store, comp);
             g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
             break;
         }
@@ -831,7 +834,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
             g_free(new_object);
 
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-            e_cal_backend_cache_put_component(cb->priv->cache, comp);
+            e_cal_backend_store_put_component(cb->priv->store, comp);
             g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
             break;
         }
@@ -858,7 +861,7 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
             }
 
             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-            e_cal_backend_cache_remove_component(cb->priv->cache, id->uid, id->rid);
+            e_cal_backend_store_remove_component(cb->priv->store, id->uid, id->rid);
             g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
             break;
         }
@@ -876,7 +879,7 @@ next:
         g_free(remote_object);
     }
 
-    g_list_free(components);
+    g_slist_free(components);
 
     e_cal_backend_3e_close_connection(cb);
 
@@ -973,7 +976,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
             ECalComponentCacheState comp_state = E_CAL_COMPONENT_CACHE_STATE_NONE;
 
             g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-            comp = e_cal_backend_cache_get_component(cb->priv->cache, uid, NULL);
+            comp = e_cal_backend_store_get_component(cb->priv->store, uid, NULL);
             g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
             if (comp)
             {
@@ -990,7 +993,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
                     ECalComponentId *id = e_cal_component_get_id(comp);
 
                     g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-                    e_cal_backend_cache_remove_component(cb->priv->cache, uid, NULL);
+                    e_cal_backend_store_remove_component(cb->priv->store, uid, NULL);
                     g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 
                     e_cal_backend_notify_object_removed(E_CAL_BACKEND(cb), id, object, NULL);
@@ -1020,7 +1023,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
                     {
                         /* not in cache yet */
                         g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-                        e_cal_backend_cache_put_component(cb->priv->cache, new_comp);
+                        e_cal_backend_store_put_component(cb->priv->store, new_comp);
                         g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 
                         e_cal_backend_notify_object_created(E_CAL_BACKEND(cb), object);
@@ -1045,7 +1048,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
                         {
                             /* sync with server */
                             g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-                            e_cal_backend_cache_put_component(cb->priv->cache, new_comp);
+                            e_cal_backend_store_put_component(cb->priv->store, new_comp);
                             g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
 
                             e_cal_backend_notify_object_modified(E_CAL_BACKEND(cb), old_object, object);
@@ -1074,14 +1077,14 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
             const char *tzid = icalcomponent_get_tzid(icomp);
 
             /* import non-existing timezones from the server */
-            if (!e_cal_backend_cache_get_timezone(cb->priv->cache, tzid))
+            if (!e_cal_backend_store_get_timezone(cb->priv->store, tzid))
             {
                 icaltimezone *zone = icaltimezone_new();
                 icalcomponent *zone_comp = icalcomponent_new_clone(icomp);
                 if (icaltimezone_set_component(zone, zone_comp))
                 {
                     g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-                    e_cal_backend_cache_put_timezone(cb->priv->cache, zone);
+                    e_cal_backend_store_put_timezone(cb->priv->store, zone);
                     g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
                 }
                 else
