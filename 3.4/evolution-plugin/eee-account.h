@@ -86,8 +86,8 @@ gboolean          eee_account_auth(EeeAccount *self);
 xr_client_conn *eee_account_connect(EeeAccount *self);
 void              eee_account_disconnect(EeeAccount *self);
 gboolean          eee_account_find_server(EeeAccount *self);
-gboolean          eee_account_load_calendars(EeeAccount *self, GSList * *cals);
-GSList *eee_account_peek_calendars(EeeAccount *self);
+gboolean          eee_account_load_calendars(EeeAccount *self, GArray * *cals);
+GArray *eee_account_peek_calendars(EeeAccount *self);
 gboolean          eee_account_load_users(EeeAccount *self,
                                          char *prefix,
                                          GSList *exclude_users,
@@ -102,8 +102,8 @@ gboolean          eee_account_calendar_acl_set_shared(EeeAccount *self,
                                                       GSList *new_perms);
 gboolean          eee_account_get_user_attributes(EeeAccount *self,
                                                   const char *username,
-                                                  GSList * *attrs);
-void              eee_account_free_attributes_list(GSList *l);
+                                                  GArray * *attrs);
+void              eee_account_free_attributes_list(GArray *l);
 gboolean          eee_account_set_calendar_attribute(EeeAccount *self,
                                                      const char *owner,
                                                      const char *calname,
@@ -127,11 +127,11 @@ gboolean          eee_account_delete_calendar(EeeAccount *self,
                                               const char *calname);
 gboolean          eee_account_search_shared_calendars(EeeAccount *self,
                                                       const char *query,
-                                                      GSList * *cals);
+                                                      GArray * *cals);
 gboolean          eee_account_get_shared_calendars(EeeAccount *self,
                                                    const char *query,
-                                                   GSList * *cals);
-void              eee_account_free_calendars_list(GSList *l);
+                                                   GArray * *cals);
+void              eee_account_free_calendars_list(GArray *l);
 
 G_END_DECLS
 

@@ -78,7 +78,7 @@ struct acl_context
 
     // initial state
     int initial_mode;
-    GSList *initial_perms;
+    GArray *initial_perms;
 };
 
 struct acl_list_click_data
@@ -241,8 +241,12 @@ static void on_acl_window_destroy(GtkObject *object, struct acl_context *ctx)
     g_object_unref(ctx->source);
     g_object_unref(ctx->account);
     g_object_unref(ctx->builder);
-    g_slist_foreach(ctx->initial_perms, (GFunc)acl_perm_free, NULL);
-    g_slist_free(ctx->initial_perms);
+
+    guint i;
+    for (i = 0; i < ctx->initial_perms->len; i++)
+        acl_perm_free (g_array_index (ctx->initial_perms, struct acl_perm *, i));
+    g_array_free (ctx->initial_perms, TRUE);
+
     acl_contexts = g_slist_remove(acl_contexts, ctx);
     g_free(ctx);
 }
@@ -250,8 +254,8 @@ static void on_acl_window_destroy(GtkObject *object, struct acl_context *ctx)
 static gboolean load_state(struct acl_context *ctx)
 {
     GError *err = NULL;
-    GSList *iter;
-    GSList *perms;
+    GArray *perms;
+    guint i;
 
     char *calname = (char *)e_source_get_property(ctx->source, "eee-calname");
     xr_client_conn *conn = eee_account_connect(ctx->account);
@@ -270,10 +274,10 @@ static gboolean load_state(struct acl_context *ctx)
         return FALSE;
     }
 
-    for (iter = perms; iter; iter = iter->next)
+    for (i = 0; i < perms->len; i++)
     {
-        GSList *attrs = NULL;
-        struct acl_perm *perm = g_renew(struct acl_perm, iter->data, 1);
+        GArray *attrs = NULL;
+        struct acl_perm *perm = g_renew(struct acl_perm, g_array_index (perms, struct acl_perm *, i), 1);
         eee_account_get_user_attributes(ctx->account, perm->perm.user, &attrs);
         perm->realname = g_strdup(eee_find_attribute_value(attrs, "realname"));
         eee_account_free_attributes_list(attrs);
@@ -293,9 +297,9 @@ static gboolean load_state(struct acl_context *ctx)
         return TRUE;
     }
 
-    for (iter = perms; iter; iter = iter->next)
+    for (i = 0; i < perms->len; i++)
     {
-        ESUserPermission *perm = iter->data;
+        ESUserPermission *perm = g_array_index (perms, ESUserPermission *, i);
         if (!strcmp(perm->user, "*"))
         {
             ctx->initial_mode = ACL_MODE_PUBLIC;
@@ -320,15 +324,14 @@ void update_gui_state(struct acl_context *ctx)
         gtk_window_resize(ctx->win, 500, 1);
     }
 
-    GSList *iter;
+    guint i;
     GtkTreeIter titer;
-    for (iter = ctx->initial_perms; iter; iter = iter->next)
+    for (i = 0; i < ctx->initial_perms->len; i++)
     {
-        struct acl_perm *perm = iter->data;
+        struct acl_perm *perm = g_array_index (ctx->initial_perms, struct acl_perm *, i);
         if (!strcmp(perm->perm.user, "*"))
-        {
             continue;
-        }
+
         gtk_list_store_append(ctx->acl_model, &titer);
         gtk_list_store_set(ctx->acl_model, &titer,
                            ACL_USERNAME_COLUMN, perm->perm.user,
@@ -350,11 +353,11 @@ static void update_users_list(struct acl_context *ctx)
 {
     // get a list of users to ignore
     GSList *users = NULL;
-    GSList *iter;
+    guint i;
 
-    for (iter = ctx->initial_perms; iter; iter = iter->next)
+    for (i = 0; i < ctx->initial_perms->len; i++)
     {
-        ESUserPermission *perm = iter->data;
+        ESUserPermission *perm = g_array_index (ctx->initial_perms, ESUserPermission *, i);
         users = g_slist_append(users, perm->user);
     }
     gtk_list_store_clear(ctx->users_model);

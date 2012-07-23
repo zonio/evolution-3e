@@ -23,6 +23,8 @@
 # include "config.h"
 #endif
 
+#include <string.h>
+
 #include <libedataserverui/e-source-selector.h>
 #include <calendar/gui/e-cal-config.h>
 #include <shell/es-event.h>

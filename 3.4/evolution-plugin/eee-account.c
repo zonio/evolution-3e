@@ -34,7 +34,7 @@ struct _EeeAccountPriv
 {
     xr_client_conn *conn;
     gboolean is_authorized;
-    GSList *cals;
+    GArray *cals;
 };
 
 EeeAccount *eee_account_new(const char *name)
@@ -120,9 +120,9 @@ gboolean eee_account_find_server(EeeAccount *self)
 static gboolean remove_acl(xr_client_conn *conn, const char *calname)
 {
     GError *err = NULL;
-    GSList *iter;
+    guint i;
 
-    GSList *perms = ESClient_getUserPermissions(conn, calname, &err);
+    GArray *perms = ESClient_getUserPermissions(conn, calname, &err);
 
     if (err)
     {
@@ -130,10 +130,10 @@ static gboolean remove_acl(xr_client_conn *conn, const char *calname)
         goto err0;
     }
 
-    for (iter = perms; iter; iter = iter->next)
+    for (i = 0; i < perms->len; i++)
     {
-        ESUserPermission *perm = iter->data;
-        ESClient_setUserPermission(conn, calname, perm->user, "none", &err);
+        ESUserPermission *perm = g_array_index (perms, ESUserPermission *, i);
+        ESClient_setUserPermission (conn, calname, perm->user, "none", &err);
         if (err)
         {
             g_warning("** EEE ** Failed to update permission for calendar '%s'. (%d:%s)", calname, err->code, err->message);
@@ -144,8 +144,7 @@ static gboolean remove_acl(xr_client_conn *conn, const char *calname)
     return TRUE;
 
 err1:
-    g_slist_foreach(perms, (GFunc)ESUserPermission_free, NULL);
-    g_slist_free(perms);
+    Array_ESUserPermission_free (perms);
 err0:
     g_clear_error(&err);
     return FALSE;
@@ -168,11 +167,10 @@ static gboolean add_wildcard(xr_client_conn *conn, const char *calname)
 static gboolean update_acl(xr_client_conn *conn, const char *calname, GSList *new_perms)
 {
     GError *err = NULL;
-    GSList *iter;
-    GSList *iter2;
     gboolean retval = TRUE;
-
-    GSList *perms = ESClient_getUserPermissions(conn, calname, &err);
+    guint i;
+    GSList *iter;
+    GArray *perms = ESClient_getUserPermissions(conn, calname, &err);
 
     if (err)
     {
@@ -180,17 +178,17 @@ static gboolean update_acl(xr_client_conn *conn, const char *calname, GSList *ne
         return FALSE;
     }
 
-    new_perms = g_slist_copy(new_perms);
+    new_perms = g_slist_copy (new_perms);
     /* for each existing perm */
-    for (iter = perms; iter; iter = iter->next)
+    for (i = 0; i < perms->len; i++)
     {
-        ESUserPermission *perm = iter->data;
+        ESUserPermission *perm = g_array_index (perms, ESUserPermission *, i);
         gboolean not_found = TRUE;
 
         /* find matching new perm */
-        for (iter2 = new_perms; iter2; iter2 = iter2->next)
+        for (iter = new_perms; iter != NULL; iter = iter->next)
         {
-            ESUserPermission *new_perm = iter2->data;
+            ESUserPermission *new_perm = (ESUserPermission *) iter->data;
 
             if (!strcmp(perm->user, new_perm->user))
             {
@@ -205,7 +203,7 @@ static gboolean update_acl(xr_client_conn *conn, const char *calname, GSList *ne
                         retval = FALSE;
                     }
                 }
-                new_perms = g_slist_remove_link(new_perms, iter2);
+                new_perms = g_slist_remove_link(new_perms, iter);
                 not_found = FALSE;
                 break;
             }
@@ -270,7 +268,7 @@ gboolean eee_account_calendar_acl_set_shared(EeeAccount *self, const char *calna
     return update_acl(self->priv->conn, calname, new_perms);
 }
 
-gboolean eee_account_load_calendars(EeeAccount *self, GSList * *cals)
+gboolean eee_account_load_calendars(EeeAccount *self, GArray * *cals)
 {
     GError *err = NULL;
 
@@ -297,7 +295,7 @@ gboolean eee_account_load_calendars(EeeAccount *self, GSList * *cals)
     return TRUE;
 }
 
-GSList *eee_account_peek_calendars(EeeAccount *self)
+GArray *eee_account_peek_calendars(EeeAccount *self)
 {
     return self->priv->cals;
 }
@@ -306,12 +304,11 @@ GSList *eee_account_peek_calendars(EeeAccount *self)
 static char *create_users_query(EeeAccount *self, const char *realname)
 {
     if (realname == NULL || !eee_account_auth(self))
-    {
         return NULL;
-    }
+
     char *query = g_strdup_printf("match_user_attribute_prefix('realname', %s)", realname);
     GError *err = NULL;
-    GSList *users = ESClient_getUsers(self->priv->conn, query, &err);
+    GArray *users = ESClient_getUsers(self->priv->conn, query, &err);
     g_free(query);
     if (err)
     {
@@ -319,27 +316,28 @@ static char *create_users_query(EeeAccount *self, const char *realname)
         g_clear_error(&err);
         return NULL;
     }
+
     GString *result = g_string_new("");
+    guint i;
     GSList *iter;
-    for (iter = users; iter; iter = iter->next)
+
+    for (i = 0; i < users->len; i++)
     {
-        ESUserInfo *user = iter->data;
-        if (iter != users)
-        {
+        ESUserInfo *user = g_array_index (users, ESUserInfo *, i);
+        if (i)
             g_string_append(result, " OR ");
-        }
         g_string_append_printf(result, "match_username('%s')", user->username);
     }
-    g_slist_foreach(users, (GFunc)ESUserInfo_free, NULL);
-    g_slist_free(users);
+
+    Array_ESUserInfo_free (users);
+
     if (strcmp("", result->str) == 0)
-    {
         return NULL;
-    }
+
     return g_string_free(result, FALSE);
 }
 
-gboolean eee_account_search_shared_calendars(EeeAccount *self, const char *query_string, GSList * *cals)
+gboolean eee_account_search_shared_calendars(EeeAccount *self, const char *query_string, GArray * *cals)
 {
     char *query = NULL;
     gboolean retval;
@@ -363,7 +361,7 @@ gboolean eee_account_search_shared_calendars(EeeAccount *self, const char *query
     return retval;
 }
 
-gboolean eee_account_get_shared_calendars(EeeAccount *self, const char *query, GSList * *cals)
+gboolean eee_account_get_shared_calendars(EeeAccount *self, const char *query, GArray * *cals)
 {
     GError *err = NULL;
 
@@ -383,17 +381,12 @@ gboolean eee_account_get_shared_calendars(EeeAccount *self, const char *query, G
     return TRUE;
 }
 
-void eee_account_free_calendars_list(GSList *l)
+void eee_account_free_calendars_list(GArray *l)
 {
-    if (l == NULL)
-    {
-        return;
-    }
-    g_slist_foreach(l, (GFunc)ESCalendarInfo_free, NULL);
-    g_slist_free(l);
+    Array_ESCalendarInfo_free (l);
 }
 
-gboolean eee_account_get_user_attributes(EeeAccount *self, const char *username, GSList * *attrs)
+gboolean eee_account_get_user_attributes(EeeAccount *self, const char *username, GArray * *attrs)
 {
     GError *err = NULL;
 
@@ -413,14 +406,9 @@ gboolean eee_account_get_user_attributes(EeeAccount *self, const char *username,
     return TRUE;
 }
 
-void eee_account_free_attributes_list(GSList *l)
+void eee_account_free_attributes_list(GArray *l)
 {
-    if (l == NULL)
-    {
-        return;
-    }
-    g_slist_foreach(l, (GFunc)ESAttribute_free, NULL);
-    g_slist_free(l);
+    Array_ESAttribute_free (l);
 }
 
 gboolean eee_account_set_calendar_attribute(EeeAccount *self, const char *owner, const char *calname, const char *name, const char *value, gboolean is_public)
@@ -428,9 +416,7 @@ gboolean eee_account_set_calendar_attribute(EeeAccount *self, const char *owner,
     GError *err = NULL;
 
     if (owner == NULL || calname == NULL || name == NULL || !eee_account_auth(self))
-    {
         return FALSE;
-    }
 
     char *calspec = g_strdup_printf("%s:%s", owner, calname);
     ESClient_setCalendarAttribute(self->priv->conn, calspec, name, value ? value : "", is_public, &err);
@@ -577,7 +563,8 @@ gboolean eee_account_delete_calendar(EeeAccount *self, const char *calname)
 gboolean eee_account_load_users(EeeAccount *self, char *prefix, GSList *exclude_users, GtkListStore *model)
 {
     GError *err = NULL;
-    GSList *users, *iter;
+    GArray *users;
+    guint i;
     GtkTreeIter titer_user;
 
     if (!eee_account_auth(self))
@@ -604,19 +591,16 @@ gboolean eee_account_load_users(EeeAccount *self, char *prefix, GSList *exclude_
         return FALSE;
     }
 
-    for (iter = users; iter; iter = iter->next)
+    for (i = 0; i < users->len; i++)
     {
-        ESUserInfo *user = iter->data;
+        ESUserInfo *user = g_array_index (users, ESUserInfo *, i);
         const char *realname = eee_find_attribute_value(user->attrs, "realname");
 
         if (!strcmp(self->name, user->username))
-        {
             continue;
-        }
+
         if (exclude_users && g_slist_find_custom(exclude_users, user->username, (GCompareFunc)strcmp))
-        {
             continue;
-        }
 
         gtk_list_store_append(model, &titer_user);
         gtk_list_store_set(model, &titer_user,
@@ -626,8 +610,7 @@ gboolean eee_account_load_users(EeeAccount *self, char *prefix, GSList *exclude_
                            -1);
     }
 
-    g_slist_foreach(users, (GFunc)ESUserInfo_free, NULL);
-    g_slist_free(users);
+    Array_ESUserInfo_free (users);
 
     return TRUE;
 }
@@ -800,15 +783,14 @@ static void eee_account_dispose(GObject *object)
 static void eee_account_finalize(GObject *object)
 {
     EeeAccount *self = EEE_ACCOUNT(object);
+    guint i;
 
     g_free(self->name);
     g_free(self->server);
     if (self->priv->conn)
-    {
         xr_client_free(self->priv->conn);
-    }
-    g_slist_foreach(self->priv->cals, (GFunc)ESCalendarInfo_free, NULL);
-    g_slist_free(self->priv->cals);
+
+    Array_ESCalendarInfo_free (self->priv->cals);
 
     G_OBJECT_CLASS(eee_account_parent_class)->finalize(object);
 }

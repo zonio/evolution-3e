@@ -21,7 +21,6 @@
  */
 
 #include <gio/gio.h>
-#include <openssl/sha.h>
 #include "e-cal-backend-3e-priv.h"
 
 typedef struct _attachment attachment;
@@ -48,35 +47,22 @@ static char *checksum_file(GFile *file)
 {
     char buf[4096];
     gssize read_bytes = -1;
-    guchar raw_sha1[SHA_DIGEST_LENGTH];
-    SHA_CTX sha1_ctx;
-    guint i;
+    GChecksum * chk;
+    char * result = NULL;
 
     GFileInputStream *stream = g_file_read(file, NULL, NULL);
 
     if (stream)
     {
-        SHA1_Init(&sha1_ctx);
+        chk = g_checksum_new (G_CHECKSUM_SHA1);
         while ((read_bytes = g_input_stream_read(G_INPUT_STREAM(stream), buf, 4096, NULL, NULL)) > 0)
-        {
-            SHA1_Update(&sha1_ctx, buf, read_bytes);
-        }
-        SHA1_Final(raw_sha1, &sha1_ctx);
-        g_object_unref(stream);
+            g_checksum_update (chk, (guchar *) buf, read_bytes);
+        g_object_unref (stream);
+        result = (char *) g_checksum_get_string (chk);
+        g_checksum_free (chk);
     }
 
-    if (read_bytes < 0)
-    {
-        return NULL;
-    }
-
-    GString *sha1 = g_string_sized_new(SHA_DIGEST_LENGTH * 2);
-    for (i = 0; i < SHA_DIGEST_LENGTH; i++)
-    {
-        g_string_append_printf(sha1, "%02hhx", raw_sha1[i]);
-    }
-
-    return g_string_free(sha1, FALSE);
+    return result;
 }
 
 static attachment *get_attacmhent(ECalBackend3e *cb, ECalComponent *comp, const char *uri)

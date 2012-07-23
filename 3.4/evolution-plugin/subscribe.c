@@ -59,13 +59,13 @@ struct subscribe_context
 
 static struct subscribe_context *active_ctx = NULL;
 
-static gboolean calendar_exists(GSList *cals, ESCalendarInfo *ref_cal)
+static gboolean calendar_exists(GArray *cals, ESCalendarInfo *ref_cal)
 {
-    GSList *iter;
+    guint i;
 
-    for (iter = cals; iter; iter = iter->next)
+    for (i = 0; i < cals->len; i++)
     {
-        ESCalendarInfo *cal = iter->data;
+        ESCalendarInfo *cal = g_array_index (cals, ESCalendarInfo *, i);
 
         if (!strcmp(cal->name, ref_cal->name) &&
             !strcmp(cal->owner, ref_cal->owner))
@@ -79,7 +79,8 @@ static gboolean calendar_exists(GSList *cals, ESCalendarInfo *ref_cal)
 
 static gboolean reload_data(struct subscribe_context *ctx, const char *query)
 {
-    GSList *cals, *existing_cals, *iter;
+    GArray *cals, *existing_cals;
+    guint i;
     GtkTreeIter titer_user;
     GtkTreeIter titer_cal;
 
@@ -94,10 +95,10 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
 
     // for each user get his calendars
     char *prev_owner = NULL;
-    for (iter = cals; iter; iter = iter->next)
+    for (i = 0; i < cals->len; i++)
     {
         const char *cal_title = NULL;
-        ESCalendarInfo *cal = iter->data;
+        ESCalendarInfo *cal = g_array_index (cals, ESCalendarInfo *, i);
 
         // skip already subscribed cals
         if (calendar_exists(existing_cals, cal))
@@ -107,20 +108,16 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
 
         if (!prev_owner || strcmp(prev_owner, cal->owner))
         {
-            GSList *attrs = NULL;
+            GArray *attrs = NULL;
             const char *realname = NULL;
             char *title;
 
             eee_account_get_user_attributes(ctx->account, cal->owner, &attrs);
             realname = eee_find_attribute_value(attrs, "realname");
             if (realname)
-            {
                 title = g_strdup_printf("%s (%s)", cal->owner, realname);
-            }
             else
-            {
                 title = g_strdup_printf("%s", cal->owner);
-            }
 
             gtk_tree_store_append(ctx->model, &titer_user, NULL);
             gtk_tree_store_set(ctx->model, &titer_user,

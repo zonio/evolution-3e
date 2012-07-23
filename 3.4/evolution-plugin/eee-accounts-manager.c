@@ -438,9 +438,11 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
         }
         else
         {
-            for (iter2 = eee_account_peek_calendars(account); iter2 != NULL; iter2 = iter2->next)
+            GArray * cals = eee_account_peek_calendars (account);
+            guint i;
+            for (i = 0; i < cals->len; i++)
             {
-                ESCalendarInfo *cal = iter2->data;
+                ESCalendarInfo *cal = g_array_index (cals, ESCalendarInfo *, i);
                 ESource *source;
 
                 if (!strcmp(cal->owner, account->name))
