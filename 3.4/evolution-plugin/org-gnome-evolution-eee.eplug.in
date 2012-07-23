@@ -117,7 +117,7 @@
 
     <hook class="org.gnome.evolution.mail.config:1.0">
       <group
-        target="account"
+        target="settings"
         id="org.gnome.evolution.mail.config.accountWizard"
         commit="eee_account_wizard_commit"
         check="eee_account_wizard_check">
@@ -127,7 +127,7 @@
           factory="eee_account_wizard_page"/>
       </group>
       <group
-        target="account"
+        target="settings"
         id="org.gnome.evolution.mail.config.accountAssistant"
         commit="eee_account_wizard_commit"
         check="eee_account_wizard_check">
@@ -137,7 +137,7 @@
           factory="eee_account_wizard_page"/>
       </group>
       <group 
-        target="account" 
+        target="settings" 
         id="org.gnome.evolution.mail.config.accountEditor"
         check="eee_account_properties_check"
         commit="eee_account_properties_commit">
