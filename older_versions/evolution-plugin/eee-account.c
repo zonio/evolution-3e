@@ -328,7 +328,7 @@ static char *create_users_query(EeeAccount *self, const char *realname)
         {
             g_string_append(result, " OR ");
         }
-        g_string_append_printf(result, "match_username('%s')", user->username);
+        g_string_append_printf(result, "match_owner('%s')", user->username);
     }
     g_slist_foreach(users, (GFunc)ESUserInfo_free, NULL);
     g_slist_free(users);
@@ -350,7 +350,7 @@ gboolean eee_account_search_shared_calendars(EeeAccount *self, const char *query
         char *users_query = create_users_query(self, escaped_query);
         users_query = users_query ? g_strdup_printf("%s OR ", users_query) : "";
         query = g_strdup_printf(
-            "%2$smatch_username_prefix(%1$s)"
+            "%2$smatch_owner_prefix(%1$s)"
             " OR match_calendar_name_prefix(%1$s)"
             " OR match_calendar_attribute_prefix('title', %1$s)",
             escaped_query, users_query);
