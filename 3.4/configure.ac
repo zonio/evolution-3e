@@ -98,7 +98,6 @@ AC_OUTPUT([
   eds-plugin/Makefile
   evolution-plugin/Makefile
   evolution-plugin/org-gnome-evolution-eee.eplug
-  evolution-plugin/org-gnome-eee-cal-subscription.xml
 ])
 
 cat << EOF
