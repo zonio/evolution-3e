@@ -3,7 +3,6 @@
 <!--*- mode: xml -*-->
 <glade-interface>
   <widget class="GtkWindow" id="subs_window">
-    <property name="visible">True</property>
     <property name="border_width">4</property>
     <property name="title" translatable="yes">Subscribe Calendar</property>
     <property name="window_position">GTK_WIN_POS_CENTER</property>

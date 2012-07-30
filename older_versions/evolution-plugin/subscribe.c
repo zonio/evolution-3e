@@ -375,6 +375,8 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
     glade_xml_signal_connect_data(c->xml, "on_subs_button_cancel_clicked", G_CALLBACK(on_subs_button_cancel_clicked), c);
     glade_xml_signal_connect_data(c->xml, "on_subs_window_destroy", G_CALLBACK(on_subs_window_destroy), c);
 
+    gtk_widget_show_all (GTK_WIDGET (c->win));
+
     active_ctx = c;
 }
 
