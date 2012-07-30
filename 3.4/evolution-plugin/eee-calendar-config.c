@@ -27,10 +27,12 @@
 
 #include <libedataserverui/e-source-selector.h>
 #include <calendar/gui/e-cal-config.h>
+#include <calendar/gui/e-calendar-selector.h>
 #include <shell/es-event.h>
 #include <mail/em-config.h>
 #include <libintl.h>
 
+#include <libecal/e-cal-client.h>
 #include <libevolution-utils/e-alert.h>
 #include <libevolution-utils/e-alert-dialog.h>
 #include <misc/e-popup-action.h>
@@ -95,7 +97,7 @@ void eee_calendar_subscription(GtkAction *action, EShellView *shell_view);
 static GtkActionEntry menuItems [] = {
     { "eee-calendar-subscribe",
       NULL,
-      N_("Subscribe to 3e calendar..."),
+      N_("Subscribe to 3e calendar"),
       NULL,
       NULL,
       G_CALLBACK(eee_calendar_subscription) }
@@ -324,24 +326,48 @@ void eee_calendar_properties_commit(EPlugin *epl, ECalConfigTargetSource *target
     eee_accounts_manager_restart_sync(mgr());
 }
 
+static void
+display_error_message (GtkWidget *parent,
+                       const gchar *message)
+{
+  GtkWidget *dialog;
+
+  dialog = gtk_message_dialog_new (GTK_WINDOW (parent), 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "%s", message);
+  gtk_dialog_run (GTK_DIALOG (dialog));
+  gtk_widget_destroy (dialog);
+}
+
+
 /* calendar source list popup menu items */
 
 static void on_permissions_cb(GtkAction *action, EShellView *shell_view)
 {
-    EShellSidebar *shell_sidebar = e_shell_view_get_shell_sidebar(shell_view);
+    EShellSidebar *shell_sidebar = e_shell_view_get_shell_sidebar (shell_view);
     ESourceSelector *selector;
-    g_object_get(shell_sidebar, "selector", &selector, NULL);
-    ESource *source = e_source_selector_peek_primary_selection(selector);
-    ESourceGroup *group = e_source_peek_group(source);
+    g_object_get (shell_sidebar, "selector", &selector, NULL);
+    ESource *source = e_source_selector_peek_primary_selection (selector);
+    ESourceGroup *group = e_source_peek_group (source);
     EeeAccount *account;
+
+    if (!e_source_is_3e (source))
+      {
+        display_error_message (gtk_widget_get_toplevel (GTK_WIDGET (selector)), _("This action is available only for 3e calendars."));
+        g_object_unref (selector);
+        return;
+      }
 
     if (!eee_plugin_online)
     {
+        display_error_message (gtk_widget_get_toplevel (GTK_WIDGET (selector)), _("This action is not available with 3e plugin in offline mode."));
+        g_object_unref (selector);
         return;
     }
 
+    g_object_unref (selector);
+
     account = eee_accounts_manager_find_account_by_source(mgr(), source);
     acl_gui_create(mgr(), account, source);
+
 }
 
 static void on_unsubscribe_cb(GtkAction *action, EShellView *shell_view)
@@ -351,21 +377,28 @@ static void on_unsubscribe_cb(GtkAction *action, EShellView *shell_view)
     g_object_get(shell_sidebar, "selector", &selector, NULL);
     ESource *source = e_source_selector_peek_primary_selection(selector);
 
+    if (!e_source_is_3e (source))
+      {
+        display_error_message (gtk_widget_get_toplevel (GTK_WIDGET (selector)), _("This action is available only for 3e calendars."));
+        g_object_unref (selector);
+        return;
+      }
+
+    if (!eee_plugin_online)
+    {
+        display_error_message (gtk_widget_get_toplevel (GTK_WIDGET (selector)), _("This action is not available with 3e plugin in offline mode."));
+        g_object_unref (selector);
+        return;
+    }
+
+    g_object_unref (selector);
+
     ESourceGroup *group = e_source_peek_group(source);
     const char *owner = e_source_get_property(source, "eee-owner");
     const char *calname = e_source_get_property(source, "eee-calname");
 
     EeeAccount *account;
     GError *err = NULL;
-
-    if (!eee_plugin_online)
-    {
-        return;
-    }
-    if (e_source_is_3e_owned_calendar(source))
-    {
-        return;
-    }
 
     account = eee_accounts_manager_find_account_by_source(mgr(), source);
     if (eee_account_unsubscribe_calendar(account, owner, calname))
@@ -395,6 +428,7 @@ static void on_delete_cb(GtkAction *action, EShellView *shell_view)
     if (e_alert_run_dialog_for_args(GTK_WINDOW(shell_view),
                     "calendar:prompt-delete-calendar", e_source_peek_name(source), NULL) != GTK_RESPONSE_YES)
     {
+        g_object_unref (selector);
         return;
     }
 
@@ -405,12 +439,19 @@ static void on_delete_cb(GtkAction *action, EShellView *shell_view)
 
     if (!eee_plugin_online)
     {
+        display_error_message (gtk_widget_get_toplevel (GTK_WIDGET (selector)), _("This action is not available with 3e plugin in offline mode."));
+        g_object_unref (selector);
         return;
     }
+
     if (!e_source_is_3e_owned_calendar(source))
     {
+        display_error_message (gtk_widget_get_toplevel (GTK_WIDGET (selector)), _("This action is available only for 3e calendars."));
+        g_object_unref (selector);
         return;
     }
+
+    g_object_unref (selector);
 
     account = eee_accounts_manager_find_account_by_source(mgr(), source);
     if (eee_account_delete_calendar(account, calname))
@@ -430,6 +471,48 @@ static void on_delete_cb(GtkAction *action, EShellView *shell_view)
     eee_accounts_manager_restart_sync(mgr());
 }
 
+gboolean
+calendar_actions_init (GtkUIManager *ui_manager, EShellView *shell_view)
+{
+  EShellWindow *shell_window;
+  GtkActionGroup *action_group;
+  GtkAction *action;
+
+  shell_window = e_shell_view_get_shell_window (shell_view);
+
+  action_group = e_shell_window_get_action_group (shell_window, "calendar");
+
+  action = gtk_action_new ("calendar-permissions", _("Setup permissions"), _("Setup 3e calendar permissions"), "stock_shared-by-me");
+  gtk_action_group_add_action (action_group, action);
+
+  g_signal_connect (
+    action, "activate",
+    G_CALLBACK (on_permissions_cb), shell_view);
+
+  g_object_unref (action);
+
+  action = gtk_action_new ("calendar-unsubscribe", _("Unsubscribe"), _("Unsubscribe a previously subscribed 3e calendar"), "remove");
+  gtk_action_group_add_action (action_group, action);
+
+  g_signal_connect (
+    action, "activate",
+    G_CALLBACK (on_unsubscribe_cb), shell_view);
+
+  g_object_unref (action);
+
+  action = gtk_action_new ("calendar-delete-3e", _("Delete from server"), _("Delete calendar from 3e server"), GTK_STOCK_DELETE);
+  gtk_action_group_add_action (action_group, action);
+
+  g_signal_connect (
+    action, "activate",
+    G_CALLBACK (on_delete_cb), shell_view);
+
+  g_object_unref (action);
+
+  return TRUE;
+}
+
+/*
 static GtkActionEntry calendar_entries[] = {
     { "eee-permissions",
       "stock_shared-by-me",
@@ -515,7 +598,7 @@ offline_mode:
     GtkActionGroup *action_group = e_shell_window_get_action_group(shell_window, "calendar");
     e_action_group_add_popup_actions(action_group, items,
                                      G_N_ELEMENTS(items));
-}
+}*/
 
 /* watch evolution state (online/offline) */
 
@@ -587,7 +670,7 @@ static GtkWidget *add_section(GtkWidget *panel, const char *title)
     gtk_label_set_use_markup(GTK_LABEL(label), TRUE);
     gtk_box_pack_start(GTK_BOX(panel), hbox = gtk_hbox_new(FALSE, 12), FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(hbox), gtk_label_new(""), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(hbox), vbox = gtk_vbox_new(FALSE, 12), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(hbox), vbox = gtk_vbox_new(FALSE, 12), FALSE, TRUE, 0);
 
     return vbox;
 }
@@ -605,44 +688,137 @@ void status_changed(GtkToggleButton *button, const char *name)
     eee_accounts_manager_restart_sync(mgr());
 }
 
-GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData *data)
+static inline guint8
+eee_color_16to8 (guint16 color)
 {
-    const char *name = ((EMConfigTargetSettings *) data->config->target)->email_address;
-    GtkWidget *panel, *section, *checkbutton_status, *label;
+  /* this way we get the same result as round (color * 0xff / 0xffff) */
+  return (guint8) (0xff * ((guint32) color + 0x80) / 0xffff);
+}
 
-    if (data->old)
+/* color has to be at least 8 bytes long */
+/*static void
+eee_color_string_16to8 (const gchar * from, gchar * to)
+{
+  GdkColor c;
+
+  if (!gdk_color_parse (from, &c))
     {
-        return data->old;
+      strcpy (to, "#ffffff");
+      return;
     }
 
-    // toplevel vbox contains frames that group 3E account settings into various
-    // groups
-    panel = gtk_vbox_new(FALSE, 12);
-    gtk_container_set_border_width(GTK_CONTAINER(panel), 12);
+  c.red = eee_color_16to8 (c.red);
+  c.green = eee_color_16to8 (c.green);
+  c.blue = eee_color_16to8 (c.blue);
+  sprintf (to, "#%02x%02x%02x", c.red, c.green, c.blue);
+}*/
 
-    // Status group
-    section = add_section(panel, _("3e Account Status"));
-    char *note = g_strdup_printf(_("If you have 3e account <i>%s</i>, you can turn it on/off here."), name);
-    label = GTK_WIDGET(g_object_new(GTK_TYPE_LABEL,
-                                        "label", note,
-                                        "use-markup", TRUE,
-                                        "justify", GTK_JUSTIFY_LEFT,
-                                        "xalign", 0,
-                                        "yalign", 0.5,
-                                        NULL));
-    g_free(note);
-    gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
-    checkbutton_status = gtk_check_button_new_with_label(_("Enable 3e Account"));
-    gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
+/*static void
+copy_calendars_clicked (GtkButton * button, const gchar * name)
+{
+  ESourceSelector * selector = g_object_get_data (G_OBJECT (button), "calendar-selector");
+  ESourceGroup * group = g_object_get_data (G_OBJECT (button), "source-group");
+  GSList * selection, * iter;
+  EeeAccount * account = eee_accounts_manager_find_account_by_name (mgr(), name);
 
-    //XXX: update button based on live account status
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), !eee_accounts_manager_account_is_disabled(mgr(), name));
-    g_signal_connect(checkbutton_status, "toggled", G_CALLBACK(status_changed), (gpointer)name); // <<< this should be ok
+  g_return_if_fail (account != NULL);
 
-    gtk_widget_show_all(panel);
-    gtk_notebook_insert_page(GTK_NOTEBOOK(data->parent), panel, gtk_label_new(_("3e Settings")), 4);
+  selection = e_source_selector_get_selection (selector);
+  for (iter = selection; iter != NULL; iter = iter->next)
+    {
+      gchar * calname, color[8], * relative_uri;
+      ESource * old, * new;
+      
+      old = E_SOURCE (iter->data);
 
-    return panel;
+      /* how to handle if failed? for now just continue */
+/*      if (!eee_account_create_new_calendar (account, &calname))
+	continue;
+
+      eee_color_string_16to8 (e_source_peek_color_spec (old), color);
+
+      eee_account_update_calendar_settings (account, account->name, calname, e_source_peek_name (old), color);
+      eee_account_disconnect (account);
+
+      new = e_source_new_3e (calname, name, account, "write", e_source_peek_name (old), color);
+      e_source_group_add_source (group, new, -1);
+
+      copy_source (GTK_WINDOW (gtk_widget_get_toplevel (GTK_WIDGET (button))), old, new, E_CAL_CLIENT_SOURCE_TYPE_EVENTS);
+
+      g_object_unref (new);
+    }
+  e_source_selector_free_selection (iter);
+}*/
+
+GtkWidget *
+eee_account_properties_page (EPlugin * epl, EConfigHookItemFactoryData * data)
+{
+  GtkBuilder * builder;
+  GtkWidget * settings/*, * selector*/;
+  GtkLabel * settings_desc;
+  GtkToggleButton * enable_button;
+/*  GtkContainer * scrolled_window;
+  GtkButton * copy_button;*/
+  const gchar * name = ((EMConfigTargetSettings *) data->config->target)->email_address;
+  gchar * desc;
+  ESourceList * sourcelist;
+  ESourceGroup * group;
+  GSList * groups, * iter;
+
+  if (data->old)
+    return data->old;
+
+  builder = gtk_builder_new ();
+  gtk_builder_add_from_file (builder, PLUGINDIR "/org-gnome-evolution-eee.glade", NULL);
+
+  settings = GTK_WIDGET (g_object_ref (gtk_builder_get_object (builder, "account-3e-settings")));
+  settings_desc = GTK_LABEL (gtk_builder_get_object (builder, "account-3e-settings_description-label"));
+  enable_button = GTK_TOGGLE_BUTTON (gtk_builder_get_object (builder, "account-3e-settings-enable-button"));
+/*  scrolled_window = GTK_CONTAINER (gtk_builder_get_object (builder, "copy-calendars-scrolledwindow"));
+  copy_button = GTK_BUTTON (gtk_builder_get_object (builder, "copy-calendars-copy-button"));*/
+
+  desc = g_strdup_printf (_("If you have 3e account <i>%s</i>, you can turn it on/off here."), name);
+  gtk_label_set_markup (settings_desc, desc);
+  g_free (desc);
+
+  gtk_toggle_button_set_active (enable_button, !eee_accounts_manager_account_is_disabled (mgr (), name));
+  g_signal_connect (enable_button, "toggled", G_CALLBACK (status_changed), (gpointer) name);
+ 
+/*  e_cal_client_get_sources (&sourcelist, E_CAL_CLIENT_SOURCE_TYPE_EVENTS, NULL);*/
+
+  /* we want calendars only from other accounts (or local), so we are removing
+     group of this account  */
+/*  groups = e_source_list_peek_groups (sourcelist);
+  for (iter = groups; iter != NULL; iter = iter->next)
+    {
+      group = E_SOURCE_GROUP (iter->data);
+      const gchar * groupname = e_source_group_peek_3e_name (group);
+    
+      if (groupname == NULL)
+	continue;
+
+      if (!strcmp (name, groupname))
+	{
+	  e_source_list_remove_group (sourcelist, group);
+	  break;
+	}
+    }
+
+  selector = e_calendar_selector_new (sourcelist);
+  g_object_unref (sourcelist);
+
+  gtk_container_add (scrolled_window, selector);
+  gtk_widget_show (selector);
+
+  g_object_set_data (G_OBJECT (copy_button), "source-group", group);
+  g_object_set_data (G_OBJECT (copy_button), "calendar-selector", selector);
+  g_signal_connect (copy_button, "clicked", G_CALLBACK (copy_calendars_clicked), (gpointer) name);*/
+
+  g_object_unref (builder);
+
+  gtk_notebook_insert_page(GTK_NOTEBOOK(data->parent), settings, gtk_label_new(_("3e Settings")), 4);
+
+  return settings;
 }
 
 gboolean eee_account_properties_check(EPlugin *epl, EConfigHookPageCheckData *data)

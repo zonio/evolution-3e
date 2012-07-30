@@ -288,6 +288,9 @@ static void on_subs_window_destroy(GtkObject *object, struct subscribe_context *
 #endif /* !EDS_CHECK_VERSION(3,0,0) */
 {
     g_object_unref(ctx->win);
+    g_object_unref(ctx->tview);
+    g_object_unref(ctx->search);
+    g_object_unref(ctx->subscribe_button);
     g_object_unref(ctx->builder);
     g_free(ctx);
     active_ctx = NULL;
@@ -330,7 +333,7 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
     gtk_builder_add_from_file (c->builder, PLUGINDIR "/org-gnome-evolution-eee.glade", NULL);
 
     c->win = GTK_WINDOW(g_object_ref(gtk_builder_get_object(c->builder, "subs_window")));
-    c->tview = GTK_TREE_VIEW(gtk_builder_get_object(c->builder, "treeview_calendars"));
+    c->tview = GTK_TREE_VIEW(g_object_ref(gtk_builder_get_object(c->builder, "treeview_calendars")));
 
     // create model for calendar list
     c->model = gtk_tree_store_new(SUB_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN, G_TYPE_STRING);
@@ -350,7 +353,7 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
     // setup account list combo box
     GSList *iter, *list;
     GtkListStore *accounts_store = gtk_list_store_new(2, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
-    GtkWidget *accounts_combo = GTK_WIDGET(gtk_builder_get_object(c->builder, "combo_account"));
+    GtkWidget *accounts_combo = GTK_WIDGET(g_object_ref(gtk_builder_get_object(c->builder, "combo_account")));
     list = eee_accounts_manager_peek_accounts_list(mgr);
     for (iter = list; iter; iter = iter->next)
     {
@@ -370,15 +373,18 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
     gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(accounts_combo), renderer, "text", 0, NULL);
     g_signal_connect(accounts_combo, "changed", G_CALLBACK(account_selected), c);
     gtk_combo_box_set_active(GTK_COMBO_BOX(accounts_combo), 0);
+    g_object_unref (accounts_combo);
 
-    c->search = GTK_EDITABLE(gtk_builder_get_object(c->builder, "entry_search"));
+    c->search = GTK_EDITABLE(g_object_ref(gtk_builder_get_object(c->builder, "entry_search")));
     g_signal_connect(c->search, "changed", G_CALLBACK(search_entry_changed), c);
 
     // activate buttons
-    c->subscribe_button = GTK_WIDGET(gtk_builder_get_object(c->builder, "subs_button_subscribe"));
+    c->subscribe_button = GTK_WIDGET(g_object_ref(gtk_builder_get_object(c->builder, "subs_button_subscribe")));
     g_object_set(c->subscribe_button, "sensitive", FALSE, NULL);
 
     gtk_builder_connect_signals_full (c->builder, connect_signals, c);
+
+    gtk_widget_show_all (GTK_WIDGET (c->win));
 
     active_ctx = c;
 }
@@ -386,7 +392,5 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
 void subscribe_gui_destroy()
 {
     if (active_ctx)
-    {
-        gtk_widget_destroy(GTK_WIDGET(active_ctx->win));
-    }
+        gtk_widget_destroy (GTK_WIDGET (active_ctx->win));
 }

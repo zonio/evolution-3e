@@ -32,6 +32,8 @@ G_BEGIN_DECLS
 
 char *qp_escape_string(const char *s);
 
+const gchar * e_source_group_peek_3e_name (ESourceGroup * group);
+
 gboolean               e_source_group_is_3e(ESourceGroup *group);
 gboolean               e_source_is_3e(ESource *source);
 gboolean               e_source_is_3e_owned_calendar(ESource *source);

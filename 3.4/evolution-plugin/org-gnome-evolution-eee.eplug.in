@@ -50,8 +50,13 @@
 -->
 
     <hook class="org.gnome.evolution.ui:1.0">
-      <ui-manager id="org.gnome.evolution.calendars">
-        <popup name='calendar-popup' factory="eee_calendar_popup_source_factory">
+      <ui-manager id="org.gnome.evolution.calendars" callback="calendar_actions_init">
+        <popup name="calendar-popup">
+          <placeholder name="calendar-popup-actions">
+            <menuitem action="calendar-permissions"/>
+            <menuitem action="calendar-unsubscribe"/>
+            <menuitem action="calendar-delete-3e"/>
+          </placeholder>
         </popup>
       </ui-manager>
     </hook>
@@ -92,11 +97,11 @@
     <hook class="org.gnome.evolution.ui:1.0">
       <ui-manager id="org.gnome.evolution.calendars">
         <menubar name='main-menu'>
-          <menu action="file-menu">
-            <placeholder name='file-action'>
+          <placeholder name='custom-menus'>
+            <menu action="calendar-actions-menu">
               <menuitem action="eee-calendar-subscribe"/>
-            </placeholder>
-          </menu>
+            </menu>
+          </placeholder>
         </menubar>
       </ui-manager>
     </hook>

@@ -57,6 +57,24 @@ char *qp_escape_string(const char *s)
     return r;
 }
 
+const gchar *
+e_source_group_peek_3e_name (ESourceGroup * group)
+{
+  const gchar * base_uri, * name;
+
+  base_uri = e_source_group_peek_base_uri (group);
+  name = e_source_group_peek_name (group);
+
+  if (strcmp (base_uri, EEE_URI_PREFIX) || !g_str_has_prefix (name, "3e: "))
+    return NULL;
+
+  /* cancel the "3e: " prefix */
+  if (name != NULL)
+    return name + 4;
+
+  return NULL;
+}
+
 /* check if group is valid 3E group */
 gboolean e_source_group_is_3e(ESourceGroup *group)
 {
@@ -64,9 +82,8 @@ gboolean e_source_group_is_3e(ESourceGroup *group)
     const char *name = e_source_group_peek_name(group);
 
     if (base_uri && name)
-    {
         return g_str_has_prefix(name, "3e: ") && !strcmp(base_uri, EEE_URI_PREFIX);
-    }
+
     return FALSE;
 }
 

@@ -921,6 +921,9 @@ static icalcomponent *get_server_objects(ECalBackend3e *cb, const char *query)
     }
 
     ical = icalcomponent_new_from_string(servercal);
+
+    g_free (servercal);
+
     if (ical == NULL)
     {
         return NULL;
