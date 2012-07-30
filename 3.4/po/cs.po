@@ -148,11 +148,3 @@ msgstr "Jméno kalendáře"
 #: ../evolution-plugin/utils.c:126 ../evolution-plugin/utils.c:134
 msgid "[No Title]"
 msgstr "[Bez titulku]"
-
-#: ../evolution-plugin/org-gnome-eee-cal-subscription.xml.in.h:1
-msgid "Subscribe to 3e calendar..."
-msgstr "Připojit 3e kalendář..."
-
-#: ../evolution-plugin/org-gnome-eee-cal-subscription.xml.in.h:2
-msgid "Subscribe to other user's 3e calendar."
-msgstr "Připojit 3e kalendář jiného uživatele."
