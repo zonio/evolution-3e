@@ -31,7 +31,7 @@ AC_HEADER_STDC
 # libxr is required
 #
 
-PKG_CHECK_MODULES(LIBXR, [libxr >= 1.0])
+PKG_CHECK_MODULES(LIBXR, [libxr >= 2.0])
 AC_SUBST(LIBXR_CFLAGS)
 AC_SUBST(LIBXR_LIBS)
 
@@ -107,7 +107,6 @@ AC_OUTPUT([
   eds-plugin/Makefile
   evolution-plugin/Makefile
   evolution-plugin/org-gnome-evolution-eee.eplug
-  evolution-plugin/org-gnome-eee-cal-subscription.xml
 ])
 
 cat << EOF

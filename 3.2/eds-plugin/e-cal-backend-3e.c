@@ -244,8 +244,8 @@ static void e_cal_backend_3e_get_object_list(ECalBackendSync *backend,
                                              GSList **objects,
                                              GError **err)
 {
-    GList *all_objects;
-    GList *iter;
+    GSList *all_objects;
+    GSList *iter;
     ECalBackendSExp *cbsexp;
 
     BACKEND_METHOD_CHECKED_NORETVAL("sexp=%s", sexp);
@@ -273,7 +273,7 @@ static void e_cal_backend_3e_get_object_list(ECalBackendSync *backend,
         g_object_unref(comp);
     }
 
-    g_list_free(all_objects);
+    g_slist_free(all_objects);
     g_object_unref(cbsexp);
 
     return;
