@@ -10,6 +10,5 @@ INTLTOOL_FILES = intltool-extract.in \
 EXTRA_DIST = \
   org-gnome-evolution-eee.eplug.in \
   org-gnome-evolution-eee.glade \
-  org-gnome-eee-cal-subscription.xml.in \
   org-gnome-evolution-eee.error \
   $(INTLTOOL_FILES)
