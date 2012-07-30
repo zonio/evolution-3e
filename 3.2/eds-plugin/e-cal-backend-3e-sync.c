@@ -324,8 +324,8 @@ gboolean e_cal_backend_3e_calendar_needs_immediate_sync(ECalBackend3e *cb)
 gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb)
 {
     GError *local_err = NULL;
-    GSList *cals;
-    GSList *iter;
+    GArray *cals;
+    guint i;
 
     /* don't sync perm for owned calendars because it can't change */
     if (e_cal_backend_3e_calendar_is_owned(cb))
@@ -348,9 +348,9 @@ gboolean e_cal_backend_3e_calendar_load_perm(ECalBackend3e *cb)
         return FALSE;
     }
 
-    for (iter = cals; iter; iter = iter->next)
+    for (i = 0; i < cals->len; i++)
     {
-        ESCalendarInfo *cal = iter->data;
+        ESCalendarInfo *cal = g_array_index (cals, ESCalendarInfo *, i);
         if (!g_ascii_strcasecmp(cal->owner, cb->priv->owner) &&
             !g_ascii_strcasecmp(cal->name, cb->priv->calname))
         {

@@ -7,8 +7,7 @@ AM_CFLAGS = \
 
 plugin_DATA = \
   org-gnome-evolution-eee.eplug \
-  org-gnome-evolution-eee.glade \
-  org-gnome-eee-cal-subscription.xml
+  org-gnome-evolution-eee.glade
 
 error_DATA = \
   org-gnome-evolution-eee.error
