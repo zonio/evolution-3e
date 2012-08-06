@@ -300,7 +300,7 @@ static gboolean load_state(struct acl_context *ctx)
     for (i = 0; i < perms->len; i++)
     {
         ESUserPermission *perm = g_array_index (perms, ESUserPermission *, i);
-        if (!strcmp(perm->user, "*"))
+        if (!g_strcmp0(perm->user, "*"))
         {
             ctx->initial_mode = ACL_MODE_PUBLIC;
             return TRUE;
@@ -329,7 +329,7 @@ void update_gui_state(struct acl_context *ctx)
     for (i = 0; i < ctx->initial_perms->len; i++)
     {
         struct acl_perm *perm = g_array_index (ctx->initial_perms, struct acl_perm *, i);
-        if (!strcmp(perm->perm.user, "*"))
+        if (!g_strcmp0(perm->perm.user, "*"))
             continue;
 
         gtk_list_store_append(ctx->acl_model, &titer);
@@ -405,7 +405,7 @@ static void add_user(const char *user, struct acl_context *ctx)
                            USERS_USERNAME_COLUMN, &user_name,
                            USERS_REALNAME_COLUMN, &realname,
                            -1);
-        if (user_name && !strcmp(user, user_name))
+        if (user_name && !g_strcmp0(user, user_name))
         {
             GtkTreeIter iter2;
             gtk_list_store_append(ctx->acl_model, &iter2);

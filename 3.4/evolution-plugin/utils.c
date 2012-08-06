@@ -65,7 +65,7 @@ e_source_group_peek_3e_name (ESourceGroup * group)
   base_uri = e_source_group_peek_base_uri (group);
   name = e_source_group_peek_name (group);
 
-  if (strcmp (base_uri, EEE_URI_PREFIX) || !g_str_has_prefix (name, "3e: "))
+  if (g_strcmp0 (base_uri, EEE_URI_PREFIX) || !g_str_has_prefix (name, "3e: "))
     return NULL;
 
   /* cancel the "3e: " prefix */
@@ -82,7 +82,7 @@ gboolean e_source_group_is_3e(ESourceGroup *group)
     const char *name = e_source_group_peek_name(group);
 
     if (base_uri && name)
-        return g_str_has_prefix(name, "3e: ") && !strcmp(base_uri, EEE_URI_PREFIX);
+        return g_str_has_prefix(name, "3e: ") && !g_strcmp0(base_uri, EEE_URI_PREFIX);
 
     return FALSE;
 }
@@ -103,7 +103,7 @@ gboolean e_source_is_3e(ESource *source)
 gboolean e_source_is_3e_owned_calendar(ESource *source)
 {
     return e_source_is_3e(source) &&
-           !strcmp(e_source_get_property(source, "eee-owner"),
+           !g_strcmp0(e_source_get_property(source, "eee-owner"),
                    e_source_get_property(source, "eee-account"));
 }
 
@@ -194,7 +194,7 @@ ESource *e_source_group_peek_source_by_calname(ESourceGroup *group, const char *
     for (iter = e_source_group_peek_sources(group); iter != NULL; iter = iter->next)
     {
         const char *cal_name = e_source_get_property(E_SOURCE(iter->data), "eee-calname");
-        if (cal_name && !strcmp(cal_name, name))
+        if (cal_name && !g_strcmp0(cal_name, name))
         {
             return E_SOURCE(iter->data);
         }
@@ -209,7 +209,7 @@ ESAttribute *eee_find_attribute(GArray *attrs, const char *name)
     for (i = 0; i < attrs->len; i++)
     {
         ESAttribute *attr = g_array_index (attrs, ESAttribute *, i);
-        if (!strcmp(attr->name, name))
+        if (!g_strcmp0(attr->name, name))
             return attr;
     }
 

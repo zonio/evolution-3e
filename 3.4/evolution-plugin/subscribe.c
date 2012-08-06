@@ -67,8 +67,8 @@ static gboolean calendar_exists(GArray *cals, ESCalendarInfo *ref_cal)
     {
         ESCalendarInfo *cal = g_array_index (cals, ESCalendarInfo *, i);
 
-        if (!strcmp(cal->name, ref_cal->name) &&
-            !strcmp(cal->owner, ref_cal->owner))
+        if (!g_strcmp0(cal->name, ref_cal->name) &&
+            !g_strcmp0(cal->owner, ref_cal->owner))
         {
             return TRUE;
         }
@@ -106,7 +106,7 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
             continue;
         }
 
-        if (!prev_owner || strcmp(prev_owner, cal->owner))
+        if (!prev_owner || g_strcmp0(prev_owner, cal->owner))
         {
             GArray *attrs = NULL;
             const char *realname = NULL;

@@ -190,10 +190,10 @@ static gboolean update_acl(xr_client_conn *conn, const char *calname, GSList *ne
         {
             ESUserPermission *new_perm = (ESUserPermission *) iter->data;
 
-            if (!strcmp(perm->user, new_perm->user))
+            if (!g_strcmp0(perm->user, new_perm->user))
             {
                 /* perm is already set, check if it differs */
-                if (strcmp(perm->perm, new_perm->perm))
+                if (g_strcmp0(perm->perm, new_perm->perm))
                 {
                     ESClient_setUserPermission(conn, calname, new_perm->user, new_perm->perm, &err);
                     if (err)
@@ -331,7 +331,7 @@ static char *create_users_query(EeeAccount *self, const char *realname)
 
     Array_ESUserInfo_free (users);
 
-    if (strcmp("", result->str) == 0)
+    if (g_strcmp0("", result->str) == 0)
         return NULL;
 
     return g_string_free(result, FALSE);
@@ -596,10 +596,10 @@ gboolean eee_account_load_users(EeeAccount *self, char *prefix, GSList *exclude_
         ESUserInfo *user = g_array_index (users, ESUserInfo *, i);
         const char *realname = eee_find_attribute_value(user->attrs, "realname");
 
-        if (!strcmp(self->name, user->username))
+        if (!g_strcmp0(self->name, user->username))
             continue;
 
-        if (exclude_users && g_slist_find_custom(exclude_users, user->username, (GCompareFunc)strcmp))
+        if (exclude_users && g_slist_find_custom(exclude_users, user->username, (GCompareFunc)g_strcmp0))
             continue;
 
         gtk_list_store_append(model, &titer_user);
@@ -771,6 +771,7 @@ G_DEFINE_TYPE(EeeAccount, eee_account, G_TYPE_OBJECT);
 static void eee_account_init(EeeAccount *self)
 {
     self->priv = G_TYPE_INSTANCE_GET_PRIVATE(self, EEE_TYPE_ACCOUNT, EeeAccountPriv);
+    self->priv->cals = NULL;
 }
 
 static void eee_account_dispose(GObject *object)

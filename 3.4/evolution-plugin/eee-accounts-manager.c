@@ -428,7 +428,7 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
                 {
                     ESource *source = iter_src->data;
                     const char *account_name = e_source_get_property(source, "eee-account");
-                    if (account_name && !strcmp(account_name, account->name))
+                    if (account_name && !g_strcmp0(account_name, account->name))
                     {
                         g_object_set_data(G_OBJECT(source), "synced", (gpointer)TRUE);
                         g_object_set_data(G_OBJECT(group), "synced", (gpointer)TRUE);
@@ -440,12 +440,12 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
         {
             GArray * cals = eee_account_peek_calendars (account);
             guint i;
-            for (i = 0; i < cals->len; i++)
+            for (i = 0; cals != NULL && i < cals->len; i++)
             {
                 ESCalendarInfo *cal = g_array_index (cals, ESCalendarInfo *, i);
                 ESource *source;
 
-                if (!strcmp(cal->owner, account->name))
+                if (!g_strcmp0(cal->owner, account->name))
                 {
                     // calendar owned by owner of account that represents current group
                     source = e_source_group_peek_source_by_calname(group, cal->name);
@@ -624,7 +624,7 @@ void eee_accounts_manager_enable_account(EeeAccountsManager *self, const char *n
 
     while (TRUE)
     {
-        item = g_slist_find_custom(accounts, name, (GCompareFunc)strcmp);
+        item = g_slist_find_custom(accounts, name, (GCompareFunc)g_strcmp0);
         if (item == NULL)
         {
             break;
@@ -648,7 +648,7 @@ gboolean eee_accounts_manager_account_is_disabled(EeeAccountsManager *self, cons
 
     accounts = gconf_client_get_list(self->priv->gconf, EEE_KEY "disabled_accounts", GCONF_VALUE_STRING, NULL);
 
-    disabled = !!g_slist_find_custom(accounts, name, (GCompareFunc)strcmp);
+    disabled = !!g_slist_find_custom(accounts, name, (GCompareFunc)g_strcmp0);
 
     g_slist_foreach(accounts, (GFunc)g_free, NULL);
     g_slist_free(accounts);
@@ -681,7 +681,7 @@ EeeAccount *eee_accounts_manager_find_account_by_name(EeeAccountsManager *self, 
     for (iter = self->priv->accounts; iter; iter = iter->next)
     {
         EeeAccount *account = iter->data;
-        if (!strcmp(account->name, name))
+        if (!g_strcmp0(account->name, name))
         {
             return account;
         }
@@ -732,7 +732,7 @@ void eee_accounts_manager_load_access_accounts_list(EeeAccountsManager *self)
         {
             continue;
         }
-        if (g_slist_find_custom(self->priv->access_accounts, (gpointer)name, (GCompareFunc)strcmp))
+        if (g_slist_find_custom(self->priv->access_accounts, (gpointer)name, (GCompareFunc)g_strcmp0))
         {
             continue;
         }

@@ -227,7 +227,7 @@ gboolean e_cal_backend_3e_calendar_info_load(ECalBackend3e *cb)
     cb->priv->calname = g_strdup(e_source_get_property(source, "eee-calname"));
     cb->priv->owner = g_strdup(e_source_get_property(source, "eee-owner"));
     cb->priv->perm = g_strdup(e_source_get_property(source, "eee-perm"));
-    cb->priv->sync_immediately = (immediate_sync == NULL || !strcmp(immediate_sync, "1"));
+    cb->priv->sync_immediately = (immediate_sync == NULL || !g_strcmp0(immediate_sync, "1"));
 
     g_free(cb->priv->calspec);
     cb->priv->calspec = g_strdup_printf("%s:%s", cb->priv->owner, cb->priv->calname);
@@ -1036,7 +1036,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
                         update_sync = FALSE;
                     }
                 }
-                else if (strcmp(old_object, object))
+                else if (g_strcmp0(old_object, object))
                 {
                     /* what is in cache and what is on server differs */
                     if (comp_state != E_CAL_COMPONENT_CACHE_STATE_NONE)

@@ -826,7 +826,7 @@ gboolean eee_account_properties_check(EPlugin *epl, EConfigHookPageCheckData *da
     const char *name = ((EMConfigTargetSettings *) data->config->target)->email_address;
     int status = TRUE;
 
-    if (data->pageid == NULL || !strcmp(data->pageid, "40.eee"))
+    if (data->pageid == NULL || !g_strcmp0(data->pageid, "40.eee"))
     {
     }
 

@@ -92,7 +92,7 @@ again:
     {
         const char *str = icalproperty_get_x_name(iter);
 
-        if (str && !strcmp(str, key))
+        if (str && !g_strcmp0(str, key))
         {
             icalcomponent_remove_property(comp, iter);
             icalproperty_free(iter);
@@ -128,7 +128,7 @@ static const char *icomp_x_prop_get(icalcomponent *comp, const char *key)
     {
         const char *str = icalproperty_get_x_name(iter);
 
-        if (str && !strcmp(str, key))
+        if (str && !g_strcmp0(str, key))
         {
             return icalproperty_get_value_as_string(iter);
         }
@@ -429,7 +429,7 @@ gboolean e_cal_component_id_compare(ECalComponentId *id1, ECalComponentId *id2)
     {
         return FALSE;
     }
-    if (strcmp(id1->uid, id2->uid))
+    if (g_strcmp0(id1->uid, id2->uid))
     {
         return FALSE;
     }
@@ -441,7 +441,7 @@ gboolean e_cal_component_id_compare(ECalComponentId *id1, ECalComponentId *id2)
     {
         return FALSE;
     }
-    return !strcmp(id1->rid, id1->rid);
+    return !g_strcmp0(id1->rid, id1->rid);
 }
 
 /** Check if component's ID matches given ID.
