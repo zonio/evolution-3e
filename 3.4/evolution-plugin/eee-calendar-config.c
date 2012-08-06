@@ -883,13 +883,9 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
     // Status group
     section = add_section(page, _("Enable 3e calendar account"));
 
-    label = GTK_WIDGET(g_object_new(GTK_TYPE_LABEL, 
-             "label", "", 
-             "use-markup", TRUE,
-             "justify", GTK_JUSTIFY_LEFT, 
-             "xalign", 0, 
-             "yalign", 0.5, 
-             NULL));
+    label = gtk_label_new (NULL);
+    gtk_label_set_justify (GTK_LABEL (label), GTK_JUSTIFY_LEFT);
+    gtk_misc_set_alignment (GTK_MISC (label), 0.0, 0.5);
 
     lbl = GTK_LABEL (label);
 
@@ -937,7 +933,7 @@ gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
                                                   "don't know ask your system administrator or provider of your email\n"
                                                   "service. Go to email account preferences to change this setting later."), name));
         gtk_label_set_use_markup(lbl, TRUE);
-        g_free (eee_host);
+//        g_free (eee_host);
     }
     else
     {
