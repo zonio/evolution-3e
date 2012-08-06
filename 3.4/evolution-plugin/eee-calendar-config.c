@@ -840,9 +840,8 @@ void eee_account_properties_commit(EPlugin *epl, EConfigHookItemFactoryData *dat
 
 gboolean wizard_eee_account_activated = TRUE;
 gboolean dns_resolv_successful = FALSE;
-GtkAssistant *assistant;
-GtkLabel *lbl;
-gchar *prev_name = NULL;
+GtkAssistant *assistant = NULL;
+GtkLabel *lbl = NULL;
 
 void wizard_chb_status_changed(GtkToggleButton* button, const char* name)
 {
@@ -854,7 +853,7 @@ void wizard_chb_status_changed(GtkToggleButton* button, const char* name)
     g_debug("** EEE **: Checkbox state changed to %s.",
             wizard_eee_account_activated ? "CHECKED" : "EMPTY");
 }
-
+/*
 static gint skip_3e_page(gint current_page, gpointer data)
 {
     switch (current_page)
@@ -864,7 +863,7 @@ static gint skip_3e_page(gint current_page, gpointer data)
         default:
             return current_page + 1;
     }
-}
+}*/
 
 GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *data)
 {
@@ -883,10 +882,7 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
 
     // Status group
     section = add_section(page, _("Enable 3e calendar account"));
-//    char* note = g_strdup(_("3e calendar server has been found for your domain. You can enable\n"
-//                            "calendar account if you have it. If you don't know ask your system\n"
-//                            "administrator or provider of your email service. Go to email account\n"
-//                            "preferences to change this setting later."));
+
     label = GTK_WIDGET(g_object_new(GTK_TYPE_LABEL, 
              "label", "", 
              "use-markup", TRUE,
@@ -894,8 +890,8 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
              "xalign", 0, 
              "yalign", 0.5, 
              NULL));
-//    g_free(note);
-    lbl = (GtkLabel*)label;
+
+    lbl = GTK_LABEL (label);
 
     gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
 
@@ -913,7 +909,7 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
 
 //    g_object_set_data((GObject *)data->parent, "restore", GINT_TO_POINTER(FALSE));
     
-    return GTK_WIDGET(page);
+    return page;
 }
 
 gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
@@ -921,16 +917,13 @@ gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
     const char *name = ((EMConfigTargetSettings *) data->config->target)->email_address;
     char *eee_host = NULL;
     GtkWidget *page;
-    
+
+    g_return_val_if_fail (lbl != NULL, FALSE);
+
     if (name == NULL)
         return TRUE;
 
-    if (g_strcmp0(name, prev_name) == 0)
-        return TRUE;
-
     g_debug("** EEE **: Wizard check: E-mail: %s", name);
-
-    prev_name = g_strdup(name);
 
     if (name != NULL)
         eee_host = get_eee_server_hostname(name);
@@ -938,26 +931,26 @@ gboolean eee_account_wizard_check(EPlugin *epl, EConfigHookPageCheckData *data)
     if (eee_host != NULL)
     {
         dns_resolv_successful = TRUE;
-        gtk_assistant_set_forward_page_func(assistant, NULL, NULL, NULL);
+/*        gtk_assistant_set_forward_page_func(assistant, NULL, NULL, NULL);*/
         gtk_label_set_text(lbl, g_strdup_printf(_("3e calendar server has been found for your domain. You can enable\n"
                                                   "calendar account for your account <i>%s</i> if you have it. If you\n"
                                                   "don't know ask your system administrator or provider of your email\n"
                                                   "service. Go to email account preferences to change this setting later."), name));
         gtk_label_set_use_markup(lbl, TRUE);
-        
+        g_free (eee_host);
     }
     else
     {
         dns_resolv_successful = FALSE;
-        gtk_assistant_set_forward_page_func(assistant, skip_3e_page, NULL, NULL);
+/*        gtk_assistant_set_forward_page_func(assistant, skip_3e_page, NULL, NULL);*/
     }
 
     return TRUE;
 }
 
-void eee_account_wizard_commit(EPlugin *epl, EConfigHookItemFactoryData *data)
+void eee_account_wizard_commit(EPlugin *epl, EMConfigTargetSettings *target)
 {
-    const char *name = ((EMConfigTargetSettings *) data->config->target)->email_address;
+    const char *name = target->email_address;
 
     if ((wizard_eee_account_activated == TRUE) && (dns_resolv_successful == TRUE)) 
         eee_accounts_manager_enable_account(mgr(), name);
