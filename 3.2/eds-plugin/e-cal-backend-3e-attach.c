@@ -58,7 +58,7 @@ static char *checksum_file(GFile *file)
         while ((read_bytes = g_input_stream_read(G_INPUT_STREAM(stream), buf, 4096, NULL, NULL)) > 0)
             g_checksum_update (chk, (guchar *) buf, read_bytes);
         g_object_unref (stream);
-        result = (char *) g_checksum_get_string (chk);
+        result = (char *) g_strdup (g_checksum_get_string (chk));
         g_checksum_free (chk);
     }
 
