@@ -111,7 +111,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_open(ECalBackendSync *backend, EDa
 #endif /* EVOLUTION_VERSION >= 232 */
         }
 
-        e_cal_backend_3e_messages_queue_load(cb);
         e_cal_backend_3e_attachment_store_load(cb);
 
         priv->is_loaded = TRUE;
@@ -1451,8 +1450,6 @@ static ECalBackendSyncStatus e_cal_backend_3e_send_objects(ECalBackendSync *back
     icalcomponent_collect_recipients(comp, priv->username, &recipients);
     icalcomponent_free(comp);
 
-    e_cal_backend_3e_push_message(E_CAL_BACKEND_3E(backend), calobj);
-
     e_cal_backend_3e_do_immediate_sync(cb);
 
     /* this tells evolution that it should not send emails (iMIPs) by itself */
@@ -1655,8 +1652,6 @@ static void e_cal_backend_3e_init(ECalBackend3e *cb)
     g_static_rec_mutex_init(&cb->priv->conn_mutex);
     cb->priv->sync_mutex = g_mutex_new();
 
-    e_cal_backend_3e_messages_queue_init(cb);
-
     e_cal_backend_sync_set_lock(E_CAL_BACKEND_SYNC(cb), TRUE);
 }
 
@@ -1666,7 +1661,6 @@ static void e_cal_backend_3e_finalize(GObject *backend)
 
     e_cal_backend_3e_periodic_sync_stop(cb);
     e_cal_backend_3e_free_connection(cb);
-    e_cal_backend_3e_messages_queue_free(cb);
     e_cal_backend_3e_attachment_store_free(cb);
 
     g_static_rw_lock_free(&priv->cache_lock);

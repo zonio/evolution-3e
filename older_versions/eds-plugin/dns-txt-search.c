@@ -244,7 +244,7 @@ gchar *get_eee_web_hostname(const gchar *email)
 
     if (!domain)
     {
-        domain = email; // Email is only domain.
+        domain = (gchar *) email; // Email is only domain.
     }
     else
     {

@@ -5,7 +5,7 @@
     id="org.gnome.evolution.eee" 
     location="@plugindir@/liborg-gnome-evolution-eee@SOEXT@" 
     load-on-startup="true" 
-    name="3e Calendar Plugin">
+    name="3e Calendar">
 
     <author name="Zonio" email="developers@zonio.net"/>
     <description>3e is new open source calendaring solution which allows users to get and share calendar and schedule data with other users. It provides full set of robust enterprise calendaring features such as planning, calendar sharing, scheduling, offline mode and much more.</description>
@@ -71,29 +71,28 @@
           factory="org_gnome_exchange_auth_section"/>
         -->
       </group>
-      <!--
-      <group
-        target="account"
-        id="org.gnome.evolution.mail.config.accountDruid"
-        check="org_gnome_exchange_check_options">
-        <item 
-          type="item_table"
-          path="10.receive/10.config/20.owa"
-          factory="org_gnome_exchange_owa_url"/>
-      </group>
       <group
         target="account"
         id="org.gnome.evolution.mail.config.accountWizard"
-        check="org_gnome_exchange_check_options">
-        <item 
-          type="item_table"
-          path="10.receive/10.config/20.owa"
-          factory="org_gnome_exchange_owa_url"/>
+        commit="eee_account_wizard_commit"
+        check="eee_account_wizard_check">
+        <item
+          type="page"
+          path="45.eee_account_page.10"
+          factory="eee_account_wizard_page"/> 
       </group>
-      -->
+      <group
+        target="account"
+        id="org.gnome.evolution.mail.config.accountDruid"
+        commit="eee_account_wizard_commit"
+        check="eee_account_wizard_check">
+        <item 
+          type="page"
+          path="45.eee_account_page.10"
+          factory="eee_account_wizard_page"/>
+      </group>
     </hook>
 
-    <!-- pre-KillBonobo definition
     <hook class="org.gnome.evolution.calendar.popup:1.0">
       <menu 
         id="org.gnome.evolution.calendar.source.popup"
@@ -101,20 +100,6 @@
         factory="eee_calendar_popup_source_factory">
       </menu>
     </hook>
-    -->
-
-    <hook class="org.gnome.evolution.ui:1.0">
-      <ui-manager id="org.gnome.evolution.calendars">
-        <popup name='calendar-popup' factory="eee_calendar_popup_source_factory">
-        </popup>
-      </ui-manager>
-    </hook>
-
-    <!--
-      This shell hook is non-functional since evolution v2.30.
-      Its handling is now in eee-calendar-config.c.
-      The hook remains here because of old versions.
-    -->
 
     <hook class="org.gnome.evolution.shell.events:1.0">
       <event 
@@ -143,20 +128,6 @@
       </group>
     </hook>
 
-    <hook class="org.gnome.evolution.ui:1.0">
-      <ui-manager id="org.gnome.evolution.calendars">
-        <menubar name='main-menu'>
-          <menu action="file-menu">
-            <placeholder name='file-action'>
-              <menuitem action="eee-calendar-subscribe"/>
-            </placeholder>
-          </menu>
-        </menubar>
-      </ui-manager>
-    </hook>
-
-
-    <!-- pre-KillBonobo definition
     <hook class="org.gnome.evolution.calendar.bonobomenu:1.0">
       <menu id="org.gnome.evolution.calendar.view" target="select">
       <ui file="@plugindir@/org-gnome-eee-cal-subscription.xml"/>
@@ -168,19 +139,6 @@
         activate="eee_calendar_subscription"/>
       </menu>
     </hook>
-    -->
 
-    <hook class="org.gnome.evolution.mail.config:1.0">
-      <group
-        target="account"
-        id="org.gnome.evolution.mail.config.accountAssistant"
-        commit="eee_account_wizard_commit"
-        check="eee_account_wizard_check">
-        <item
-          type="page"
-          path="45.eee_account_page.10"
-          factory="eee_account_wizard_page"/>
-      </group>
-    </hook>
   </e-plugin>
 </e-plugin-list>

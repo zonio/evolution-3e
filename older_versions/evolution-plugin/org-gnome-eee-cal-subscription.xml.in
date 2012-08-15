@@ -6,11 +6,11 @@
   </commands>
 
   <menu>
-    <submenu name="File">
-      <placeholder name="FileOps">
+    <placeholder name="ActionsPlaceholder">
+      <submenu name="Actions">
         <menuitem name="EeeCalSubscription" verb=""/>
-      </placeholder>
-    </submenu>
+      </submenu>
+    </placeholder>
   </menu>
 
 </Root>

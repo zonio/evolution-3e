@@ -422,9 +422,11 @@ static gboolean eee_accounts_manager_sync_phase2(EeeAccountsManager *self)
         }
         else
         {
-            for (iter2 = eee_account_peek_calendars(account); iter2 != NULL; iter2 = iter2->next)
+            GArray * cals = eee_account_peek_calendars (account);
+            guint i;
+            for (i = 0; i < cals->len; i++)
             {
-                ESCalendarInfo *cal = iter2->data;
+                ESCalendarInfo *cal = g_array_index (cals, ESCalendarInfo *, i);
                 ESource *source;
 
                 if (!strcmp(cal->owner, account->name))
@@ -784,7 +786,7 @@ void eee_accounts_manager_activate_accounts(EeeAccountsManager *self)
                 if (e_source_is_3e(source))
                 {
                     const char *calname = e_source_get_property(source, "eee-calname");
-                    e_source_set_3e_properties(source, calname, account->name, account, NULL, NULL, NULL);
+                    e_source_set_3e_properties(source, calname, account->name, account, NULL, NULL, 0);
                 }
                 else
                 {

@@ -1,26 +1,26 @@
 /*
- * Zonio 3e calendar plugin
+ * Authors: Ondrej Jirman <ondrej.jirman@zonio.net>
+ *          Stanislav Slusny <stanislav.slusny@zonio.net>
  *
- * Copyright (C) 2008-2010 Zonio s.r.o <developers@zonio.net>
+ * Copyright 2008 Zonio, s.r.o.
  *
  * This file is part of evolution-3e.
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Libxr is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 2 of the License, or (at your option) any
+ * later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Libxr is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+ * A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * along with evolution-3e.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <gio/gio.h>
-#include <openssl/sha.h>
 #include "e-cal-backend-3e-priv.h"
 
 typedef struct _attachment attachment;
@@ -47,35 +47,22 @@ static char *checksum_file(GFile *file)
 {
     char buf[4096];
     gssize read_bytes = -1;
-    guchar raw_sha1[SHA_DIGEST_LENGTH];
-    SHA_CTX sha1_ctx;
-    guint i;
+    GChecksum * chk;
+    char * result = NULL;
 
     GFileInputStream *stream = g_file_read(file, NULL, NULL);
 
     if (stream)
     {
-        SHA1_Init(&sha1_ctx);
+        chk = g_checksum_new (G_CHECKSUM_SHA1);
         while ((read_bytes = g_input_stream_read(G_INPUT_STREAM(stream), buf, 4096, NULL, NULL)) > 0)
-        {
-            SHA1_Update(&sha1_ctx, buf, read_bytes);
-        }
-        SHA1_Final(raw_sha1, &sha1_ctx);
-        g_object_unref(stream);
+            g_checksum_update (chk, (guchar *) buf, read_bytes);
+        g_object_unref (stream);
+        result = (char *) g_checksum_get_string (chk);
+        g_checksum_free (chk);
     }
 
-    if (read_bytes < 0)
-    {
-        return NULL;
-    }
-
-    GString *sha1 = g_string_sized_new(SHA_DIGEST_LENGTH * 2);
-    for (i = 0; i < SHA_DIGEST_LENGTH; i++)
-    {
-        g_string_append_printf(sha1, "%02hhx", raw_sha1[i]);
-    }
-
-    return g_string_free(sha1, FALSE);
+    return result;
 }
 
 static attachment *get_attacmhent(ECalBackend3e *cb, ECalComponent *comp, const char *uri)
