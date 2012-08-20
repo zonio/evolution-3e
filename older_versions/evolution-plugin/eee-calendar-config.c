@@ -762,6 +762,7 @@ GtkWidget *eee_account_properties_page(EPlugin *epl, EConfigHookItemFactoryData 
     g_free(note);
     gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
     checkbutton_status = gtk_check_button_new_with_label(_("Enable 3e Account"));
+    gtk_widget_set_can_focus (checkbutton_status, FALSE);
     gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
 
     //XXX: update button based on live account status

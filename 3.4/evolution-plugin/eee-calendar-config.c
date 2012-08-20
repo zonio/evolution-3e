@@ -892,6 +892,7 @@ GtkWidget* eee_account_wizard_page(EPlugin *epl, EConfigHookItemFactoryData *dat
     gtk_box_pack_start(GTK_BOX(section), label, FALSE, FALSE, 0);
 
     checkbutton_status = gtk_check_button_new_with_label(_("Enable 3e calendar account"));
+    gtk_widget_set_can_focus (checkbutton_status, FALSE);
     gtk_box_pack_start(GTK_BOX(section), checkbutton_status, FALSE, FALSE, 0);
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbutton_status), TRUE);
