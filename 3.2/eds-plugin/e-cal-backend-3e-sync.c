@@ -956,7 +956,7 @@ gboolean e_cal_backend_3e_sync_server_to_cache(ECalBackend3e *cb)
 
     /* prepare query filter string */
     gmtime_r(&stamp, &tm);
-    strftime(filter, sizeof(filter), "date_from('%F %T')", &tm);
+    strftime(filter, sizeof(filter), "modified_since('%F %T')", &tm);
 
     ical = get_server_objects(cb, filter);
     if (ical == NULL)
