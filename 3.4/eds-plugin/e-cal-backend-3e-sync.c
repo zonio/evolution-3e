@@ -646,98 +646,7 @@ void e_cal_backend_3e_set_sync_timestamp(ECalBackend3e *cb, time_t stamp)
 }
 
 // }}}
-// {{{ Timezones synchronization
 
-/** Get all timezones from the cache.
- *
- * @param cb 3E calendar backend.
- * @param cache Calendar backend cache object.
- *
- * @return List of icaltimezone objects (free them using icaltimezone_free(x, 1);).
- */
-static GSList *e_cal_backend_store_get_timezones(ECalBackend3e *cb, ECalBackendStore *store)
-{
-    GSList *comps, *iter;
-    GSList *list = NULL;
-
-    g_return_val_if_fail(E_IS_CAL_BACKEND_STORE(store), NULL);
-    g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
-    comps = e_cal_backend_store_get_components(store);
-    g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
-
-    for (iter = comps; iter; iter = iter->next)
-    {                                          
-        ECalComponent * comp = E_CAL_COMPONENT(iter->data);
-
-        if (e_cal_component_get_vtype (comp) != E_CAL_COMPONENT_TIMEZONE)
-            continue;
-
-        icalcomponent *zone_comp = e_cal_component_get_icalcomponent (comp);
-
-        char *key = iter->data;
-        const icaltimezone *zone;
-        icaltimezone *new_zone = icaltimezone_new();
-        /* make sure you have patched eds if you get segfaults here */
-        if (zone_comp == NULL)
-        {
-            g_critical("Patch your evolution-data-server or else...");
-        }
-
-        icaltimezone_set_component(new_zone, icalcomponent_new_clone(zone_comp));
-        list = g_slist_prepend(list, new_zone);
-    }
-
-    /* eds patch required here! */
-    g_slist_free(comps);
-    return list;
-}
-
-/** Sync new timezones from the cache to the server.
- *
- * Assumes caller opened connection using e_cal_backend_3e_open_connection().
- *
- * @param cb 3e calendar backend.
- *
- * @return TRUE on success.
- */
-static gboolean sync_timezones_to_server(ECalBackend3e *cb)
-{
-    GError *local_err = NULL;
-    GSList *timezones, *iter;
-
-    timezones = e_cal_backend_store_get_timezones(cb, cb->priv->store);
-
-    for (iter = timezones; iter; iter = iter->next)
-    {
-        icaltimezone *zone = iter->data;
-        icalcomponent *zone_comp = icaltimezone_get_component(zone);
-        ECalComponentCacheState state = icalcomponent_get_cache_state(zone_comp);
-        icalcomponent_set_cache_state(zone_comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
-        char *object = icalcomponent_as_ical_string(zone_comp);
-
-        //XXX: always try to add all timezones from the cache
-        //if (state == E_CAL_COMPONENT_CACHE_STATE_CREATED)
-        {
-            ESClient_addObject(cb->priv->conn, cb->priv->calspec, object, &local_err);
-            if (local_err)
-            {
-                g_clear_error(&local_err);
-                break;
-            }
-
-            g_static_rw_lock_writer_lock(&cb->priv->cache_lock);
-            e_cal_backend_store_put_timezone(cb->priv->store, zone);
-            g_static_rw_lock_writer_unlock(&cb->priv->cache_lock);
-        }
-
-        icaltimezone_free(zone, 1);
-    }
-
-    g_slist_free(timezones);
-    return TRUE;
-}
-
-// }}}
 // {{{ Client -> Server synchronization
 
 /** Sync cache changes to the server and unmark them.
@@ -760,8 +669,6 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
         return FALSE;
     }
 
-    sync_timezones_to_server(cb);
-
     g_static_rw_lock_reader_lock(&cb->priv->cache_lock);
     components = e_cal_backend_store_get_components(cb->priv->store);
     g_static_rw_lock_reader_unlock(&cb->priv->cache_lock);
@@ -771,28 +678,48 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
         ECalComponent *comp = E_CAL_COMPONENT(iter->data);
         ECalComponent *remote_comp;
         ECalComponentId *id = e_cal_component_get_id(comp);
+        ECalComponentVType type = e_cal_component_get_vtype (comp);
         ECalComponentCacheState state = e_cal_component_get_cache_state(comp);
+
         /* remove client properties before sending component to the server */
         e_cal_component_set_x_property(comp, "X-EVOLUTION-STATUS", NULL);
         e_cal_component_set_cache_state(comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
         e_cal_component_set_x_property(comp, "X-3E-DELETED", NULL);
+
         remote_comp = e_cal_component_clone(comp);
-        gboolean attachments_converted = e_cal_backend_3e_convert_attachment_uris_to_remote(cb, remote_comp);
         char *remote_object = e_cal_component_get_as_string(remote_comp);
         char *object = e_cal_component_get_as_string(comp);
 
-        if (!attachments_converted)
-        {
+        if (type == E_CAL_COMPONENT_EVENT && !e_cal_backend_3e_convert_attachment_uris_to_remote(cb, remote_comp))
             goto next;
-        }
 
-        if (state == E_CAL_COMPONENT_CACHE_STATE_CREATED || state == E_CAL_COMPONENT_CACHE_STATE_MODIFIED)
+        if (type == E_CAL_COMPONENT_EVENT && (state == E_CAL_COMPONENT_CACHE_STATE_CREATED || state == E_CAL_COMPONENT_CACHE_STATE_MODIFIED))
         {
             if (!e_cal_backend_3e_upload_attachments(cb, remote_comp, &local_err))
             {
                 e_cal_backend_notify_gerror_error(E_CAL_BACKEND(cb), "3e attachemnts sync failure", local_err);
                 g_clear_error(&local_err);
                 goto next;
+            }
+
+            /* add timezone */
+            const icaltimezone *zone = NULL;
+            ECalComponentDateTime datetime;
+
+            e_cal_component_get_dtstart (comp, &datetime);
+            g_static_rw_lock_reader_lock (&cb->priv->cache_lock);
+            zone = e_cal_backend_store_get_timezone (cb->priv->store, datetime.tzid);
+            g_static_rw_lock_reader_unlock (&cb->priv->cache_lock);
+            e_cal_component_free_datetime (&datetime);
+
+            if (zone)
+            {
+                icalcomponent *zone_comp = icaltimezone_get_component (zone);
+                char *object = icalcomponent_as_ical_string (zone_comp);
+
+                ESClient_addObject (cb->priv->conn, cb->priv->calspec, object, &local_err);
+                if (local_err)
+                    g_clear_error (&local_err);
             }
         }
 
