@@ -75,6 +75,10 @@ static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
 
     if (!priv->is_loaded)
     {
+        ECredentials *credentials;
+        guint prompt_flags;
+        gchar *prompt_flags_str;
+        gchar *credkey;
         const gchar * cache_dir;
 
         /* load calendar info */
@@ -109,7 +113,24 @@ static void e_cal_backend_3e_open(ECalBackendSync *backend, EDataCal *cal,
 
         priv->is_loaded = TRUE;
 
-        e_cal_backend_notify_auth_required(E_CAL_BACKEND(backend), TRUE, NULL);
+        if (cb->priv->credentials)
+            credentials = cb->priv->credentials;
+        else
+            credentials = e_credentials_new ();
+
+        prompt_flags = E_CREDENTIALS_PROMPT_FLAG_REMEMBER_FOREVER
+                     | E_CREDENTIALS_PROMPT_FLAG_SECRET
+                     | E_CREDENTIALS_PROMPT_FLAG_ONLINE;
+
+        prompt_flags_str = e_credentials_util_prompt_flags_to_string (prompt_flags);
+        e_credentials_set (credentials, E_CREDENTIALS_KEY_PROMPT_FLAGS, prompt_flags_str);
+        g_free (prompt_flags_str);
+
+        credkey = e_source_get_property (e_backend_get_source (E_BACKEND (backend)), "auth-key");
+        e_credentials_set (credentials, E_CREDENTIALS_KEY_PROMPT_KEY, credkey);
+
+        e_cal_backend_notify_auth_required(E_CAL_BACKEND(backend), TRUE, credentials);
+        e_credentials_free (credentials);
         return;
     }
 
@@ -127,27 +148,34 @@ static void e_cal_backend_3e_authenticate_user(ECalBackendSync *backend,
                                                ECredentials *credentials,
                                                GError **err)
 {
-    BACKEND_METHOD_CHECKED_NORETVAL("username=%s, password=%s",
-                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_USERNAME),
-                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_PASSWORD)
-                                   );
+    BACKEND_METHOD_CHECKED_NORETVAL();
 
-    /* setup connection info */
-    if (e_cal_backend_3e_setup_connection(cb,
-                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_USERNAME),
-                    e_credentials_peek(credentials, E_CREDENTIALS_KEY_PASSWORD))
-       )
+    g_free (cb->priv->username);
+    g_free (cb->priv->password);
+    g_free (cb->priv->server_uri);
+
+    e_credentials_free (priv->credentials);
+
+    if (!credentials || !e_credentials_has_key (credentials, E_CREDENTIALS_KEY_USERNAME))
     {
-        /* enable sync */
-        e_cal_backend_3e_periodic_sync_enable(cb);
-        e_cal_backend_notify_readonly (E_CAL_BACKEND(backend), FALSE);
-        e_cal_backend_notify_opened (E_CAL_BACKEND(backend), NULL);
-        e_cal_backend_notify_online (E_CAL_BACKEND(backend), TRUE);
-    }
-    else
-    {
-        g_propagate_error (err, EDC_ERROR (AuthenticationFailed));
+        g_propagate_error (err, EDC_ERROR (AuthenticationRequired));
         return;
+    }
+
+    cb->priv->username = e_credentials_get (credentials, E_CREDENTIALS_KEY_USERNAME);
+    cb->priv->password = e_credentials_get (credentials, E_CREDENTIALS_KEY_PASSWORD);
+    cb->priv->server_uri = NULL;//get_eee_server_hostname (cb->priv->username);
+
+    priv->credentials = e_credentials_new_clone (credentials);
+
+    /* enable sync */
+    if (e_cal_backend_3e_calendar_is_online(cb))
+    {
+        cb->priv->is_loaded = TRUE;
+        e_cal_backend_3e_periodic_sync_enable(cb);
+        e_cal_backend_notify_readonly(E_CAL_BACKEND(backend), FALSE);
+        e_cal_backend_notify_opened(E_CAL_BACKEND(backend), NULL);
+        e_cal_backend_notify_online(E_CAL_BACKEND(backend), TRUE);
     }
 }
 
