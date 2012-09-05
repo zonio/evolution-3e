@@ -39,6 +39,7 @@ struct _ECalBackend3ePrivate
     /** @{ */
     gboolean is_open;               /**< Connection is open. */
     xr_client_conn *conn;           /**< Connection object. */
+    ECredentials *credentials;
     char *server_uri;               /**< Server URI (automatically detected from DNS TXT). */
     char *username;                 /**< Username for the 3E account. */
     char *password;                 /**< Password for the 3E account. */
