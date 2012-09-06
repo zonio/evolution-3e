@@ -115,7 +115,7 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
             eee_account_get_user_attributes(ctx->account, cal->owner, &attrs);
             realname = eee_find_attribute_value(attrs, "realname");
             if (realname)
-                title = g_strdup_printf("%s (%s)", cal->owner, realname);
+                title = g_strdup_printf("%s <%s>", realname, cal->owner);
             else
                 title = g_strdup_printf("%s", cal->owner);
 
