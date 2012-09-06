@@ -83,15 +83,19 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
     guint i;
     GtkTreeIter titer_user;
     GtkTreeIter titer_cal;
+    gchar *dquery = NULL;
 
     gtk_tree_store_clear(ctx->model);
 
-    if (!eee_account_search_shared_calendars(ctx->account, query, &cals) ||
+    if (!eee_account_search_shared_calendars(ctx->account, "", &cals) ||
         !eee_account_load_calendars(ctx->account, &existing_cals))
     {
         eee_account_disconnect(ctx->account);
         return FALSE;
     }
+
+    if (query && *query != '\n')
+        dquery = g_ascii_strdown (query, -1);
 
     // for each user get his calendars
     char *prev_owner = NULL;
@@ -104,6 +108,29 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
         if (calendar_exists(existing_cals, cal))
         {
             continue;
+        }
+
+        cal_title = eee_find_attribute_value(cal->attrs, "title");
+
+        if (dquery)
+        {
+            gboolean cont;
+            gchar *downer, *dtitle, *dname;
+
+            downer = g_ascii_strdown (cal->owner, -1);
+            dtitle = g_ascii_strdown (cal_title, -1);
+            dname = g_ascii_strdown (cal->name, -1);
+
+            cont = !g_str_has_prefix (downer, dquery) &&
+                   !g_str_has_prefix (dtitle, dquery) &&
+                   !g_str_has_prefix (dname, dquery);
+
+            g_free (downer);
+            g_free (dtitle);
+            g_free (dname);
+
+            if (cont)
+                continue;
         }
 
         if (!prev_owner || strcmp(prev_owner, cal->owner))
@@ -132,8 +159,6 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
             eee_account_free_attributes_list(attrs);
         }
 
-        cal_title = eee_find_attribute_value(cal->attrs, "title");
-
         gtk_tree_store_append(ctx->model, &titer_cal, &titer_user);
         gtk_tree_store_set(ctx->model, &titer_cal,
                            SUB_NAME_COLUMN, cal->name,
@@ -142,6 +167,9 @@ static gboolean reload_data(struct subscribe_context *ctx, const char *query)
                            SUB_OWNER_COLUMN, cal->owner,
                            SUB_IS_CALENDAR_COLUMN, TRUE, -1);
     }
+
+    if (dquery)
+        g_free (dquery);
 
     eee_account_disconnect(ctx->account);
     eee_account_free_calendars_list(cals);
