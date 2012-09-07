@@ -24,7 +24,30 @@
 
 #include "eee-accounts-manager.h"
 
-void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *source);
+struct acl_context
+{
+    ESource *source;
+    EeeAccount *account;
+
+    GtkBuilder *builder;
+    GtkWidget *win;
+    GtkWidget *rb_private;
+    GtkWidget *rb_public;
+    GtkWidget *rb_shared;
+    GtkWidget *users_frame;
+    GtkWidget *users_menu;
+    GtkWidget *user_entry;
+    GtkListStore *acl_model;
+    GtkListStore *users_model;
+    GtkTreeView *tview;
+
+    // initial state
+    int initial_mode;
+    GArray *initial_perms;
+};
+
+gboolean store_acl (struct acl_context *);
+struct acl_context * acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *source);
 void acl_gui_destroy();
 
 #endif

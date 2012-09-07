@@ -165,6 +165,27 @@ GtkWidget *eee_calendar_properties_factory(EPlugin *epl, EConfigHookItemFactoryD
     ECalConfigTargetSource *target = (ECalConfigTargetSource *)data->target;
     ESourceGroup *group = e_source_peek_group(target->source);
     EeeAccount *account;
+    GtkWidget *perms;
+    guint row;
+
+    if (!e_plugin_util_is_group_proto (group, "eee"))
+        return NULL;
+
+    if (is_new_calendar_dialog (target->source))
+        return NULL;
+
+    g_object_get (data->parent, "n-rows", &row, NULL);
+
+    account = eee_accounts_manager_find_account_by_group (mgr(), group);
+
+    struct acl_context * ctx = acl_gui_create (mgr(), account, target->source);
+    g_object_set_data (G_OBJECT (target->source), "eee-acl-context", ctx);
+    gtk_widget_show (ctx->win);
+    gtk_table_attach (GTK_TABLE (data->parent), ctx->win, 0, 2, row, row+1, GTK_FILL, 0, 0, 0);
+
+    return ctx->win;
+
+/*
     GtkWidget *label;
     guint row; 
 
@@ -218,7 +239,7 @@ GtkWidget *eee_calendar_properties_factory(EPlugin *epl, EConfigHookItemFactoryD
         }
     }
 
-    return hidden;
+    return hidden;*/
 }
 
 gboolean eee_calendar_properties_check(EPlugin *epl, EConfigHookPageCheckData *data)
@@ -321,6 +342,10 @@ void eee_calendar_properties_commit(EPlugin *epl, ECalConfigTargetSource *target
         const char *owner = e_source_get_property(source, "eee-owner");
         eee_account_update_calendar_settings(account, owner, calname, e_source_peek_name(source), converted_color);
         eee_account_disconnect(account);
+
+        struct acl_context * ctx = g_object_get_data (G_OBJECT (target->source), "eee-acl-context");
+        store_acl (ctx);
+        acl_gui_destroy ();
     }
 
     eee_accounts_manager_restart_sync(mgr());
@@ -482,14 +507,14 @@ calendar_actions_init (GtkUIManager *ui_manager, EShellView *shell_view)
 
   action_group = e_shell_window_get_action_group (shell_window, "calendar");
 
-  action = gtk_action_new ("calendar-permissions", _("Setup permissions"), _("Setup 3e calendar permissions"), "stock_shared-by-me");
+/*  action = gtk_action_new ("calendar-permissions", _("Setup permissions"), _("Setup 3e calendar permissions"), "stock_shared-by-me");
   gtk_action_group_add_action (action_group, action);
 
   g_signal_connect (
     action, "activate",
     G_CALLBACK (on_permissions_cb), shell_view);
 
-  g_object_unref (action);
+  g_object_unref (action);*/
 
   action = gtk_action_new ("calendar-unsubscribe", _("Unsubscribe"), _("Unsubscribe a previously subscribed 3e calendar"), "remove");
   gtk_action_group_add_action (action_group, action);

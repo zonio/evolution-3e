@@ -53,7 +53,7 @@
       <ui-manager id="org.gnome.evolution.calendars" callback="calendar_actions_init">
         <popup name="calendar-popup">
           <placeholder name="calendar-popup-actions">
-            <menuitem action="calendar-permissions"/>
+<!--            <menuitem action="calendar-permissions"/>-->
             <menuitem action="calendar-unsubscribe"/>
             <menuitem action="calendar-delete-3e"/>
           </placeholder>

@@ -59,28 +59,6 @@ struct acl_perm
     char *realname;
 };
 
-struct acl_context
-{
-    ESource *source;
-    EeeAccount *account;
-
-    GtkBuilder *builder;
-    GtkWindow *win;
-    GtkWidget *rb_private;
-    GtkWidget *rb_public;
-    GtkWidget *rb_shared;
-    GtkWidget *users_frame;
-    GtkWidget *users_menu;
-    GtkWidget *user_entry;
-    GtkListStore *acl_model;
-    GtkListStore *users_model;
-    GtkTreeView *tview;
-
-    // initial state
-    int initial_mode;
-    GArray *initial_perms;
-};
-
 struct acl_list_click_data
 {
     GtkTreeIter iter;
@@ -144,11 +122,11 @@ static void on_rb_perm_toggled(GtkButton *button, struct acl_context *ctx)
     g_object_set(ctx->users_frame, "visible", mode == ACL_MODE_SHARED, NULL);
     if (mode == ACL_MODE_SHARED)
     {
-        gtk_window_resize(ctx->win, 500, 400);
+//        gtk_window_resize(ctx->win, 500, 400);
     }
     else
     {
-        gtk_window_resize(ctx->win, 500, 1);
+//        gtk_window_resize(ctx->win, 500, 1);
     }
 }
 
@@ -160,7 +138,7 @@ static void on_acl_button_cancel_clicked(GtkButton *button, struct acl_context *
 }
 
 // store ACL to the 3e server
-static gboolean store_acl(struct acl_context *ctx)
+gboolean store_acl(struct acl_context *ctx)
 {
     GtkTreeIter iter;
     int new_mode = get_acl_mode(ctx);
@@ -317,11 +295,11 @@ void update_gui_state(struct acl_context *ctx)
     g_object_set(ctx->users_frame, "visible", ctx->initial_mode == ACL_MODE_SHARED, NULL);
     if (ctx->initial_mode == ACL_MODE_SHARED)
     {
-        gtk_window_resize(ctx->win, 500, 400);
+//        gtk_window_resize(ctx->win, 500, 400);
     }
     else
     {
-        gtk_window_resize(ctx->win, 500, 1);
+//        gtk_window_resize(ctx->win, 500, 1);
     }
 
     guint i;
@@ -511,11 +489,7 @@ static gboolean user_selected(GtkEntryCompletion *widget, GtkTreeModel *model, G
 }
 
 // combo box item selected
-#if EDS_CHECK_VERSION(3,0,0)
 static void cbe_changed(GtkComboBox *cbe, struct acl_context *ctx)
-#else /* !EDS_CHECK_VERSION(3,0,0) */
-static void cbe_changed(GtkComboBoxEntry *cbe, struct acl_context *ctx)
-#endif /* !EDS_CHECK_VERSION(3,0,0) */
 {
     GtkTreeIter iter;
 
@@ -530,11 +504,7 @@ static void cbe_changed(GtkComboBoxEntry *cbe, struct acl_context *ctx)
 }
 
 // add compeltion to the combobox entry
-#if EDS_CHECK_VERSION(3,0,0)
 static void combo_add_completion(GtkComboBox *cbe, struct acl_context *ctx)
-#else /* !EDS_CHECK_VERSION(3,0,0) */
-static void combo_add_completion(GtkComboBoxEntry *cbe, struct acl_context *ctx)
-#endif /* !EDS_CHECK_VERSION(3,0,0) */
 {
     GtkEntry *entry;
     GtkEntryCompletion *completion;
@@ -584,7 +554,8 @@ static void connect_signals (GtkBuilder *b, GObject *obj, const gchar *name, con
 }
 
 // buid acl dialog
-void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *source)
+struct acl_context *
+acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *source)
 {
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
@@ -593,7 +564,7 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
 
     if (!eee_plugin_online || account == NULL || !e_source_is_3e_owned_calendar(source))
     {
-        return;
+        return NULL;
     }
 
     // create context and load glade file
@@ -602,22 +573,18 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
     c->account = g_object_ref(account);
     c->builder = gtk_builder_new ();
     gtk_builder_add_from_file (c->builder, PLUGINDIR "/org-gnome-evolution-eee.glade", NULL);
-    c->win = GTK_WINDOW(g_object_ref(gtk_builder_get_object(c->builder, "acl_window")));
+    c->win = GTK_WIDGET(g_object_ref(gtk_builder_get_object(c->builder, "acl_vbox")));
     c->rb_private = GTK_WIDGET(gtk_builder_get_object(c->builder, "rb_perm_private"));
     c->rb_public = GTK_WIDGET(gtk_builder_get_object(c->builder, "rb_perm_public"));
     c->rb_shared = GTK_WIDGET(gtk_builder_get_object(c->builder, "rb_perm_shared"));
     c->users_frame = GTK_WIDGET(gtk_builder_get_object(c->builder, "frame2"));
     c->tview = GTK_TREE_VIEW(gtk_builder_get_object(c->builder, "treeview_acl_users"));
-    c->user_entry = GTK_WIDGET(gtk_builder_get_object(c->builder, "comboboxentry1"));
+    c->user_entry = GTK_WIDGET(gtk_builder_get_object(c->builder, "combobox1"));
 
     // users list for autocompletion inside acl table combo cells
     c->users_model = gtk_list_store_new(USERS_NUM_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, EEE_TYPE_ACCOUNT);
     gtk_combo_box_set_model(GTK_COMBO_BOX(c->user_entry), GTK_TREE_MODEL(c->users_model));
-#if EDS_CHECK_VERSION(3,0,0)
     combo_add_completion(GTK_COMBO_BOX(c->user_entry), c);
-#else /* !EDS_CHECK_VERSION(3,0,0) */
-    combo_add_completion(GTK_COMBO_BOX_ENTRY(c->user_entry), c);
-#endif /* !EDS_CHECK_VERSION(3,0,0) */
     g_object_set(c->user_entry, "text-column", USERS_USERNAME_COLUMN, NULL);
 
     // acl list
@@ -651,19 +618,20 @@ void acl_gui_create(EeeAccountsManager *mgr, EeeAccount *account, ESource *sourc
 
     if (!load_state(c))
     {
-        gtk_widget_destroy(GTK_WIDGET(c->win));
-        return;
+        gtk_widget_destroy(c->win);
+        return NULL;
     }
 
     update_users_list(c);
     update_gui_state(c);
     acl_contexts = g_slist_append(acl_contexts, c);
-    gtk_widget_show(GTK_WIDGET(c->win));
+    gtk_widget_show(c->win);
+    return c;
 }
 
 static void destroy_ctx(struct acl_context *ctx)
 {
-    gtk_widget_destroy(GTK_WIDGET(ctx->win));
+    gtk_widget_destroy(ctx->win);
 }
 
 void acl_gui_destroy()
