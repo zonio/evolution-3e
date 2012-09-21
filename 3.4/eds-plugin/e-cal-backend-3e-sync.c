@@ -682,9 +682,8 @@ gboolean e_cal_backend_3e_sync_cache_to_server(ECalBackend3e *cb)
         ECalComponentCacheState state = e_cal_component_get_cache_state(comp);
 
         /* remove client properties before sending component to the server */
-        e_cal_component_set_x_property(comp, "X-EVOLUTION-STATUS", NULL);
+        e_cal_component_set_outofsync (comp, FALSE);
         e_cal_component_set_cache_state(comp, E_CAL_COMPONENT_CACHE_STATE_NONE);
-        e_cal_component_set_x_property(comp, "X-3E-DELETED", NULL);
 
         remote_comp = e_cal_component_clone(comp);
         char *remote_object = e_cal_component_get_as_string(remote_comp);

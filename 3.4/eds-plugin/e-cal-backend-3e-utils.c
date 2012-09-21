@@ -24,6 +24,52 @@
 /** @addtogroup eds_misc */
 /** @{ */
 
+void
+e_cal_component_set_outofsync (ECalComponent *comp, gboolean outofsync)
+{
+    GSList *categ_list, *iter;
+    gboolean updated = FALSE;
+
+    g_return_if_fail (comp != NULL);
+    g_return_if_fail (E_IS_CAL_COMPONENT (comp));
+
+    e_cal_component_get_categories_list (comp, &categ_list);
+
+    if (outofsync)
+    {
+        for (iter = categ_list; iter != NULL; iter = iter->next)
+        {
+            gchar *cat = (gchar *) iter->data;
+            if (!g_strcmp0 (cat, "outofsync"))
+                goto exit;
+        }
+
+        categ_list = g_slist_prepend (categ_list, g_strdup ("outofsync"));
+        updated = TRUE;
+    }
+    else
+    {
+        GSList *next;
+
+        for (iter = categ_list; iter != NULL; iter = next)
+        {
+            next = iter->next;
+            gchar *cat = (gchar *) iter->data;
+            if (!g_strcmp0 (cat, "outofsync"))
+            {
+                categ_list = g_slist_delete_link (categ_list, iter);
+                g_free (cat);
+                updated = TRUE;
+            }
+        }
+    }
+
+    if (updated)
+        e_cal_component_set_categories_list (comp, categ_list);
+exit:
+    e_cal_component_free_categories_list (categ_list);
+}
+
 // {{{ Error notification
 
 /** Notify listeners (CUA GUI) of error, pass message from @b GError object.

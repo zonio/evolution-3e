@@ -2,6 +2,7 @@ AM_CFLAGS = \
   -DG_LOG_DOMAIN=\"libecalbackend3e\" \
   $(LIBXR_CFLAGS) \
   $(EVO3E_CFLAGS) \
+  -DE_DATA_SERVER_IMAGESDIR=\"$(imagesdir)\" \
   -D_GNU_SOURCE \
   -I$(srcdir) \
   -I$(top_srcdir)
@@ -27,3 +28,9 @@ libecalbackend3e_la_LIBADD = \
 
 libecalbackend3e_la_LDFLAGS = \
   -module -avoid-version
+
+images_DATA = \
+	category_outofsync_16.png
+
+EXTRA_DIST = \
+	$(images_DATA)

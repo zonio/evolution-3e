@@ -40,6 +40,8 @@ AC_SUBST(LIBXR_LIBS)
 #
 
 edsversion=`$PKG_CONFIG --variable=execversion evolution-data-server-1.2`
+imagesdir=`$PKG_CONFIG --variable=datadir evolution-data-server-1.2`/pixmaps/evolution-data-server
+AC_SUBST(imagesdir)
 
 PKG_CHECK_MODULES(EVO3E, [
     libedata-cal-1.2 >= 3.2.0

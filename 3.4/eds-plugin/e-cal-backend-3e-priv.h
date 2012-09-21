@@ -137,6 +137,7 @@ void icalcomponent_set_cache_state(icalcomponent *comp, int state);
 int icalcomponent_get_cache_state(icalcomponent *comp);
 
 /* misc */
+void e_cal_component_set_outofsync (ECalComponent *comp, gboolean outofsync);
 const char *e_cal_backend_3e_get_cache_path(ECalBackend3e *cb);
 const char *icalcomponent_get_tzid(icalcomponent *comp);
 gboolean icalcomponent_3e_status_is_deleted(icalcomponent *comp);

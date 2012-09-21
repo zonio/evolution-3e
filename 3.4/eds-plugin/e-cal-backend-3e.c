@@ -385,7 +385,7 @@ static void e_cal_backend_3e_create_object(ECalBackendSync *backend,
         return;
     }
 
-    e_cal_component_set_x_property(comp, "X-EVOLUTION-STATUS", "outofsync");
+    e_cal_component_set_outofsync (comp, TRUE);
 
     calobj = e_cal_component_get_as_string(comp);
 
@@ -476,7 +476,7 @@ static void e_cal_backend_3e_modify_object(ECalBackendSync *backend,
                 e_cal_component_commit_sequence(inst);
                 e_cal_backend_store_put_component(priv->store, inst);
 
-                e_cal_component_set_x_property(inst, "X-EVOLUTION-STATUS", "outofsync");
+                e_cal_component_set_outofsync (inst, TRUE);
                 char *new_inst_str = e_cal_component_get_as_string(inst);
                 e_cal_backend_notify_object_modified(E_CAL_BACKEND(backend), inst_str, new_inst_str);
                 g_free(new_inst_str);
@@ -498,7 +498,7 @@ static void e_cal_backend_3e_modify_object(ECalBackendSync *backend,
             *old_object = cache_comp;
         }
 
-        e_cal_component_set_x_property(new_comp, "X-EVOLUTION-STATUS", "outofsync");
+        e_cal_component_set_outofsync (new_comp, TRUE);
         *new_object = g_object_ref(new_comp);
         e_cal_backend_store_put_component(priv->store, new_comp);
     }
