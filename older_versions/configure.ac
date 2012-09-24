@@ -1,5 +1,5 @@
 AC_PREREQ(2.57)
-AC_INIT([evolution-3e-plugin], 1.0, [3e-list@zonio.net], evolution-3e-plugin)
+AC_INIT([evolution-3e-plugin], 0.9.4, [3e-list@zonio.net], evolution-3e-plugin)
 AC_CONFIG_SRCDIR([Makefile.am])
 AC_PROG_RANLIB
 AM_CONFIG_HEADER([config.h])
