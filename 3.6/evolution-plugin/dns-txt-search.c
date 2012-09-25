@@ -187,7 +187,6 @@ gchar * *get_txt_records(const gchar *name)
 
 gchar *get_eee_server_hostname(const gchar *email)
 {
-    return g_strdup("localhost:4444");
     gchar *server;
     gchar *domain = strchr(email, '@');
     gchar **txt_list;
