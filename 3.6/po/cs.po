@@ -1,0 +1,150 @@
+# 3e Evolution czech translation
+# Copyright (C) 2010 Zonio
+# Pavel Tuma <pavel.tuma@zonio.net>, 2010.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: evolution-3e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2010-02-22 11:51+0100\n"
+"PO-Revision-Date: 2010-03-22 19:47+0100\n"
+"Last-Translator: Pavel Tuma <pavel.tuma@zonio.net>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../evolution-plugin/acl.c:404 ../evolution-plugin/acl.c:589
+msgid "read only"
+msgstr "pouze ke čtení"
+
+#: ../evolution-plugin/acl.c:580
+msgid "Username"
+msgstr "Uživatelské jméno"
+
+#: ../evolution-plugin/acl.c:581
+msgid "Real Name"
+msgstr "Plné jméno"
+
+#: ../evolution-plugin/acl.c:591
+msgid "read & write"
+msgstr "čtení a zápis"
+
+#: ../evolution-plugin/acl.c:598 ../evolution-plugin/subscribe.c:323
+msgid "Permission"
+msgstr "Přístupové právo"
+
+#: ../evolution-plugin/eee-calendar-config.c:141
+msgid ""
+"Evolution is in offline mode. You cannot create or modify calendars now.\n"
+"Please switch to online mode for such operations."
+msgstr ""
+"Evolution je v offline módu. Není možné vytvářet ani měnit kalendáře.\n"
+"Přepněte se do online módu, abyste to mohli dělat."
+
+#: ../evolution-plugin/eee-calendar-config.c:163
+msgid "You cannot create calendars for this 3e account."
+msgstr "Na tomto 3e účtu není možné vytvářet nové kalendáře."
+
+#: ../evolution-plugin/eee-calendar-config.c:380
+#: ../evolution-plugin/eee-calendar-config.c:395
+msgid "_Unsubscribe"
+msgstr "_Odpojit"
+
+#: ../evolution-plugin/eee-calendar-config.c:382
+#: ../evolution-plugin/eee-calendar-config.c:389
+#: ../evolution-plugin/eee-calendar-config.c:397
+msgid "_Delete"
+msgstr "_Vymazat"
+
+#: ../evolution-plugin/eee-calendar-config.c:387
+#: ../evolution-plugin/eee-calendar-config.c:394
+msgid "Setup _Permissions..."
+msgstr "Nastavit _práva..."
+
+#: ../evolution-plugin/eee-calendar-config.c:399
+#: ../evolution-plugin/eee-calendar-config.c:401
+msgid "_Properties..."
+msgstr "V_lastnosti"
+
+#. Status group
+#: ../evolution-plugin/eee-calendar-config.c:565
+msgid "3e Account Status"
+msgstr "Stav 3e účtu"
+
+#: ../evolution-plugin/eee-calendar-config.c:566
+#, c-format
+msgid "If you have 3e account <i>%s</i>, you can turn it on/off here."
+msgstr "Jestliže máte 3e účet <i>%s</i>, můžete ho zde zapnout či vypnout."
+
+#: ../evolution-plugin/eee-calendar-config.c:576
+msgid "Enable 3e Account"
+msgstr "Používat 3e účet"
+
+#: ../evolution-plugin/eee-calendar-config.c:584
+msgid "3e Settings"
+msgstr "Nastavení 3e"
+
+#: ../evolution-plugin/eee-calendar-config.c:818
+msgid "3e Calendar Account"
+msgstr "Účet 3e kalendáře"
+
+#: ../evolution-plugin/eee-calendar-config.c:830
+msgid "Enable 3e calendar account"
+msgstr "Zapnout účet 3e kalendáře"
+
+#: ../evolution-plugin/eee-calendar-config.c:888
+msgid ""
+"3e calendar server has been found for your domain. You can enable\n"
+"calendar account for your account <i>%s</i> if you have it. If you\n"
+"don't know ask your system administrator or provider of your email\n"
+"service. Go to email account preferences to change this setting later."
+msgstr ""
+"Pro váš doménu byl nalezen server 3e kalendáře. Můžete zapnout\n"
+"kalendářový účet pro vaši adresu <i>%s</i>. Jestliže nevíte,\n"
+"kontaktujte administátora či poskytovatele vaší emailové služby.\n"
+"Jděte do možností emailového účtu pro změnu tohoto nastavení později."
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:1
+msgid "<b>Selected Users</b>"
+msgstr "<b>Vybraní uživatelé</b>"
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:2
+msgid "<b>Permissions</b>"
+msgstr "<b>Přístupová práva</b>"
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:3
+msgid "Account:"
+msgstr "Účet:"
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:4
+msgid "Calendar Permissions Setup..."
+msgstr "Nastavení práv pro kalendář..."
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:5
+msgid "Filter:"
+msgstr "Filtr:"
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:6
+msgid "Private Calendar"
+msgstr "Soukromý kalendář"
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:7
+msgid "Public Calendar - Read-only access to everyone."
+msgstr "Veřejný kalendář - Přístup pouze pro čtení pro kohokoliv."
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:8
+msgid "Shared Calendar - Allow access to selected users."
+msgstr "Sdílený kalendář - Povolit přístup vybraným uživatelům."
+
+#: ../evolution-plugin/org-gnome-evolution-eee.glade.h:9
+msgid "Subscribe Calendar"
+msgstr "Připojit kalendář"
+
+#: ../evolution-plugin/subscribe.c:320
+msgid "Calendar Name"
+msgstr "Jméno kalendáře"
+
+#: ../evolution-plugin/utils.c:126 ../evolution-plugin/utils.c:134
+msgid "[No Title]"
+msgstr "[Bez titulku]"

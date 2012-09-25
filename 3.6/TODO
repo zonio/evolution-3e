@@ -1,0 +1,17 @@
+Evolution Plugin
+~~~~~~~~~~~~~~~~
+- fix ESourceList loop bug (reproduce with corba trace on)
+- check for cross-subscription in evolution (two EAccounts both with 3e support,
+  one is subscribing from other)
+- subscribe: too many users handling
+
+EDS Plugin
+~~~~~~~~~~
+- itip-formatter.c:1829: strip attachments from iTIP replys
+- conflict resolution when same event is modified multiple times
+  in a shared calendar (that cache thing)
+
+Evolution/EDS
+~~~~~~~~~~~~~
+- don't add groups that does not represent owned accounts to the list in
+  calendar/gui/dialogs/calendar-setup.c:432
