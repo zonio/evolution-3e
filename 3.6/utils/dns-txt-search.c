@@ -1,35 +1,23 @@
-/* Copyright (c) 1996 by Internet Software Consortium.
+/*
+ * Zonio 3e calendar plugin
  *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
+ * Copyright (C) 2008-2012 Zonio s.r.o <developers@zonio.net>
  *
- * THE SOFTWARE IS PROVIDED "AS IS" AND INTERNET SOFTWARE CONSORTIUM DISCLAIMS
- * ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES
- * OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL INTERNET SOFTWARE
- * CONSORTIUM BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
- * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
- * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
- * ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
- * SOFTWARE.
+ * This file is part of evolution-3e.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-/* Copyright 1996, 2000 by the Massachusetts Institute of Technology.
- *
- * Permission to use, copy, modify, and distribute this
- * software and its documentation for any purpose and without
- * fee is hereby granted, provided that the above copyright
- * notice appear in all copies and that both that copyright
- * notice and this permission notice appear in supporting
- * documentation, and that the name of M.I.T. not be used in
- * advertising or publicity pertaining to distribution of the
- * software without specific, written prior permission.
- * M.I.T. makes no representations about the suitability of
- * this software for any purpose.  It is provided "as is"
- * without express or implied warranty.
- */
-
-/* ripped off from hesiod */
 
 #include <stdlib.h>
 #include <errno.h>
@@ -199,6 +187,7 @@ gchar * *get_txt_records(const gchar *name)
 
 gchar *get_eee_server_hostname(const gchar *email)
 {
+    return g_strdup("localhost:4444");
     gchar *server;
     gchar *domain = strchr(email, '@');
     gchar **txt_list;
@@ -256,7 +245,7 @@ gchar *get_eee_web_hostname(const gchar *email)
 
     if (!domain)
     {
-        domain = (gchar*) email; // Email is only domain.
+        domain = (gchar *) email; // Email is only domain.
     }
     else
     {

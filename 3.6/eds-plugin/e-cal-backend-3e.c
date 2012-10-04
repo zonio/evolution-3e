@@ -20,17 +20,15 @@
  * along with evolution-3e.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <config.h>
 #include <string.h>
 #include <glib/gstdio.h>
+#include <ESClient.xrc.h>
+#include <dns-txt-search.h>
 #include "e-cal-backend-3e.h"
-#include "interface/ESClient.xrc.h"
-#include "dns-txt-search.h"
 
 
-#define mydebug(args...) do{FILE * fp = g_fopen("/dev/pts/2", "w"); fprintf (fp, args); fclose (fp);}while(0)
-
-
-#define _(a) (a)
+#define mydebug(args...) do{FILE * fp = g_fopen("/dev/pts/4", "w"); fprintf (fp, args); fclose (fp);}while(0)
 
 
 #define E_CAL_BACKEND_3E_GET_PRIVATE(obj) \
@@ -152,8 +150,7 @@ get_usermail (ECalBackend *backend)
     ESource *source;
     ESourceAuthentication *auth_extension;
     const gchar *extension_name;
-    const gchar *user, *host;
-    gchar *res = NULL;
+    const gchar *user;
 
     g_return_val_if_fail (backend != NULL, NULL);
 
@@ -162,11 +159,11 @@ get_usermail (ECalBackend *backend)
     extension_name = E_SOURCE_EXTENSION_AUTHENTICATION;
     auth_extension = e_source_get_extension (source, extension_name);
     user = e_source_authentication_get_user (auth_extension);
-    host = e_source_authentication_get_host (auth_extension);
 
-    res = g_strconcat (user, "@", host, NULL);
+    if (!user)
+	return NULL;
 
-    return res;
+    return g_strdup (user);
 }
 
 /* caldav tag */
@@ -259,7 +256,7 @@ synchronize_cache (ECalBackend3e *cb3e)
         ECalComponent *comp;
 
         comp = e_cal_component_new ();
-        if (!e_cal_component_set_icalcomponent (comp, icalcomponent_new_clone (icomp))) {
+        if (e_cal_component_set_icalcomponent (comp, icalcomponent_new_clone (icomp))) {
             ECalComponentId *id;
             ECalComponent *old_comp;
 
@@ -400,7 +397,9 @@ eee_get_backend_property (ECalBackendSync *backend,
 
 		caps = g_string_new (CAL_STATIC_CAPABILITY_NO_THISANDFUTURE ","
 				     CAL_STATIC_CAPABILITY_NO_THISANDPRIOR ","
-				     CAL_STATIC_CAPABILITY_REFRESH_SUPPORTED);
+				     CAL_STATIC_CAPABILITY_REFRESH_SUPPORTED ","
+				     CAL_STATIC_CAPABILITY_CREATE_MESSAGES ","
+				     CAL_STATIC_CAPABILITY_SAVE_SCHEDULES);
 
 		*prop_value = g_string_free (caps, FALSE);
 	} else if (g_str_equal (prop_name, CAL_BACKEND_PROPERTY_CAL_EMAIL_ADDRESS) ||
@@ -568,6 +567,11 @@ eee_server_open_calendar (ECalBackend3e *cb3e,
     g_return_val_if_fail (cb3e != NULL, FALSE);
     g_return_val_if_fail (server_unreachable != NULL, FALSE);
 
+    if (cb3e->priv->password == NULL) {
+        g_set_error (perror, E_DATA_CAL_ERROR, AuthenticationRequired, "");
+        return FALSE;
+    }
+
     /* resolve server URI from DNS TXT if necessary */
     if (cb3e->priv->server_uri == NULL) {
         gchar *server_hostname = get_eee_server_hostname (cb3e->priv->username);
@@ -661,7 +665,7 @@ verify_connection (ECalBackend3e *cb3e,
     GError *err = NULL;
     gboolean res = open_calendar (cb3e, &err);
 
-    if (g_error_matches (err, E_DATA_CAL_ERROR, AuthenticationFailed)) {
+    if (g_error_matches (err, E_DATA_CAL_ERROR, AuthenticationFailed) || g_error_matches (err, E_DATA_CAL_ERROR, AuthenticationRequired)) {
         g_clear_error (&err);
         res = eee_authenticate (cb3e, TRUE, NULL, &err);
     }
@@ -709,7 +713,7 @@ eee_open (ECalBackendSync *backend,
 
         opened = open_calendar (cb3e, &local_error);
 
-        if (g_error_matches (local_error, E_DATA_CAL_ERROR, AuthenticationFailed)) {
+        if (g_error_matches (local_error, E_DATA_CAL_ERROR, AuthenticationFailed) || g_error_matches (local_error, E_DATA_CAL_ERROR, AuthenticationRequired)) {
             g_clear_error (&local_error);
             opened = eee_authenticate (cb3e, FALSE, cancellable, perror);
         }
@@ -796,25 +800,17 @@ eee_open (ECalBackendSync *backend,
     e_cal_backend_notify_online (E_CAL_BACKEND(backend), TRUE);*/
 }
 
-/*
-static void
+/*static void
 eee_remove (ECalBackendSync *backend,
             EDataCal *cal,
             GCancellable *cancellable,
             GError **err)
 {
-    if (priv->is_loaded)
-    {
-        priv->is_loaded = FALSE;
-        e_cal_backend_3e_periodic_sync_stop(cb);
-        e_cal_backend_store_remove(priv->store);
-        priv->store = NULL;
-    }
-}
-*/
 
-static void/* caldav tag */
+}*/
 
+/* caldav tag */
+static void
 eee_refresh (ECalBackendSync *backend,
              EDataCal *cal,
              GCancellable *cancellable,
@@ -1029,6 +1025,27 @@ eee_server_put_object (ECalBackend3e *cb3e,
 
     if (verify_connection (cb3e, &local_err))
         ESClient_addObject(cb3e->priv->conn, cb3e->priv->calspec, object, &local_err);
+
+    if (local_err) {
+        g_propagate_error (perror, local_err);
+        return FALSE;
+    }
+
+    put_comp_to_cache (cb3e, comp);
+
+    return TRUE;
+}
+
+static gboolean
+eee_server_modify_object (ECalBackend3e *cb3e,
+                          icalcomponent *comp,
+                          GError **perror)
+{
+    GError *local_err = NULL;
+    char *object = icalcomponent_as_ical_string (comp);
+
+    if (verify_connection (cb3e, &local_err))
+        ESClient_updateObject(cb3e->priv->conn, cb3e->priv->calspec, object, &local_err);
 
     if (local_err) {
         g_propagate_error (perror, local_err);
@@ -1544,7 +1561,7 @@ do_modify_objects (ECalBackend3e *cb3e,
 		break;
 	}
 
-	if (online && eee_server_put_object (cb3e, cache_comp, error)) {
+	if (online && eee_server_modify_object (cb3e, cache_comp, error)) {
 		if (new_components && !*new_components) {
 			/* read the comp from cache again, as some servers can modify it on put */
 			*new_components = g_slist_prepend (*new_components, get_ecalcomp_master_from_cache_or_fallback (cb3e, id->uid, id->rid, NULL));

@@ -23,7 +23,7 @@
 
 #include <mail/e-mail-config-summary-page.h>
 
-#include "dns-txt-search.h"
+#include <dns-txt-search.h>
 
 #define E_MAIL_CONFIG_EEE_SUMMARY_GET_PRIVATE(obj) \
 	(G_TYPE_INSTANCE_GET_PRIVATE \
@@ -100,7 +100,7 @@ mail_config_eee_summary_commit_changes_cb (EMailConfigSummaryPage *page,
 	GList *head, *link;
 	const gchar *address;
 	const gchar *parent_uid;
-	const gchar *display_name;
+	gchar *display_name;
 	const gchar *extension_name;
 	gboolean calendar_active;
 	gboolean contacts_active;
@@ -124,7 +124,9 @@ mail_config_eee_summary_commit_changes_cb (EMailConfigSummaryPage *page,
 	address = e_source_mail_identity_get_address (identity_extension);
 
 	source = extension->priv->collection_source;
+	display_name = g_strconcat ("3e: ", display_name, NULL);
 	e_source_set_display_name (source, display_name);
+	g_free (display_name);
 
 	extension_name = E_SOURCE_EXTENSION_COLLECTION;
 	collection_extension = e_source_get_extension (source, extension_name);

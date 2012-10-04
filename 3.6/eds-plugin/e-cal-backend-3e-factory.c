@@ -53,6 +53,9 @@ e_cal_backend_3e_factory_init (ECalBackendFactory *factory)
 G_MODULE_EXPORT void
 e_module_load (GTypeModule *type_module)
 {
+        bindtextdomain (GETTEXT_PACKAGE, EXCHANGE_EEE_LOCALEDIR);
+        bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+
     xr_init();
 
     //xr_debug_enabled = XR_DEBUG_CALL;
@@ -64,23 +67,6 @@ e_module_load (GTypeModule *type_module)
     icaltimezone_get_utc_timezone();
 
     e_cal_backend_3e_factory_register_type (type_module);
-
-    GList *l, *saved_cats;
-    gchar *filename;
-
-    saved_cats = e_categories_get_list ();
-
-    for (l = saved_cats; l; l = g_list_next (l)) {
-        if (!g_strcmp0 ((const gchar *) l->data, "outofsync"))
-            goto exit;
-    }
-
-    filename = g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_outofsync_16.png", NULL);
-    e_categories_add ("outofsync", NULL, filename, FALSE);
-    g_free (filename);
-
-exit:
-    g_list_free (saved_cats);
 }
 
 G_MODULE_EXPORT void

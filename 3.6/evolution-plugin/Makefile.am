@@ -1,9 +1,10 @@
 AM_CFLAGS = \
   $(EVO3E_CFLAGS) \
+  -DEXCHANGE_EEE_LOCALEDIR=\"$(localedir)\" \
   -DPLUGINDIR=\""$(plugindir)"\" \
   $(LIBXR_CFLAGS) \
-  -DPROGRAMNAME_LOCALEDIR=\"${PROGRAMNAME_LOCALEDIR}\" \
-  -I$(top_srcdir)
+  -I$(top_srcdir) \
+  -I$(top_srcdir)/utils
 
 #plugin_DATA = \
 #  org-gnome-evolution-eee.eplug \
@@ -15,20 +16,15 @@ error_DATA = \
 #plugin_LTLIBRARIES = \
 #  liborg-gnome-evolution-eee.la
 
-module_LTLIBRARIES = \
+evo_module_LTLIBRARIES = \
   module-eee.la
 
 module_eee_la_SOURCES = \
-  module-eee-backend.c \
   evolution-cal-config-eee.c \
   e-mail-config-eee-summary.c \
-  e-mail-config-eee-summary.h \
-  dns-txt-search.c \
-  dns-txt-search.h
+  e-mail-config-eee-summary.h
 
-liborg_gnome_evolution_eee_la_SOURCES = \
-  dns-txt-search.c \
-  dns-txt-search.h
+# liborg_gnome_evolution_eee_la_SOURCES = \
 #  evolution-cal-config-eee.c \
 #  e-mail-config-eee-summary.c \
 #  e-mail-config-eee-summary.h \
@@ -38,8 +34,6 @@ liborg_gnome_evolution_eee_la_SOURCES = \
 #  eee-accounts-manager.h \
 #  eee-calendar-config.c \
 #  eee-calendar-config.h \
-#  dns-txt-search.c \
-#  dns-txt-search.h \
 #  utils.c \
 #  utils.h \
 #  subscribe.c \
@@ -56,7 +50,7 @@ liborg_gnome_evolution_eee_la_LDFLAGS = \
   -module -avoid-version
 
 module_eee_la_LIBADD = \
-  $(top_builddir)/interface/libinterface.la \
+  $(top_builddir)/utils/libeeeutils.la \
   $(LIBXR_LIBS) \
   $(EVO3E_LIBS)
 

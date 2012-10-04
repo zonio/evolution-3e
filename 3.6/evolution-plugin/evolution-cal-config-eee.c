@@ -28,6 +28,7 @@
 #include <shell/e-shell-view.h>
 
 #include "e-mail-config-eee-summary.h"
+#include <dns-txt-search.h>
 
 typedef ESourceConfigBackend ECalConfigEee;
 typedef ESourceConfigBackendClass ECalConfigEeeClass;
@@ -58,6 +59,8 @@ G_DEFINE_DYNAMIC_TYPE (
 	ECalConfigEee,
 	e_cal_config_eee,
 	E_TYPE_SOURCE_CONFIG_BACKEND)
+
+
 /*
 static Context *
 cal_config_eee_context_new (ESourceConfigBackend *backend,
@@ -202,6 +205,23 @@ cal_config_eee_run_dialog (GtkButton *button,
 	gtk_widget_destroy (dialog);
 }
 */
+
+static gboolean
+cal_config_eee_allow_creation (ESourceConfigBackend *backend)
+{
+        ESourceConfig *config;
+        ECalSourceConfig *cal_config;
+        ECalClientSourceType source_type;
+        gboolean allow_creation = FALSE;
+
+        config = e_source_config_backend_get_config (backend);
+
+        cal_config = E_CAL_SOURCE_CONFIG (config);
+        source_type = e_cal_source_config_get_source_type (cal_config);
+
+	return source_type == E_CAL_CLIENT_SOURCE_TYPE_EVENTS;
+}
+
 static void
 cal_config_eee_insert_widgets (ESourceConfigBackend *backend,
                                ESource *scratch_source)
@@ -326,6 +346,7 @@ static gboolean
 cal_config_eee_check_complete (ESourceConfigBackend *backend,
                                ESource *scratch_source)
 {
+	return TRUE;
 	ESourceConfig *config;
 	ESource *collection_source;
 	Context *context;
@@ -357,8 +378,8 @@ e_cal_config_eee_class_init (ESourceConfigBackendClass *class)
 	extension_class = E_EXTENSION_CLASS (class);
 	extension_class->extensible_type = E_TYPE_CAL_SOURCE_CONFIG;
 
-//	class->parent_uid = "eee-stub";
 	class->backend_name = "eee";
+	class->allow_creation = cal_config_eee_allow_creation;
 	class->insert_widgets = cal_config_eee_insert_widgets;
 	class->check_complete = cal_config_eee_check_complete;
 }
@@ -373,9 +394,19 @@ e_cal_config_eee_init (ESourceConfigBackend *backend)
 {
 }
 
-void
-e_cal_config_eee_type_register (GTypeModule *type_module)
+void e_mail_config_eee_summary_type_register (GTypeModule *type_module);
+
+G_MODULE_EXPORT void
+e_module_load (GTypeModule *type_module)
 {
+        bindtextdomain (GETTEXT_PACKAGE, EXCHANGE_EEE_LOCALEDIR);
+        bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+
 	e_cal_config_eee_register_type (type_module);
+	e_mail_config_eee_summary_type_register (type_module);
 }
 
+G_MODULE_EXPORT void
+e_module_unload (GTypeModule *type_module)
+{
+}

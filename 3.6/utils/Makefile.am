@@ -1,3 +1,5 @@
+privlib_LTLIBRARIES = libeeeutils.la
+
 BUILT_SOURCES = \
   ESCommon.c \
   ESClient.xrc.c \
@@ -15,6 +17,7 @@ EXTRA_DIST = \
 
 AM_CFLAGS= \
   $(LIBXR_CFLAGS) \
+  $(EVO3E_CFLAGS) \
   -D_REENTRANT \
   -D_GNU_SOURCE
 
@@ -22,10 +25,12 @@ $(BUILT_SOURCES): $(srcdir)/server.xdl
 	$(XDL_COMPILER) --mode=pub-impl -i $< -o .
 	$(XDL_COMPILER) --mode=pub-headers -i $< -o .
 
-noinst_LTLIBRARIES = \
-  libinterface.la
-
-libinterface_la_SOURCES = \
+libeeeutils_la_SOURCES = \
   ESCommon.c \
   ESClient.xrc.c \
-  ESClient.c
+  ESClient.c \
+  dns-txt-search.c \
+  e-source-eee.c
+
+libeeeutils_la_LDFLAGS = \
+  -module -avoid-version
