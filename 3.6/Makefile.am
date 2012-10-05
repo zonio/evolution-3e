@@ -2,7 +2,7 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-SUBDIRS = docs interface evolution-plugin eds-plugin po
+SUBDIRS = utils collection eds-plugin evolution-plugin docs po
 
 INTLTOOL_FILES = intltool-extract.in \
                  intltool-merge.in \

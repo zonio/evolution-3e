@@ -22,6 +22,7 @@
 #include <libebackend/libebackend.h>
 #include <dns-txt-search.h>
 #include <ESClient.xrc.h>
+#include <e-source-eee.h>
 
 /* Standard GObject macros */
 #define E_TYPE_EEE_BACKEND \
@@ -175,14 +176,15 @@ eee_backend_get_calendars_list (EEeeBackend *backend, xr_client_conn *conn)
 		extension = e_source_get_extension (source, extension_name);
 		perms = ESClient_getUserPermissions (conn, cal->name, NULL);
 		for (j = 0; perms != NULL && j < perms->len; j++) {
-			glong p;
+			glong p = 0;
 			ESUserPermission *perm = g_array_index (perms, ESUserPermission *, j);
 
 			if (!g_strcmp0 (perm->perm, "read"))
 				p = EEE_PERM_READ;
-			else if (!g_strcmp0 (perm->perm, ""))
+			else if (!g_strcmp0 (perm->perm, "readwrite"))
 				p = EEE_PERM_READWRITE;
-			e_source_eee_add_user_perm (E_SOURCE_EEE (extension), perm->user);
+			if (p != 0)
+				e_source_eee_add_user_perm (E_SOURCE_EEE (extension), perm->user, p);
 		}
 
 		e_source_registry_server_add_source (server, source);
