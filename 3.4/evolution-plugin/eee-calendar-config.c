@@ -160,6 +160,37 @@ static void show_offline_labels()
     g_slist_foreach(offline_labels, (GFunc)gtk_widget_show, NULL);
 }
 
+static void calendar_properties_dialog_polish(EConfigHookItemFactoryData *data)
+{
+    GtkTable *table = GTK_TABLE(data->parent);
+    GtkFrame *frame = gtk_widget_get_parent(
+        GTK_WIDGET(gtk_widget_get_parent(GTK_WIDGET(table))));
+
+    gtk_frame_set_label(frame, "General");
+
+    GSList *children = g_slist_reverse(gtk_container_get_children(GTK_CONTAINER(table)));
+    gtk_widget_hide(GTK_WIDGET(children->data));
+    gtk_widget_hide(GTK_WIDGET(children->next->data));
+
+    // XXX: Changing width of colorButton is not so easy, will see
+    //GSList *iter;
+    //for (iter = children; iter; iter = iter->next)
+    //{
+    //    gchar *name = gtk_widget_get_name(GTK_WIDGET(iter->data));
+    //    if (g_strcmp0(name, "GtkColorButton") == 0 )
+    //    {
+    //        gint x, y;
+    //        gtk_widget_get_size_request(GTK_WIDGET(iter->data), &x, &y);
+    //        printf("\tsize: %dx%d\n", x, y);
+    //        gtk_widget_set_size_request(GTK_WIDGET(iter->data), 20, -1);
+    //        gtk_widget_get_size_request(GTK_WIDGET(iter->data), &x, &y);
+    //        printf("\tsize: %dx%d\n", x, y);
+    //    }
+    //}
+
+    g_slist_free(children);
+}
+
 GtkWidget *eee_calendar_properties_factory(EPlugin *epl, EConfigHookItemFactoryData *data)
 {
     ECalConfigTargetSource *target = (ECalConfigTargetSource *)data->target;
@@ -178,6 +209,7 @@ GtkWidget *eee_calendar_properties_factory(EPlugin *epl, EConfigHookItemFactoryD
 
     account = eee_accounts_manager_find_account_by_group (mgr(), group);
 
+    calendar_properties_dialog_polish(data);
     struct acl_context * ctx = acl_gui_create (mgr(), account, target->source);
     g_object_set_data (G_OBJECT (target->source), "eee-acl-context", ctx);
     gtk_widget_show (ctx->win);
