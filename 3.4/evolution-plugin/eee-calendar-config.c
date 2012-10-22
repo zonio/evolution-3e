@@ -166,7 +166,13 @@ static void calendar_properties_dialog_polish(EConfigHookItemFactoryData *data)
     GtkFrame *frame = gtk_widget_get_parent(
         GTK_WIDGET(gtk_widget_get_parent(GTK_WIDGET(table))));
 
-    gtk_frame_set_label(frame, "General");
+    GtkLabel *label = gtk_label_new("General");
+    gtk_widget_show(GTK_WIDGET(label));
+    PangoAttribute *attr = pango_attr_weight_new(PANGO_WEIGHT_BOLD);
+    PangoAttrList *list = pango_attr_list_new();
+    pango_attr_list_insert(list, attr);
+    gtk_label_set_attributes(label, list);
+    gtk_frame_set_label_widget(frame, GTK_WIDGET(label));
 
     GSList *children = g_slist_reverse(gtk_container_get_children(GTK_CONTAINER(table)));
     gtk_widget_hide(GTK_WIDGET(children->data));
