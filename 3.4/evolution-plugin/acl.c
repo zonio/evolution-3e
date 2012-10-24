@@ -232,7 +232,6 @@ static void on_acl_window_destroy(GtkObject *object, struct acl_context *ctx)
 static gboolean load_state(struct acl_context *ctx)
 {
     GError *err = NULL;
-    GArray *perms;
     guint i;
 
     char *calname = (char *)e_source_get_property(ctx->source, "eee-calname");
@@ -243,7 +242,7 @@ static gboolean load_state(struct acl_context *ctx)
         return FALSE;
     }
 
-    perms = ESClient_getUserPermissions(conn, calname, &err);
+    GArray *perms = ESClient_getUserPermissions(conn, calname, &err);
     if (err)
     {
         g_warning("** EEE ** Can't get permissions. (%d:%s)", err->code, err->message);
@@ -269,7 +268,7 @@ static gboolean load_state(struct acl_context *ctx)
     // - some permissions => shared
 
     ctx->initial_perms = perms;
-    if (perms == NULL)
+    if (perms == NULL || perms->len == 0)
     {
         ctx->initial_mode = ACL_MODE_PRIVATE;
         return TRUE;

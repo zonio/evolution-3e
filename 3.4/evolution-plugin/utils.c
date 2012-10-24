@@ -204,8 +204,12 @@ ESource *e_source_group_peek_source_by_calname(ESourceGroup *group, const char *
 
 ESAttribute *eee_find_attribute(GArray *attrs, const char *name)
 {
-    guint i;
+    if (attrs == NULL)
+    {
+        return NULL;
+    }
 
+    guint i;
     for (i = 0; i < attrs->len; i++)
     {
         ESAttribute *attr = g_array_index (attrs, ESAttribute *, i);
