@@ -1,0 +1,310 @@
+diff --git a/calendar/gui/alarm-notify/alarm-notify.c b/calendar/gui/alarm-notify/alarm-notify.c
+index 7ad414c..28bc1ff 100644
+--- a/calendar/gui/alarm-notify/alarm-notify.c
++++ b/calendar/gui/alarm-notify/alarm-notify.c
+@@ -353,7 +353,9 @@ alarm_notify_add_calendar (AlarmNotify *an, ECalSourceType source_type,  ESource
+ 	priv = an->priv;
+ 	str_uri = e_source_get_uri (source);
+ 	e_uri = e_uri_new (str_uri);
+-	if (e_source_get_property (source, "auth-type"))
++	if (e_source_get_property (source, "auth-key"))
++		pass_key = e_source_get_duped_property (source, "auth-key");
++	else if (e_source_get_property (source, "auth-type"))
+ 		pass_key = e_uri_to_string (e_uri, FALSE);
+ 	else
+ 		pass_key = g_strdup (str_uri);
+diff --git a/calendar/gui/dialogs/calendar-setup.c b/calendar/gui/dialogs/calendar-setup.c
+index 9b396ce..d271305 100644
+--- a/calendar/gui/dialogs/calendar-setup.c
++++ b/calendar/gui/dialogs/calendar-setup.c
+@@ -74,9 +74,13 @@ eccp_check_complete (EConfig *ec, const gchar *pageid, gpointer data)
+ static void
+ eccp_commit (EConfig *ec, GSList *items, gpointer data)
+ {
++	ECalConfigTargetSource* target = (ECalConfigTargetSource*)ec->target;
+ 	CalendarSourceDialog *sdialog = data;
+ 	xmlNodePtr xml;
+ 
++	if (target->disable_source_update)
++		return;
++
+ 	if (sdialog->original_source) {
+ 		const gchar *color_spec;
+ 
+diff --git a/calendar/gui/dialogs/cancel-comp.c b/calendar/gui/dialogs/cancel-comp.c
+index fe85119..deecfe6 100644
+--- a/calendar/gui/dialogs/cancel-comp.c
++++ b/calendar/gui/dialogs/cancel-comp.c
+@@ -72,6 +72,11 @@ cancel_component_dialog (GtkWindow *parent,
+ 	ECalComponentVType vtype;
+ 	const gchar *id;
+ 
++	if (g_str_has_prefix(e_cal_get_uri(client), "eee://"))
++	{
++		return FALSE;
++	}
++
+ 	if (deleting && e_cal_get_save_schedules (client))
+ 		return TRUE;
+ 
+diff --git a/calendar/gui/dialogs/comp-editor.c b/calendar/gui/dialogs/comp-editor.c
+index 7e16d89..a51267b 100644
+--- a/calendar/gui/dialogs/comp-editor.c
++++ b/calendar/gui/dialogs/comp-editor.c
+@@ -2681,7 +2681,7 @@ real_send_comp (CompEditor *editor, ECalComponentItipMethod method, gboolean str
+ 	}
+ 
+ 	if (!e_cal_component_has_attachments (priv->comp)
+-	  || e_cal_get_static_capability (priv->client, CAL_STATIC_CAPABILITY_CREATE_MESSAGES)) {
++	    || e_cal_get_static_capability (priv->client, CAL_STATIC_CAPABILITY_CREATE_MESSAGES) || e_cal_get_static_capability (priv->client, CAL_STATIC_CAPABILITY_NO_SEND_IMIP)) {
+ 		if (itip_send_comp (method, send_comp, priv->client,
+ 					NULL, NULL, users, strip_alarms, priv->flags & COMP_EDITOR_SEND_TO_NEW_ATTENDEES_ONLY)) {
+ 			g_object_unref (send_comp);
+diff --git a/calendar/gui/dialogs/send-comp.c b/calendar/gui/dialogs/send-comp.c
+index a42501c..607c923 100644
+--- a/calendar/gui/dialogs/send-comp.c
++++ b/calendar/gui/dialogs/send-comp.c
+@@ -105,6 +105,11 @@ add_checkbox (GtkBox *where, const gchar *caption)
+ gboolean
+ send_component_dialog (GtkWindow *parent, ECal *client, ECalComponent *comp, gboolean new, gboolean *strip_alarms, gboolean *only_new_attendees)
+ {
++  if (g_str_has_prefix(e_cal_get_uri(client), "eee://"))
++  {
++    return FALSE;
++  }
++
+ 	ECalComponentVType vtype;
+ 	const gchar *id;
+ 	GtkWidget *dialog, *sa_checkbox = NULL, *ona_checkbox = NULL;
+diff --git a/calendar/gui/e-cal-config.h b/calendar/gui/e-cal-config.h
+index 30e12bb..ddacbc4 100644
+--- a/calendar/gui/e-cal-config.h
++++ b/calendar/gui/e-cal-config.h
+@@ -55,6 +55,7 @@ struct _ECalConfigTargetSource {
+ 
+ 	struct _ESource *source;
+         ECalSourceType source_type;
++	gboolean disable_source_update;
+ };
+ 
+ struct _ECalConfigTargetPrefs {
+diff --git a/calendar/gui/e-calendar-view.c b/calendar/gui/e-calendar-view.c
+index 42e4c1c..54787e5 100644
+--- a/calendar/gui/e-calendar-view.c
++++ b/calendar/gui/e-calendar-view.c
+@@ -1824,6 +1824,20 @@ e_calendar_view_get_tooltips (ECalendarViewEventData *data)
+ 	gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
+ 	g_free (tmp);
+ 
++	/* display error */
++	e_cal_component_get_x_property (newcomp, "X-EVOLUTION-ERROR", &str);
++	if (str) {
++		tmp = g_strdup_printf (_("Error: %s"), str);
++		label = gtk_label_new (NULL);
++		gtk_label_set_markup ((GtkLabel *)label, tmp);
++		hbox = gtk_hbox_new (FALSE, 0);
++		gtk_box_pack_start ((GtkBox *)hbox, label, FALSE, FALSE, 0);
++		ebox = gtk_event_box_new ();
++		gtk_container_add ((GtkContainer *)ebox, hbox);
++		gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
++		g_free (tmp);
++	}
++
+ 	e_cal_component_get_organizer (newcomp, &organiser);
+ 	if (organiser.cn) {
+ 		gchar *ptr;
+diff --git a/calendar/gui/itip-utils.c b/calendar/gui/itip-utils.c
+index 9fe0f1b..1bb8ae0 100644
+--- a/calendar/gui/itip-utils.c
++++ b/calendar/gui/itip-utils.c
+@@ -1312,7 +1312,7 @@ itip_send_comp (ECalComponentItipMethod method, ECalComponent *send_comp,
+ 	/* Recipients */
+ 	destinations = comp_to_list (method, comp, users, FALSE, only_new_attendees ? g_object_get_data (G_OBJECT (send_comp), "new-attendees") : NULL);
+ 	if (method != E_CAL_COMPONENT_METHOD_PUBLISH) {
+-		if (destinations == NULL) {
++		if (destinations == NULL || e_cal_get_static_capability (client, CAL_STATIC_CAPABILITY_NO_SEND_IMIP)) {
+ 			/* We sent them all via the server */
+ 			retval = TRUE;
+ 			goto cleanup;
+diff --git a/help/C/evolution.xml b/help/C/evolution.xml
+index c761cc5..cb34cdc 100644
+--- a/help/C/evolution.xml
++++ b/help/C/evolution.xml
+@@ -6573,6 +6573,177 @@
+   </section>
+  </chapter>
+ 
++  <chapter id="usage-3e-server">
++    <title>3e-server usage</title>
++
++    <para>Before you start using 3e calendar plugin for evolution you have to ensure that your administrator set up your account.</para>
++
++    <itemizedlist>
++      <listitem>
++        <para><link linkend="3e-account">Add your account</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-create">Creating/deleting new callendar</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-subscribe">Subscribing existing calendar</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-publish">Publishing calendar</link></para>
++      </listitem>
++    </itemizedlist>
++
++    <section id="3e-account">
++      <title>Add your account</title>
++
++      <para>If you have 3e server account same as your email adress (ex. alice@company-one.com), you have to only check that it is enabled in your account settings: Edit → Preferences → Mail accounts → your account → Edit</para>
++
++      <mediaobject id="3e1">
++        <imageobject>
++	  <imagedata fileref="figures/3e1.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>If you have 3e server account on different server than your mail, you will have to create new evolution account: Edit → Preferences → Mail accounts → your account → Add</para>
++
++      <para>Take the same steps like creating email account.</para>
++    </section>
++
++    <section id="3e-create">
++      <title>Creating/deleting new callendar</title>
++
++      <section id="3e-create1">
++	<title>Create</title>
++	<para>Now when you have set up your account you can add new calendars on the server.</para>
++
++	<para>Go to: File → New → Calendar </para>
++
++	<para>In the dialog chose your 3e account and put a name of your new calendar.</para>
++
++	<mediaobject id="3e7">
++	  <imageobject>
++	    <imagedata fileref="figures/3e7.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>Press OK.</para>
++
++	<para>Now you have created a new calendar on the server and you can start using it.</para>
++
++	<mediaobject id="3e8">
++	  <imageobject>
++	    <imagedata fileref="figures/3e8.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++      <section id="3e-create2">
++	<title>Delete</title>
++
++	<para>When you want to delete the calendar, just press right button on the calendar and chose delete.</para>
++
++	<mediaobject id="3e9">
++	  <imageobject>
++	    <imagedata fileref="figures/3e9.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++    </section>
++
++    <section id="3e-subscribe">
++      <title>Subscribing existing calendar</title>
++
++      <para>If you want to subscribe an existing calendar got to: File → Subscribe to 3E calendar</para>
++
++      <mediaobject id="3e2">
++        <imageobject>
++	  <imagedata fileref="figures/3e2.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>Select you account.</para>
++
++      <mediaobject id="3e3">
++        <imageobject>
++	  <imagedata fileref="figures/3e3.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>And than chose calendar you want to subscribe. Notice here that you will se only calendars you have permission for.</para>
++
++      <mediaobject id="3e4">
++        <imageobject>
++	  <imagedata fileref="figures/3e4.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>Press Add.</para>
++
++      <para>Now you will have Bobs personal callendar subscribed.</para>
++
++      <mediaobject id="3e5">
++        <imageobject>
++	  <imagedata fileref="figures/3e5.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++    </section>
++
++    <section id="3e-publish">
++      <title>Publishing calendar</title>
++
++      <para>To set all the states, pres right button on the apropriate calendar and select: Configure ACL</para>
++
++      <mediaobject id="3e10">
++        <imageobject>
++	  <imagedata fileref="figures/3e10.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>In the opened dialog you can choose one of the values described further.</para>
++
++      <section id="3e-publish-private">
++	<title>Private calendar</title>
++	<para>Private calendar is good if you want to store your calendar on 3e server, but dont want to allow anyone to see it.</para>
++	<mediaobject id="3e11">
++	  <imageobject>
++	    <imagedata fileref="figures/3e11.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++      <section id="3e-publish-public">
++	<title>Public calendar</title>
++	<para>When you want to share your tasks with all users read only, the second option is for you.</para>
++      </section>
++
++      <section id="3e-publish-shared">
++	<title>Shared calendar</title>
++
++	<para>Third option is good for selective sharing. You can set read-only or read-write to each user you want.</para>
++
++	<mediaobject id="3e12">
++	  <imageobject>
++	    <imagedata fileref="figures/3e12.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>Select permission by clicking on the user line, permission colum.</para>
++
++	<mediaobject id="3e13">
++	  <imageobject>
++	    <imagedata fileref="figures/3e13.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>If you want to delete some user just press right mouse button on the user and than press delete.</para>
++      </section>
++
++    </section>
++
++  </chapter>
++
+  <chapter id="config-prefs">
+   <title>Advanced Configuration</title>
+   <para>Perhaps your mail server has changed names. Or you have grown tired of a certain layout for your appointments. Whatever the reason, you can change your <trademark>Evolution</trademark> settings.</para>

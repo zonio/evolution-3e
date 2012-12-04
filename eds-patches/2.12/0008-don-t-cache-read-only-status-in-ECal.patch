@@ -1,0 +1,33 @@
+From d4f43407aeddbf983420aafd84ab2085b39fd461 Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Thu, 25 Oct 2007 02:52:46 +0200
+Subject: [PATCH] don't cache read only status in ECal
+
+---
+ calendar/libecal/e-cal.c |    7 +------
+ 1 files changed, 1 insertions(+), 6 deletions(-)
+
+diff --git a/calendar/libecal/e-cal.c b/calendar/libecal/e-cal.c
+index 78d66ea..dc4d736 100644
+--- a/calendar/libecal/e-cal.c
++++ b/calendar/libecal/e-cal.c
+@@ -2109,15 +2109,10 @@ e_cal_get_local_attachment_store (ECal *ecal)
+ gboolean
+ e_cal_is_read_only (ECal *ecal, gboolean *read_only, GError **error)
+ {
+-	ECalPrivate *priv;
+-	
+ 	if (!(ecal && E_IS_CAL (ecal)))
+ 		E_CALENDAR_CHECK_STATUS (E_CALENDAR_STATUS_INVALID_ARG, error);
+ 	
+-	priv = ecal->priv;
+-	*read_only = priv->read_only;
+-	
+-	return TRUE;
++	return get_read_only (ecal, read_only, error);
+ }
+ 
+ static gboolean
+-- 
+1.5.4-dirty
+

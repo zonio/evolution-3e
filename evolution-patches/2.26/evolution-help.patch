@@ -1,0 +1,180 @@
+--- a/help/C/evolution.xml	2008-11-24 05:57:48.000000000 +0100
++++ b/help/C/evolution.xml	2009-02-19 13:02:48.000000000 +0100
+@@ -6511,6 +6511,177 @@
+   </section>
+  </chapter>
+ 
++ <chapter id="usage-3e-server">
++    <title>3e-server usage</title>
++
++    <para>Before you start using 3e calendar plugin for evolution you have to ensure that your administrator set up your account.</para>
++
++    <itemizedlist>
++      <listitem>
++        <para><link linkend="3e-account">Add your account</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-create">Creating/deleting new callendar</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-subscribe">Subscribing existing calendar</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-publish">Publishing calendar</link></para>
++      </listitem>
++    </itemizedlist>
++
++    <section id="3e-account">
++      <title>Add your account</title>
++
++      <para>If you have 3e server account same as your email adress (ex. alice@company-one.com), you have to only check that it is enabled in your account settings: Edit → Preferences → Mail accounts → your account → Edit</para>
++
++      <mediaobject id="3e1">
++        <imageobject>
++	  <imagedata fileref="figures/3e1.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>If you have 3e server account on different server than your mail, you will have to create new evolution account: Edit → Preferences → Mail accounts → your account → Add</para>
++
++      <para>Take the same steps like creating email account.</para>
++    </section>
++
++    <section id="3e-create">
++      <title>Creating/deleting new callendar</title>
++
++      <section id="3e-create1">
++	<title>Create</title>
++	<para>Now when you have set up your account you can add new calendars on the server.</para>
++
++	<para>Go to: File → New → Calendar </para>
++
++	<para>In the dialog chose your 3e account and put a name of your new calendar.</para>
++
++	<mediaobject id="3e7">
++	  <imageobject>
++	    <imagedata fileref="figures/3e7.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>Press OK.</para>
++
++	<para>Now you have created a new calendar on the server and you can start using it.</para>
++
++	<mediaobject id="3e8">
++	  <imageobject>
++	    <imagedata fileref="figures/3e8.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++      <section id="3e-create2">
++	<title>Delete</title>
++
++	<para>When you want to delete the calendar, just press right button on the calendar and chose delete.</para>
++
++	<mediaobject id="3e9">
++	  <imageobject>
++	    <imagedata fileref="figures/3e9.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++    </section>
++
++    <section id="3e-subscribe">
++      <title>Subscribing existing calendar</title>
++
++      <para>If you want to subscribe an existing calendar got to: File → Subscribe to 3E calendar</para>
++
++      <mediaobject id="3e2">
++        <imageobject>
++	  <imagedata fileref="figures/3e2.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>Select you account.</para>
++
++      <mediaobject id="3e3">
++        <imageobject>
++	  <imagedata fileref="figures/3e3.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>And than chose calendar you want to subscribe. Notice here that you will se only calendars you have permission for.</para>
++
++      <mediaobject id="3e4">
++        <imageobject>
++	  <imagedata fileref="figures/3e4.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>Press Add.</para>
++
++      <para>Now you will have Bobs personal callendar subscribed.</para>
++
++      <mediaobject id="3e5">
++        <imageobject>
++	  <imagedata fileref="figures/3e5.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++    </section>
++
++    <section id="3e-publish">
++      <title>Publishing calendar</title>
++
++      <para>To set all the states, pres right button on the apropriate calendar and select: Configure ACL</para>
++
++      <mediaobject id="3e10">
++        <imageobject>
++	  <imagedata fileref="figures/3e10.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>In the opened dialog you can choose one of the values described further.</para>
++
++      <section id="3e-publish-private">
++	<title>Private calendar</title>
++	<para>Private calendar is good if you want to store your calendar on 3e server, but dont want to allow anyone to see it.</para>
++	<mediaobject id="3e11">
++	  <imageobject>
++	    <imagedata fileref="figures/3e11.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++      <section id="3e-publish-public">
++	<title>Public calendar</title>
++	<para>When you want to share your tasks with all users read only, the second option is for you.</para>
++      </section>
++
++      <section id="3e-publish-shared">
++	<title>Shared calendar</title>
++
++	<para>Third option is good for selective sharing. You can set read-only or read-write to each user you want.</para>
++
++	<mediaobject id="3e12">
++	  <imageobject>
++	    <imagedata fileref="figures/3e12.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>Select permission by clicking on the user line, permission colum.</para>
++
++	<mediaobject id="3e13">
++	  <imageobject>
++	    <imagedata fileref="figures/3e13.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>If you want to delete some user just press right mouse button on the user and than press delete.</para>
++      </section>
++
++    </section>
++
++  </chapter>
++
+  <chapter id="config-prefs">
+   <title>Advanced Configuration</title>
+   <para>Perhaps your mail server has changed names. Or you have grown tired of a certain layout for your appointments. Whatever the reason, you can change your <trademark>Evolution</trademark> settings.</para>

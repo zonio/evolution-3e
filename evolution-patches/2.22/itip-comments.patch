@@ -1,0 +1,29 @@
+diff --git a/plugins/itip-formatter/itip-formatter.c b/plugins/itip-formatter/itip-formatter.c
+index 9ba15fc..910b47a 100644
+--- a/plugins/itip-formatter/itip-formatter.c
++++ b/plugins/itip-formatter/itip-formatter.c
+@@ -1651,6 +1651,24 @@ view_response_cb (GtkWidget *widget, ItipViewResponse response, gpointer data)
+ 
+ 	save_schedules = e_cal_get_save_schedules (pitip->current_ecal);
+ 
++    if (g_str_has_prefix(e_cal_get_uri(pitip->current_ecal), "eee://"))
++    {
++        const gchar *comment = NULL;
++       comment = itip_view_get_rsvp_comment (ITIP_VIEW (pitip->view));
++       if (comment) {
++               GSList comments;
++               ECalComponentText text;
++    
++               text.value = comment;
++               text.altrep = NULL;
++    
++               comments.data = &text;
++               comments.next = NULL;
++    
++               e_cal_component_set_comment_list (pitip->comp, &comments);
++       }
++    }
++
+ 	switch (response) {
+ 		case ITIP_VIEW_RESPONSE_ACCEPT:
+ 			if (pitip->type != E_CAL_SOURCE_TYPE_JOURNAL)

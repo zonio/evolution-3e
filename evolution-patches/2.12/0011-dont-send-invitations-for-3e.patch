@@ -1,0 +1,14 @@
+diff --git a/calendar/gui/dialogs/send-comp.c b/calendar/gui/dialogs/send-comp.c
+index 4be2633..e396848 100644
+--- a/calendar/gui/dialogs/send-comp.c
++++ b/calendar/gui/dialogs/send-comp.c
+@@ -78,6 +78,10 @@ send_component_dialog (GtkWindow *parent, ECal *client, ECalComponent *comp, gbo
+ gboolean
+ send_component_prompt_subject (GtkWindow *parent, ECal *client, ECalComponent *comp)
+ {
++  if (g_str_has_prefix(e_cal_get_uri(client), "eee://"))
++  {
++    return FALSE;
++  }
+ 	ECalComponentVType vtype;
+ 	const char *id;

@@ -1,0 +1,16 @@
+diff --git a/calendar/gui/dialogs/cancel-comp.c b/calendar/gui/dialogs/cancel-comp.c
+index cdb388e..1d4a633 100644
+--- a/calendar/gui/dialogs/cancel-comp.c
++++ b/calendar/gui/dialogs/cancel-comp.c
+@@ -69,6 +69,11 @@ cancel_component_dialog (GtkWindow *parent, ECal *client, ECalComponent *comp, g
+ 	ECalComponentVType vtype;
+ 	const gchar *id;
+ 
++	if (g_str_has_prefix(e_cal_get_uri(client), "eee://"))
++	{
++		return FALSE;
++	}
++
+ 	if (deleting && e_cal_get_save_schedules (client))
+ 		return TRUE;
+ 

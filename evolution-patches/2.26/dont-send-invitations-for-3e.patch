@@ -1,0 +1,15 @@
+diff --git a/calendar/gui/dialogs/send-comp.c b/calendar/gui/dialogs/send-comp.c
+index a7d87c4..7df8b68 100644
+--- a/calendar/gui/dialogs/send-comp.c
++++ b/calendar/gui/dialogs/send-comp.c
+@@ -75,6 +75,11 @@ have_nonprocedural_alarm (ECalComponent *comp)
+ gboolean
+ send_component_dialog (GtkWindow *parent, ECal *client, ECalComponent *comp, gboolean new, gboolean *strip_alarms)
+ {
++  if (g_str_has_prefix(e_cal_get_uri(client), "eee://"))
++  {
++    return FALSE;
++  }
++
+ 	ECalComponentVType vtype;
+ 	const char *id;

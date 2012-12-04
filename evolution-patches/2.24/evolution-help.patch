@@ -1,0 +1,724 @@
+--- a/help/C/evolution.xml	2008-11-24 05:57:48.000000000 +0100
++++ b/help/C/evolution.xml	2009-02-19 13:02:48.000000000 +0100
+@@ -18,7 +18,7 @@
+    <authorgroup>
+      <author role="maintainer">
+        <firstname>Novell, Inc</firstname>
+-     </author> 
++     </author>
+    <corpauthor>
+      Novell, Inc
+    </corpauthor>
+@@ -56,7 +56,7 @@
+      </revision>
+      <revision>
+        <revnumber>2.8</revnumber>
+-       <date>October 5, 2006</date>	 
++       <date>October 5, 2006</date>
+        <revdescription>
+ 	 <para role="author">Radhika PC</para>
+ 	 <para role="publisher">Novell, Inc</para>
+@@ -65,7 +65,7 @@
+    </revhistory>
+ 
+    <releaseinfo>
+-     This manual describes version &appversion; of Evolution 
++     This manual describes version &appversion; of Evolution
+    </releaseinfo>
+    <abstract role="description">
+      <para>
+@@ -416,7 +416,7 @@
+        <listitem id="bstho1w">
+         <para>Click Forward.</para>
+         <mediaobject id="b13sbacj"><imageobject><imagedata format="PNG" fileref="figures/evo_gwreceive_a.png"/></imageobject></mediaobject>
+-        
++
+        </listitem>
+       </orderedlist>
+       <para>When you have finished, continue with <link linkend="third-step">Sending Mail</link>.</para>
+@@ -582,7 +582,7 @@
+        <listitem id="bsthtwt">
+         <para>Click Forward.</para>
+         <mediaobject id="bsu2gk6"><imageobject><imagedata format="PNG" fileref="figures/evo_mhreceive_a.png"/></imageobject></mediaobject>
+-        
++
+        </listitem>
+       </orderedlist>
+       <para>When you have finished, continue with <link linkend="third-step">Sending Mail</link>.</para>
+@@ -603,7 +603,7 @@
+        <listitem id="bsthuhd">
+         <para>Click Forward.</para>
+         <mediaobject id="bsu2had"><imageobject><imagedata format="PNG" fileref="figures/evo_maildirreceive_a.png"/></imageobject></mediaobject>
+-        
++
+        </listitem>
+       </orderedlist>
+       <para>When you have finished, continue with <link linkend="third-step">Sending Mail</link>.</para>
+@@ -625,7 +625,7 @@
+        <listitem id="bsthv90">
+         <para>Click Forward.</para>
+         <mediaobject id="bsu2i12"><imageobject><imagedata format="PNG" fileref="figures/evo_mboxreceive_a.png"/></imageobject></mediaobject>
+-        
++
+        </listitem>
+       </orderedlist>
+       <para>When you have finished, continue with <link linkend="third-step">Sending Mail</link>.</para>
+@@ -648,7 +648,7 @@
+        <listitem id="b185alnc">
+         <para>Click Forward.</para>
+         <mediaobject id="b185alnd"><imageobject><imagedata format="PNG" fileref="figures/evo_mboxreceive_a.png"/></imageobject></mediaobject>
+-        
++
+        </listitem>
+       </orderedlist>
+       <para>When you have finished, continue with <link linkend="third-step">Sending Mail</link>.</para>
+@@ -723,7 +723,7 @@
+        <para>or</para>
+        <para>Select from the time zone drop-down list.</para>
+        <mediaobject id="bsj8v15"><imageobject><imagedata format="PNG" fileref="figures/evo_timezone_a.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="b10fn8up">
+        <para>Click OK, then click Apply.</para>
+@@ -981,7 +981,7 @@
+      <para>Evolution is always backed up as evolution-backup.tar.gz.</para>
+      <para>Before the backup process starts, it asks you to close Evolution and displays a warning as shown below:</para>
+      <mediaobject id="b17qyjon"><imageobject><imagedata format="PNG" fileref="figures/evo_backup_warning.png"/></imageobject></mediaobject>
+-     
++
+     </listitem>
+     <listitem id="b17qygt2">
+      <para>Select Restart Evolution after backup to restart Evolution immediately after the backup process.</para>
+@@ -1322,7 +1322,7 @@
+      <para>To save an attachment to disk:</para>
+      <orderedlist>
+       <listitem id="bsen45z">
+-       <para>Click the down-arrow on the attachment icon or right-click the attachment icon in the attachment bar.</para> 
++       <para>Click the down-arrow on the attachment icon or right-click the attachment icon in the attachment bar.</para>
+       </listitem>
+       <listitem id="bsen45d">
+        <para>Click Save As.</para>
+@@ -1558,7 +1558,7 @@
+       <para>Click File &gt; Work Offline, or click the connection status icon in the lower left of the screen.</para>
+       <para>A message pop-ups and asks you whether you want to go offline immediately or cache before you go offline.</para>
+       <mediaobject id="b17rd4gb"><imageobject><imagedata format="PNG" fileref="figures/evo_offline.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="b17rd4pa">
+       <para>Click Synchronize to download all the messages to the folders marked for offline.</para>
+@@ -2083,7 +2083,7 @@
+      <para>Select Edit &gt; Plugins, then select Templates.</para>
+     </listitem>
+    </orderedlist>
+-   
++
+    <section id="b1dlbad4">
+     <title>Creating a Message Template from an Existing Message</title>
+     <orderedlist>
+@@ -2110,7 +2110,7 @@
+      </listitem>
+     </orderedlist>
+    </section>
+-   
++
+    <section id="b1dlbckm">
+     <title>Saving a New Message as a Template</title>
+     <orderedlist>
+@@ -2122,7 +2122,7 @@
+      </listitem>
+     </orderedlist>
+    </section>
+-   
++
+    <section id="b1dlbec6">
+     <title>Using a Message Template as a Reply</title>
+     <orderedlist>
+@@ -2139,7 +2139,7 @@
+      </listitem>
+     </orderedlist>
+    </section>
+-   
++
+    <section id="b1dlbgwb">
+     <title>Configuring Message Templates</title>
+     <para>In the Plugin Manager, select the Configuration tab to customize your message templates. You can add, edit or remove the key-value pairs. You can specify any number of key-value pairs.</para>
+@@ -2160,7 +2160,7 @@
+     </itemizedlist>
+    </section>
+   </section>
+-  
++
+   <section id="rsvp-stuff">
+    <title>Sending Invitations by Mail</title>
+    <para>If you create an event in the calendar component, you can then send invitations to the attendee list through the Evolution email tool. The invitation card is sent as an attachment in iCal format.</para>
+@@ -2293,13 +2293,13 @@
+     <para>To send an encrypted message, you need to use the recipient's public key in combination with your private key. Evolution handles the encryption, but you need to get the public key and add it to your keyring.</para>
+     <para>To get public keys from a public key server, enter the command<command> gpg --recv-keys --keyserver wwwkeys.pgp.net <varname>keyid</varname></command>, substituting <varname>keyid</varname> for your recipient's ID. You need to enter your password, and the ID is automatically added to your keyring.</para>
+     <note>
+-     <para>The domain <quote><emphasis>wwwkeys.pgp.net</emphasis></quote> is assigned to multiple hosts in various networks. 
+-     The gpg utility tries to connect to one in the current network; and if that particular host is down, 
++     <para>The domain <quote><emphasis>wwwkeys.pgp.net</emphasis></quote> is assigned to multiple hosts in various networks.
++     The gpg utility tries to connect to one in the current network; and if that particular host is down,
+      it fails with a time-out.</para>
+-     <para>To avoid this, Type <command>$ host wwwkeys.pgp.net</command> in a terminal console and get the IP address of the hosts. 
++     <para>To avoid this, Type <command>$ host wwwkeys.pgp.net</command> in a terminal console and get the IP address of the hosts.
+       You can ping each of them to find the one which is up and running. Now, you can replace wwwkeys.pgp.net in the gpg --recv-keys
+-      --keyserver wwwkeys.pgp.net keyid command with that 
+-      explicit IP number as returned by the host utility.</para> 
++      --keyserver wwwkeys.pgp.net keyid command with that
++      explicit IP number as returned by the host utility.</para>
+     </note>
+     <para>If someone sends you a public key directly, save it as a plain text file and enter the command <command>gpg <varname>--import</varname></command> to add it to your keyring.</para>
+    </section>
+@@ -2896,7 +2896,7 @@
+     <listitem id="b13tvb7l">
+      <para>Click Advanced Search to open Advanced Search dialog box.</para>
+      <mediaobject id="b13tvd61"><imageobject><imagedata format="PNG" fileref="figures/evo_adv_search_a.png"/></imageobject></mediaobject>
+-     
++
+     </listitem>
+     <listitem id="b13tvdt8">
+      <para>Enter the Search name.</para>
+@@ -2926,13 +2926,13 @@
+     <listitem id="b13tw2vp">
+      <para>Click Edit Saved Searches to open the Searches dialog box.</para>
+      <mediaobject id="b13tw8de"><imageobject><imagedata format="PNG" fileref="figures/evo_edit_search.png"/></imageobject></mediaobject>
+-     
++
+     </listitem>
+     <listitem id="b13tw8px">
+      <para>Click the Edit button to open the Edit Rule dialog box.</para>
+      <para>You can also add or remove Searches from the list by using the respective buttons available at the right.</para>
+      <mediaobject id="b13twan3"><imageobject><imagedata format="PNG" fileref="figures/evo_edit_rule_a.png"/></imageobject></mediaobject>
+-     
++
+     </listitem>
+     <listitem id="b13twb4j">
+      <para>Edit the title or search criteria from the dialog box.</para>
+@@ -2959,7 +2959,7 @@
+      <listitem id="bsazayr">
+       <para>Type a name for the filter in the Rule name field.</para>
+       <mediaobject id="usage-mail-filter-fig-createrule"><imageobject><imagedata format="PNG" fileref="figures/filter-new-fig.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="bsazb4y">
+       <para>Define the criteria for the filter in the first section.</para>
+@@ -3207,7 +3207,7 @@
+      <listitem id="bsazsav">
+       <para>Click Add.</para>
+       <mediaobject id="usage-mail-vfolder-fig-createrule"><imageobject><imagedata format="PNG" fileref="figures/evo_rule_a.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="bsazsbo">
+       <para>Type the name of the search folder in the Search name field.</para>
+@@ -3298,7 +3298,7 @@
+        <listitem id="b13txae8">
+         <para>click Add button to open the Select folder window.</para>
+         <mediaobject id="b13txc09"><imageobject><imagedata format="PNG" fileref="figures/evo_select_add_folder.png"/></imageobject></mediaobject>
+-        
++
+        </listitem>
+       </orderedlist>
+       <orderedlist>
+@@ -3429,7 +3429,7 @@
+       <listitem id="b13psizd">
+        <para>Select Add to Address Book to bring up the Contact Quick-Add window.</para>
+        <mediaobject id="b13psl8w"><imageobject><imagedata format="PNG" fileref="figures/quick_add_a.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="b13pslot">
+        <para>Press the Edit Full button at the bottom left to bring up the Contact Editor window.</para>
+@@ -3441,7 +3441,7 @@
+      </orderedlist>
+     </section>
+    </section>
+-  
++
+    <section id="b1dl9th7">
+     <title>Google Contacts</title>
+     <para>Evolution allows you to access your Google Address Book. You can view the Google contacts offline and create, modify and delete the contacts online.</para>
+@@ -3450,7 +3450,7 @@
+      <listitem id="b1dl9x1r">
+       <para>Select File &gt; New &gt; Address book to open the New Address Book window.</para>
+       <mediaobject id="b1dl9yef"><imageobject><imagedata format="PNG" fileref="figures/evo_googlecontacts.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="b1dl9x69">
+       <para>Select Google from the Type drop-down list.</para>
+@@ -3499,7 +3499,7 @@
+     </orderedlist>
+    </section>
+   </section>
+-  
++
+   <section id="contact-search">
+    <title>Searching for Contacts</title>
+    <formalpara id="b131mz65">
+@@ -3742,7 +3742,7 @@
+       <para></para>
+       <para></para>
+       <mediaobject id="b13pr0v9"><imageobject><imagedata format="PNG" fileref="figures/categories_a.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="b13ptc7b">
+       <para>Select the category from the list. You can select as many or as few categories as you like.</para>
+@@ -3920,7 +3920,7 @@
+       <para></para>
+       <para></para>
+       <mediaobject id="b13xydyw"><imageobject><imagedata format="PNG" fileref="figures/evo_cal_prop_a.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="b13xyg92">
+       <para>Edit the label from Name field.</para>
+@@ -3940,7 +3940,7 @@
+     </tip>
+     <para>Click Mark as default folder if you want to mark this folder as your default calendar folder.</para>
+    </section>
+-  
++
+    <section id="b1a47igh">
+     <title>Google Calendar </title>
+     <para>Evolution allows you to access your Google calendar. You can view the Google calendar offline or create, modify, and delete the calendar items online.</para>
+@@ -3952,7 +3952,7 @@
+      <listitem id="b1a49odb">
+       <para>Select Google from the Type drop-down list.</para>
+       <mediaobject id="b1a4ahp1"><imageobject><imagedata format="PNG" fileref="figures/google_cal_view.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="b1a4aebo">
+       <para>Specify the following:</para>
+@@ -4051,7 +4051,7 @@
+        <para>Select a calendar in the Calendar drop-down list.</para>
+        <para>Enter a brief summary in the Summary field.</para>
+        <mediaobject id="b13uby19"><imageobject><imagedata format="PNG" fileref="figures/evo_calender_appointmnt.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="b10fnwru">
+        <para>(Optional) Type a location in the Location field.</para>
+@@ -4119,7 +4119,7 @@
+       <para>An All Day event appears at the top of a day's appointment list, in the header under the date, rather than inside. That makes it easy to have appointments that overlap and fit inside each other. For example, a conference might be an All Day appointment, and the meetings at the conference could be timed appointments. Appointments with specific starting and ending times can also overlap. When they do they display as multiple columns in the day view of the calendar.</para>
+       <para>If you create calendar appointments that overlap, Evolution displays them side by side in your calendar.</para>
+       <mediaobject id="b14avp8y"><imageobject><imagedata format="PNG" fileref="figures/evo_allday_a.png"/></imageobject></mediaobject>
+-      
++
+      </section>
+     </section>
+ 
+@@ -4315,7 +4315,7 @@
+      <listitem id="bsb0c7x">
+       <para>Click the Free/Busy button on the toolbar, or click Options &gt; Free/Busy.</para>
+       <mediaobject id="bs4aw7i"><imageobject><imagedata format="PNG" fileref="figures/free_busy.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="b10fogwo">
+       <para>Adjust the meeting time, either by dragging the meeting borders or by using the Autopick buttons to choose a time automatically, then click Save and Close. Attendees on an Exchange server have the appointment updated automatically; others receive email notification of any change in plans.</para>
+@@ -4411,7 +4411,7 @@
+      <para>Select Advanced Search to open Advanced Search dialog box.</para>
+      <para>Search name field displays the search type you have selected.</para>
+      <mediaobject id="b17qbkiq"><imageobject><imagedata format="PNG" fileref="figures/evo_cal_advsearch.png"/></imageobject></mediaobject>
+-     
++
+     </listitem>
+     <listitem id="b17qbiup">
+      <para>Click Add to add rules.</para>
+@@ -4725,7 +4725,7 @@
+       <para>Select Advanced Search to open Advanced Search dialog box.</para>
+       <para>Search name field displays the search type you have selected.</para>
+       <mediaobject id="b17qcztn"><imageobject><imagedata format="PNG" fileref="figures/evo_cal_advsearch.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="b17qd03l">
+       <para>Click Add to add rules.</para>
+@@ -4963,7 +4963,7 @@
+       <para>Select Advanced Search to open Advanced Search dialog box.</para>
+       <para>Search name field displays the search type you have selected.</para>
+       <mediaobject id="b17qewa3"><imageobject><imagedata format="PNG" fileref="figures/evo_cal_advsearch.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="b17qetof">
+       <para>Click Add to add rules.</para>
+@@ -5270,19 +5270,19 @@
+       <listitem id="bshnbsi">
+        <para>Click Add.</para>
+        <mediaobject id="bs4aw7j"><imageobject><imagedata format="PNG" fileref="figures/exchng-identity.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="bshnbxz">
+        <para>Create the account following the procedure in <link linkend="usage-mainwindow-starting">Starting Evolution for the First Time</link>. Remember to select Microsoft Exchange as server type in the Receiving Mail section.</para>
+        <mediaobject id="bs4aw7k"><imageobject><imagedata format="PNG" fileref="figures/exchng-rec-mails.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+      </orderedlist>
+      <note>
+       <para>Only one Microsoft Exchange account can be configured in Evolution.</para>
+      </note>
+      <mediaobject id="bs4aw7l"><imageobject><imagedata format="PNG" fileref="figures/exchng-rec-options.png"/></imageobject></mediaobject>
+-     
++
+     </section>
+ 
+     <section id="config-exchange-existing-account">
+@@ -5296,7 +5296,7 @@
+        <para>Select the account you want to convert, then click Edit to appear the Account Editor.</para>
+        <para>You can view Identity tab enabled.</para>
+        <mediaobject id="b13p90wc"><imageobject><imagedata format="PNG" fileref="figures/exchg-identity.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="bshngg7">
+        <para>Change your email address as needed.</para>
+@@ -5304,7 +5304,7 @@
+       <listitem id="bshngsm">
+        <para>Click the Receiving Mail tab, then select Microsoft Exchange as your server type.</para>
+        <mediaobject id="b13pb2z0"><imageobject><imagedata format="PNG" fileref="figures/exchng-rec-mail.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="bshnh8h">
+        <para>Type your user name, and the Outlook Web Access (OWA) URL. Click Authenticate, then enter the password at the prompt. The Exchange server authenticates your account.</para>
+@@ -5312,7 +5312,7 @@
+       <listitem id="bxpfgk7">
+        <para>Select your authentication type in the Authentication list.</para>
+        <mediaobject id="b13pb4ri"><imageobject><imagedata format="PNG" fileref="figures/exchng-rec-option.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="bshnhvg">
+        <para>Click the Receiving Options tab.</para>
+@@ -5387,7 +5387,7 @@
+       <listitem id="b15flmjn">
+        <para>Click Insert &gt; Send Options to open the Send Option dialog box</para>
+        <mediaobject id="b15fliu0"><imageobject><imagedata format="PNG" fileref="figures/evo_send_option_a.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="b15flnox">
+        <para>Select the priority for your sent message from the given three options (Normal, High, Low)</para>
+@@ -5467,7 +5467,7 @@
+       <listitem id="b17qx94g">
+        <para>Click Delegation Assistant to open the Delegates dialog box.</para>
+        <mediaobject id="bxorvbh"><imageobject><imagedata format="PNG" fileref="figures/delgt-add.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="bxpfj5p">
+        <para>Click Add, then search for a contact in the Global Address List.</para>
+@@ -5476,7 +5476,7 @@
+       <listitem id="b17qxknb">
+        <para>Select the delegate and click Edit to open the delegate permission dialog box.</para>
+        <mediaobject id="b17qxmcm"><imageobject><imagedata format="PNG" fileref="figures/evo_delegate_permission_a.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="bxpfjm3">
+        <para>Select from the following access levels for each of the four types of folders:</para>
+@@ -5511,7 +5511,7 @@
+       <listitem id="bshok43">
+        <para>Click File &gt; Subscribe to Other User's Exchange Folder.</para>
+        <mediaobject id="bxorvbj"><imageobject><imagedata format="PNG" fileref="figures/sub-others-folder.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="bshokwk">
+        <para>Specify the email address of the user who has delegated to you, or click User to select the user from your address book.</para>
+@@ -5541,7 +5541,7 @@
+      <listitem id="bxn8ffk">
+       <para>Check the folders you want to subscribe to.</para>
+       <mediaobject id="bxorvbk"><imageobject><imagedata format="PNG" fileref="figures/sub-pub-fold.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="bxn8fm8">
+       <para>Click OK.</para>
+@@ -5870,7 +5870,7 @@
+      <listitem id="buw5x0n">
+       <para>Click the Identity tab.</para>
+       <mediaobject id="bv7wbfs"><imageobject><imagedata format="PNG" fileref="figures/evo_identityedit_a.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="bxpfqzp">
+       <para>Change your email address as needed.</para>
+@@ -5878,7 +5878,7 @@
+      <listitem id="buw5x0o">
+       <para>Click the Receiving Email tab, then select Novell GroupWise as your server type.</para>
+       <mediaobject id="bv7wbhn"><imageobject><imagedata format="PNG" fileref="figures/evo_gwreceiveedit_a.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="buw5x0p">
+       <para>Type the name of your mail server, your user name, and select whether to use SSL.</para>
+@@ -5891,7 +5891,7 @@
+       <para>Select if you want Evolution to automatically check for new mail.</para>
+       <para>If you select this option, you need to specify how often Evolution should check for new messages.</para>
+       <mediaobject id="bv7wc82"><imageobject><imagedata format="PNG" fileref="figures/evo_gwreceiveoptedit_a.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="bv7wbod">
+       <para>Select if you want to check for new messages in all folders.</para>
+@@ -5969,7 +5969,7 @@
+     </listitem>
+    </orderedlist>
+    <mediaobject id="b15ijb3h"><imageobject><imagedata format="PNG" fileref="figures/evo_shd_memo_a.png"/></imageobject></mediaobject>
+-   
++
+   </section>
+ 
+   <section id="bv7wck0">
+@@ -6040,7 +6040,7 @@
+        <para>In the Compose Message window, click Insert &gt; Send Options.</para>
+        <para>Select Status Tracking.</para>
+        <mediaobject id="b17qsuu3"><imageobject><imagedata format="PNG" fileref="figures/evo_gwstatustrack.png"/></imageobject></mediaobject>
+-       
++
+       </listitem>
+       <listitem id="b17qt9nx">
+        <para>Select the check box next to Create a sent item to track information.</para>
+@@ -6174,7 +6174,7 @@
+     </section>
+    </section>
+   </section>
+-  
++
+   <section id="Aai4ois">
+    <title>Giving Other People Access to Your Mailbox or Calendar</title>
+    <para>Use Proxy to manage another user's Mailbox and Calendar. Proxy lets you perform various actions, such as reading, accepting, and declining items on behalf of another user, within the restrictions the other user sets.</para>
+@@ -6294,7 +6294,7 @@
+      <listitem id="Aai4sll">
+       <para>Select the rights you want to give to the user.</para>
+       <mediaobject id="bxmtqdk"><imageobject><imagedata format="PNG" fileref="figures/evo_proxyadd_a.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="Aai4soe">
+       <para>Repeat <link linkend="Aai4sat">Step 4</link> and <link linkend="Aai4sll">Step 5</link> to assign rights to each user in the Proxy List.</para>
+@@ -6317,7 +6317,7 @@
+      <listitem id="bxmtz8v">
+       <para>Click Proxy Login.</para>
+       <mediaobject id="bxq9bsi"><imageobject><imagedata format="PNG" fileref="figures/proxy-login.png"/></imageobject></mediaobject>
+-      
++
+      </listitem>
+      <listitem id="bxmtz8w">
+       <para>Type the user name of the person who has given you Proxy access, or select from the list.</para>
+@@ -6438,6 +6438,177 @@
+   </section>
+  </chapter>
+ 
++ <chapter id="usage-3e-server">
++    <title>3e-server usage</title>
++
++    <para>Before you start using 3e calendar plugin for evolution you have to ensure that your administrator set up your account.</para>
++
++    <itemizedlist>
++      <listitem>
++        <para><link linkend="3e-account">Add your account</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-create">Creating/deleting new callendar</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-subscribe">Subscribing existing calendar</link></para>
++      </listitem>
++      <listitem>
++        <para><link linkend="3e-publish">Publishing calendar</link></para>
++      </listitem>
++    </itemizedlist>
++
++    <section id="3e-account">
++      <title>Add your account</title>
++
++      <para>If you have 3e server account same as your email adress (ex. alice@company-one.com), you have to only check that it is enabled in your account settings: Edit → Preferences → Mail accounts → your account → Edit</para>
++
++      <mediaobject id="3e1">
++        <imageobject>
++	  <imagedata fileref="figures/3e1.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>If you have 3e server account on different server than your mail, you will have to create new evolution account: Edit → Preferences → Mail accounts → your account → Add</para>
++
++      <para>Take the same steps like creating email account.</para>
++    </section>
++
++    <section id="3e-create">
++      <title>Creating/deleting new callendar</title>
++
++      <section id="3e-create1">
++	<title>Create</title>
++	<para>Now when you have set up your account you can add new calendars on the server.</para>
++
++	<para>Go to: File → New → Calendar </para>
++
++	<para>In the dialog chose your 3e account and put a name of your new calendar.</para>
++
++	<mediaobject id="3e7">
++	  <imageobject>
++	    <imagedata fileref="figures/3e7.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>Press OK.</para>
++
++	<para>Now you have created a new calendar on the server and you can start using it.</para>
++
++	<mediaobject id="3e8">
++	  <imageobject>
++	    <imagedata fileref="figures/3e8.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++      <section id="3e-create2">
++	<title>Delete</title>
++
++	<para>When you want to delete the calendar, just press right button on the calendar and chose delete.</para>
++
++	<mediaobject id="3e9">
++	  <imageobject>
++	    <imagedata fileref="figures/3e9.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++    </section>
++
++    <section id="3e-subscribe">
++      <title>Subscribing existing calendar</title>
++
++      <para>If you want to subscribe an existing calendar got to: File → Subscribe to 3E calendar</para>
++
++      <mediaobject id="3e2">
++        <imageobject>
++	  <imagedata fileref="figures/3e2.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>Select you account.</para>
++
++      <mediaobject id="3e3">
++        <imageobject>
++	  <imagedata fileref="figures/3e3.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>And than chose calendar you want to subscribe. Notice here that you will se only calendars you have permission for.</para>
++
++      <mediaobject id="3e4">
++        <imageobject>
++	  <imagedata fileref="figures/3e4.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>Press Add.</para>
++
++      <para>Now you will have Bobs personal callendar subscribed.</para>
++
++      <mediaobject id="3e5">
++        <imageobject>
++	  <imagedata fileref="figures/3e5.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++    </section>
++
++    <section id="3e-publish">
++      <title>Publishing calendar</title>
++
++      <para>To set all the states, pres right button on the apropriate calendar and select: Configure ACL</para>
++
++      <mediaobject id="3e10">
++        <imageobject>
++	  <imagedata fileref="figures/3e10.png" format="PNG" />
++	</imageobject>
++      </mediaobject>
++
++      <para>In the opened dialog you can choose one of the values described further.</para>
++
++      <section id="3e-publish-private">
++	<title>Private calendar</title>
++	<para>Private calendar is good if you want to store your calendar on 3e server, but dont want to allow anyone to see it.</para>
++	<mediaobject id="3e11">
++	  <imageobject>
++	    <imagedata fileref="figures/3e11.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++      </section>
++
++      <section id="3e-publish-public">
++	<title>Public calendar</title>
++	<para>When you want to share your tasks with all users read only, the second option is for you.</para>
++      </section>
++
++      <section id="3e-publish-shared">
++	<title>Shared calendar</title>
++
++	<para>Third option is good for selective sharing. You can set read-only or read-write to each user you want.</para>
++
++	<mediaobject id="3e12">
++	  <imageobject>
++	    <imagedata fileref="figures/3e12.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>Select permission by clicking on the user line, permission colum.</para>
++
++	<mediaobject id="3e13">
++	  <imageobject>
++	    <imagedata fileref="figures/3e13.png" format="PNG" />
++	  </imageobject>
++	</mediaobject>
++
++	<para>If you want to delete some user just press right mouse button on the user and than press delete.</para>
++      </section>
++
++    </section>
++
++  </chapter>
++
+  <chapter id="config-prefs">
+   <title>Advanced Configuration</title>
+   <para>Perhaps your mail server has changed names. Or you have grown tired of a certain layout for your appointments. Whatever the reason, you can change your <trademark>Evolution</trademark> settings.</para>
+@@ -6571,7 +6742,7 @@
+     <listitem id="b15fy4cs">
+      <para>On the Account Editor, click IMAP Headers tab to open IMAP Headers to the Account Editor.</para>
+      <mediaobject id="b15fy5rr"><imageobject><imagedata format="PNG" fileref="figures/evo_imapheader_a.png"/></imageobject></mediaobject>
+-     
++
+     </listitem>
+     <listitem id="b15fy565">
+      <para>Click Fetch All Headers to download all the available header information.</para>
+@@ -7047,7 +7218,7 @@
+     <para>Specify the automatic proxy configuration URL for Evolution to use in the autoconfig script to configure the proxy.</para>
+    </formalpara>
+   </section>
+-  
++
+   <section id="bshoty0">
+    <title>Certificates</title>
+    <para>Evolution allows you to add certificates for yourself as well as for contacts. This allows you to communicate with others securely over an encrypted connection, or sign a message confirming your identity to the contact. These settings only apply to S/MIME encryption.</para>
+@@ -7197,7 +7368,7 @@
+     </orderedlist>
+    </section>
+   </section>
+-  
++
+   <section id="b1a4ol61">
+    <title>Debug Logs</title>
+    <para>Evolution allows you to view the error logs and set the display duration for the error messages that appear in the statusbar. When an error occurs, statusbar displays the error message for the specified time, then it is moved to the debug file.</para>

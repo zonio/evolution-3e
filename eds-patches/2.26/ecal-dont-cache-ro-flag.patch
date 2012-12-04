@@ -1,0 +1,42 @@
+don't cache read only status in ECal
+
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+
+calendar/ChangeLog:
+
+2008-04-06  Ondrej Jirman  <megous@megous.com>
+
+	** Fix for bug #525231
+
+	* libecal/e-cal.c: (e_cal_is_read_only):
+	Don't cache read_only flag on the client side. Always ask backend plugin
+	for the current status of the read_only flag. Some calendar plugins
+	allow for changes between read-only/read-write status of the calendar
+	on the fly (for example because of change in the calendar ACL).
+---
+
+ calendar/libecal/e-cal.c |    7 +------
+ 1 files changed, 1 insertions(+), 6 deletions(-)
+
+
+diff --git a/calendar/libecal/e-cal.c b/calendar/libecal/e-cal.c
+index c429ff0..732b562 100644
+--- a/calendar/libecal/e-cal.c
++++ b/calendar/libecal/e-cal.c
+@@ -2124,15 +2124,10 @@ e_cal_get_local_attachment_store (ECal *ecal)
+ gboolean
+ e_cal_is_read_only (ECal *ecal, gboolean *read_only, GError **error)
+ {
+-	ECalPrivate *priv;
+-
+ 	if (!(ecal && E_IS_CAL (ecal)))
+ 		E_CALENDAR_CHECK_STATUS (E_CALENDAR_STATUS_INVALID_ARG, error);
+ 
+-	priv = ecal->priv;
+-	*read_only = priv->read_only;
+-
+-	return TRUE;
++	return get_read_only (ecal, read_only, error);
+ }
+ 
+ static gboolean

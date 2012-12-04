@@ -1,0 +1,170 @@
+diff --git a/calendar/gui/alarm-notify/alarm-notify.c b/calendar/gui/alarm-notify/alarm-notify.c
+index df6a8fc..1a01379 100644
+--- a/calendar/gui/alarm-notify/alarm-notify.c
++++ b/calendar/gui/alarm-notify/alarm-notify.c
+@@ -445,7 +445,9 @@ alarm_notify_add_calendar (AlarmNotify *an, ECalSourceType source_type,  ESource
+ 	priv = an->priv;
+ 	str_uri = e_source_get_uri (source);
+ 	e_uri = e_uri_new (str_uri);
+-	if (e_source_get_property (source, "auth-type"))
++	if (e_source_get_property (source, "auth-key"))
++		pass_key = e_source_get_duped_property (source, "auth-key");
++	else if (e_source_get_property (source, "auth-type"))
+ 		pass_key = e_uri_to_string (e_uri, FALSE);
+ 	else
+ 		pass_key = g_strdup (str_uri);
+diff --git a/calendar/gui/dialogs/calendar-setup.c b/calendar/gui/dialogs/calendar-setup.c
+index b21c027..34f1f5b 100644
+--- a/calendar/gui/dialogs/calendar-setup.c
++++ b/calendar/gui/dialogs/calendar-setup.c
+@@ -77,10 +77,14 @@ eccp_check_complete (EConfig *ec, const gchar *pageid, gpointer data)
+ static void
+ eccp_commit (EConfig *ec,
+              CalendarSourceDialog *sdialog)
+ {
++	ECalConfigTargetSource* target = (ECalConfigTargetSource*)ec->target;
+ 	xmlNodePtr xml;
+ 	GtkWindow *window;
+
++	if (target->disable_source_update)
++		return;
++
+ 	if (sdialog->original_source) {
+ 		const gchar *color_spec;
+ 
+diff --git a/calendar/gui/dialogs/cancel-comp.c b/calendar/gui/dialogs/cancel-comp.c
+index fe85119..deecfe6 100644
+--- a/calendar/gui/dialogs/cancel-comp.c
++++ b/calendar/gui/dialogs/cancel-comp.c
+@@ -73,6 +73,11 @@ cancel_component_dialog (GtkWindow *parent,
+ 	ECalComponentVType vtype;
+ 	const gchar *id;
+ 
++	if (g_str_has_prefix(e_client_get_uri(cal_client), "eee://"))
++	{
++		return FALSE;
++	}
++
+ 	if (deleting && e_cal_client_check_save_schedules (cal_client))
+ 		return TRUE;
+ 
+diff --git a/calendar/gui/dialogs/comp-editor.c b/calendar/gui/dialogs/comp-editor.c
+index 6c5092e..b1a5a35 100644
+--- a/calendar/gui/dialogs/comp-editor.c
++++ b/calendar/gui/dialogs/comp-editor.c
+@@ -3248,8 +3248,10 @@ real_send_comp (CompEditor *editor,
+ 	}
+ 
+ 	if (!e_cal_component_has_attachments (priv->comp) ||
+-		e_client_check_capability (E_CLIENT (priv->cal_client),
+-		CAL_STATIC_CAPABILITY_CREATE_MESSAGES)) {
++		e_client_check_capability (E_CLIENT (priv->cal_client),
++		CAL_STATIC_CAPABILITY_CREATE_MESSAGES) ||
++		e_client_check_capability (E_CLIENT (priv->cal_client),
++		CAL_STATIC_CAPABILITY_NO_SEND_IMIP)) {
+ 		if (itip_send_comp (
+ 			method, send_comp, priv->cal_client,
+ 			NULL, NULL, users, strip_alarms,
+diff --git a/calendar/gui/dialogs/send-comp.c b/calendar/gui/dialogs/send-comp.c
+index 4a9f80e..e58edf2 100644
+--- a/calendar/gui/dialogs/send-comp.c
++++ b/calendar/gui/dialogs/send-comp.c
+@@ -136,11 +136,16 @@ add_checkbox (GtkBox *where, const gchar *caption)
+ gboolean
+ send_component_dialog (GtkWindow *parent,
+                        ECalClient *client,
+                        ECalComponent *comp,
+                        gboolean new,
+                        gboolean *strip_alarms,
+                        gboolean *only_new_attendees)
+ {
++	if (g_str_has_prefix(e_client_get_uri(client), "eee://"))
++	{
++		return FALSE;
++	}
++
+ 	ECalComponentVType vtype;
+ 	const gchar *id;
+ 	GtkWidget *dialog, *sa_checkbox = NULL, *ona_checkbox = NULL;
+diff --git a/calendar/gui/e-cal-config.h b/calendar/gui/e-cal-config.h
+index 30e12bb..ddacbc4 100644
+--- a/calendar/gui/e-cal-config.h
++++ b/calendar/gui/e-cal-config.h
+@@ -75,6 +75,7 @@ struct _ECalConfigTargetSource {
+ 
+ 	ESource *source;
+         ECalClientSourceType source_type;
++	gboolean disable_source_update;
+ };
+ 
+ struct _ECalConfigTargetPrefs {
+diff --git a/calendar/gui/e-calendar-view.c b/calendar/gui/e-calendar-view.c
+index 2bc7eef..f039239 100644
+--- a/calendar/gui/e-calendar-view.c
++++ b/calendar/gui/e-calendar-view.c
+@@ -1938,6 +1938,20 @@ e_calendar_view_get_tooltips (const ECalendarViewEventData *data)
+ 	gtk_box_pack_start ((GtkBox *) box, ebox, FALSE, FALSE, 0);
+ 	g_free (tmp);
+ 
++	/* display error */
++	e_cal_component_get_x_property (newcomp, "X-EVOLUTION-ERROR", &str);
++	if (str) {
++		tmp = g_strdup_printf (_("Error: %s"), str);
++		label = gtk_label_new (NULL);
++		gtk_label_set_markup ((GtkLabel *)label, tmp);
++		hbox = gtk_hbox_new (FALSE, 0);
++		gtk_box_pack_start ((GtkBox *)hbox, label, FALSE, FALSE, 0);
++		ebox = gtk_event_box_new ();
++		gtk_container_add ((GtkContainer *)ebox, hbox);
++		gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
++		g_free (tmp);
++	}
++
+ 	e_cal_component_get_organizer (newcomp, &organiser);
+ 	if (organiser.cn) {
+ 		gchar *ptr;
+diff --git a/calendar/gui/itip-utils.c b/calendar/gui/itip-utils.c
+index 1c4ced6..2d18828 100644
+--- a/calendar/gui/itip-utils.c
++++ b/calendar/gui/itip-utils.c
+@@ -1547,10 +1547,10 @@ itip_send_comp (ECalComponentItipMethod method, ECalComponent *send_comp,
+ 	/* Recipients */
+ 	destinations = comp_to_list (
+ 		method, comp, users, FALSE,
+ 		only_new_attendees ?  g_object_get_data (
+ 		G_OBJECT (send_comp), "new-attendees") : NULL);
+ 	if (method != E_CAL_COMPONENT_METHOD_PUBLISH) {
+-		if (destinations == NULL) {
++		if (destinations == NULL || e_client_check_capability (E_CLIENT (cal_client), CAL_STATIC_CAPABILITY_NO_SEND_IMIP)) {
+ 			/* We sent them all via the server */
+ 			retval = TRUE;
+ 			goto cleanup;
+diff --git a/plugins/itip-formatter/itip-formatter.c b/plugins/itip-formatter/itip-formatter.c
+index 5e46cb4..ea0b2b8 100644
+--- a/plugins/itip-formatter/itip-formatter.c
++++ b/plugins/itip-formatter/itip-formatter.c
+@@ -2252,5 +2252,24 @@ view_response_cb (GtkWidget *widget,
+ 	save_schedules = e_cal_client_check_save_schedules (pitip->current_client);
+ 
++	if (g_str_has_prefix(e_client_get_uri(pitip->current_client), "eee://"))
++	{
++		const gchar *comment = NULL;
++		comment = itip_view_get_rsvp_comment (ITIP_VIEW (pitip->view));
++
++		if (comment) {
++			GSList comments;
++			ECalComponentText text;
++
++			text.value = comment;
++			text.altrep = NULL;
++    
++			comments.data = &text;
++			comments.next = NULL;
++    
++			e_cal_component_set_comment_list (pitip->comp, &comments);
++		}
++	}
++
+ 	switch (response) {
+ 		case ITIP_VIEW_RESPONSE_ACCEPT:
+ 			if (pitip->type != E_CAL_CLIENT_SOURCE_TYPE_MEMOS)

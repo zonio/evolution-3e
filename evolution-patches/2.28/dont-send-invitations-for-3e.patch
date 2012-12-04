@@ -1,0 +1,16 @@
+diff --git a/calendar/gui/dialogs/send-comp.c b/calendar/gui/dialogs/send-comp.c
+index 64e0ce0..00d383e 100644
+--- a/calendar/gui/dialogs/send-comp.c
++++ b/calendar/gui/dialogs/send-comp.c
+@@ -105,6 +105,11 @@ add_checkbox (GtkBox *where, const gchar *caption)
+ gboolean
+ send_component_dialog (GtkWindow *parent, ECal *client, ECalComponent *comp, gboolean new, gboolean *strip_alarms, gboolean *only_new_attendees)
+ {
++  if (g_str_has_prefix(e_cal_get_uri(client), "eee://"))
++  {
++    return FALSE;
++  }
++
+ 	ECalComponentVType vtype;
+ 	const gchar *id;
+ 	GtkWidget *dialog, *sa_checkbox = NULL, *ona_checkbox = NULL;

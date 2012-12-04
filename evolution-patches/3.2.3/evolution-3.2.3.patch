@@ -1,0 +1,149 @@
+diff -Naur a/calendar/gui/alarm-notify/alarm-notify.c b/calendar/gui/alarm-notify/alarm-notify.c
+--- a/calendar/gui/alarm-notify/alarm-notify.c	2011-11-24 18:05:08.000000000 +0100
++++ b/calendar/gui/alarm-notify/alarm-notify.c	2012-06-24 22:14:25.123023348 +0200
+@@ -445,7 +445,9 @@
+ 	priv = an->priv;
+ 	str_uri = e_source_get_uri (source);
+ 	e_uri = e_uri_new (str_uri);
+-	if (e_source_get_property (source, "auth-type"))
++	if (e_source_get_property (source, "auth-key"))
++		pass_key = e_source_get_duped_property (source, "auth-key");
++	else if (e_source_get_property (source, "auth-type"))
+ 		pass_key = e_uri_to_string (e_uri, FALSE);
+ 	else
+ 		pass_key = g_strdup (str_uri);
+diff -Naur a/calendar/gui/dialogs/calendar-setup.c b/calendar/gui/dialogs/calendar-setup.c
+--- a/calendar/gui/dialogs/calendar-setup.c	2011-09-28 00:03:28.000000000 +0200
++++ b/calendar/gui/dialogs/calendar-setup.c	2012-06-24 22:14:25.124023335 +0200
+@@ -78,9 +78,13 @@
+ eccp_commit (EConfig *ec,
+              CalendarSourceDialog *sdialog)
+ {
++	ECalConfigTargetSource* target = (ECalConfigTargetSource*)ec->target;
+ 	xmlNodePtr xml;
+ 	GtkWindow *window;
+ 
++	if (target->disable_source_update)
++		return;
++
+ 	if (sdialog->original_source) {
+ 		const gchar *color_spec;
+ 
+diff -Naur a/calendar/gui/dialogs/cancel-comp.c b/calendar/gui/dialogs/cancel-comp.c
+--- a/calendar/gui/dialogs/cancel-comp.c	2011-09-28 00:03:28.000000000 +0200
++++ b/calendar/gui/dialogs/cancel-comp.c	2012-06-24 22:14:25.124023335 +0200
+@@ -73,6 +73,11 @@
+ 	ECalComponentVType vtype;
+ 	const gchar *id;
+ 
++	if (g_str_has_prefix(e_client_get_uri(cal_client), "eee://"))
++	{
++		return FALSE;
++	}
++
+ 	if (deleting && e_cal_client_check_save_schedules (cal_client))
+ 		return TRUE;
+ 
+diff -Naur a/calendar/gui/dialogs/comp-editor.c b/calendar/gui/dialogs/comp-editor.c
+--- a/calendar/gui/dialogs/comp-editor.c	2011-09-28 00:03:28.000000000 +0200
++++ b/calendar/gui/dialogs/comp-editor.c	2012-06-24 22:14:25.126023309 +0200
+@@ -3249,7 +3249,9 @@
+ 
+ 	if (!e_cal_component_has_attachments (priv->comp) ||
+ 		e_client_check_capability (E_CLIENT (priv->cal_client),
+-		CAL_STATIC_CAPABILITY_CREATE_MESSAGES)) {
++		CAL_STATIC_CAPABILITY_CREATE_MESSAGES) ||
++		e_client_check_capability (E_CLIENT (priv->cal_client),
++		CAL_STATIC_CAPABILITY_NO_SEND_IMIP)) {
+ 		if (itip_send_comp (
+ 			method, send_comp, priv->cal_client,
+ 			NULL, NULL, users, strip_alarms,
+diff -Naur a/calendar/gui/dialogs/send-comp.c b/calendar/gui/dialogs/send-comp.c
+--- a/calendar/gui/dialogs/send-comp.c	2011-09-28 00:03:28.000000000 +0200
++++ b/calendar/gui/dialogs/send-comp.c	2012-06-24 22:15:49.593915036 +0200
+@@ -147,6 +147,9 @@
+ 	GtkWidget *content_area;
+ 	gboolean res;
+ 
++	if (g_str_has_prefix(e_client_get_uri(client), "eee://"))
++		return FALSE;
++
+ 	if (strip_alarms)
+ 		*strip_alarms = TRUE;
+ 
+diff -Naur a/calendar/gui/e-cal-config.h b/calendar/gui/e-cal-config.h
+--- a/calendar/gui/e-cal-config.h	2011-09-28 00:03:28.000000000 +0200
++++ b/calendar/gui/e-cal-config.h	2012-06-24 22:14:25.127023296 +0200
+@@ -75,6 +75,7 @@
+ 
+ 	ESource *source;
+         ECalClientSourceType source_type;
++	gboolean disable_source_update;
+ };
+ 
+ struct _ECalConfigTargetPrefs {
+diff -Naur a/calendar/gui/e-calendar-view.c b/calendar/gui/e-calendar-view.c
+--- a/calendar/gui/e-calendar-view.c	2011-11-04 16:57:43.000000000 +0100
++++ b/calendar/gui/e-calendar-view.c	2012-06-24 22:14:25.128023283 +0200
+@@ -1938,6 +1938,20 @@
+ 	gtk_box_pack_start ((GtkBox *) box, ebox, FALSE, FALSE, 0);
+ 	g_free (tmp);
+ 
++	/* display error */
++	e_cal_component_get_x_property (newcomp, "X-EVOLUTION-ERROR", &str);
++	if (str) {
++		tmp = g_strdup_printf (_("Error: %s"), str);
++		label = gtk_label_new (NULL);
++		gtk_label_set_markup ((GtkLabel *)label, tmp);
++		hbox = gtk_hbox_new (FALSE, 0);
++		gtk_box_pack_start ((GtkBox *)hbox, label, FALSE, FALSE, 0);
++		ebox = gtk_event_box_new ();
++		gtk_container_add ((GtkContainer *)ebox, hbox);
++		gtk_box_pack_start ((GtkBox *)box, ebox, FALSE, FALSE, 0);
++		g_free (tmp);
++	}
++
+ 	e_cal_component_get_organizer (newcomp, &organiser);
+ 	if (organiser.cn) {
+ 		gchar *ptr;
+diff -Naur a/calendar/gui/itip-utils.c b/calendar/gui/itip-utils.c
+--- a/calendar/gui/itip-utils.c	2011-10-16 11:06:50.000000000 +0200
++++ b/calendar/gui/itip-utils.c	2012-06-24 22:17:11.210524001 +0200
+@@ -1550,7 +1550,7 @@
+ 		only_new_attendees ?  g_object_get_data (
+ 		G_OBJECT (send_comp), "new-attendees") : NULL);
+ 	if (method != E_CAL_COMPONENT_METHOD_PUBLISH) {
+-		if (destinations == NULL) {
++		if (destinations == NULL || e_client_check_capability (E_CLIENT (cal_client), CAL_STATIC_CAPABILITY_NO_SEND_IMIP)) {
+ 			/* We sent them all via the server */
+ 			retval = TRUE;
+ 			goto cleanup;
+diff -Naur a/plugins/itip-formatter/itip-formatter.c b/plugins/itip-formatter/itip-formatter.c
+--- a/plugins/itip-formatter/itip-formatter.c	2012-01-09 03:49:06.000000000 +0100
++++ b/plugins/itip-formatter/itip-formatter.c	2012-06-24 22:14:25.131023244 +0200
+@@ -2251,6 +2251,25 @@
+ 	/*FIXME Save schedules is misused here, remove it */
+ 	save_schedules = e_cal_client_check_save_schedules (pitip->current_client);
+ 
++	if (g_str_has_prefix(e_client_get_uri(pitip->current_client), "eee://"))
++	{
++		const gchar *comment = NULL;
++		comment = itip_view_get_rsvp_comment (ITIP_VIEW (pitip->view));
++
++		if (comment) {
++			GSList comments;
++			ECalComponentText text;
++
++			text.value = comment;
++			text.altrep = NULL;
++    
++			comments.data = &text;
++			comments.next = NULL;
++    
++			e_cal_component_set_comment_list (pitip->comp, &comments);
++		}
++	}
++
+ 	switch (response) {
+ 		case ITIP_VIEW_RESPONSE_ACCEPT:
+ 			if (pitip->type != E_CAL_CLIENT_SOURCE_TYPE_MEMOS)

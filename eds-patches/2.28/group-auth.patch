@@ -1,0 +1,35 @@
+use password manager key from ESource auth-key property in ECal
+
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+
+calendar/ChangeLog:
+
+2008-04-06  Ondrej Jirman  <megous@megous.com>
+
+	** Fix for bug #525229
+
+	* libecal/e-cal.c: (open_calendar):
+ 	Use "auth-key" ESource property to determine pass_key if "auth-key" is
+ 	set. This is used by calendar plugins that use common authentication
+	credentials for multiple calendars assigned to single calendar account.
+---
+
+ calendar/libecal/e-cal.c |    4 +++-
+ 1 files changed, 3 insertions(+), 1 deletions(-)
+
+
+diff --git a/calendar/libecal/e-cal.c b/calendar/libecal/e-cal.c
+index 1603e87..c429ff0 100644
+--- a/calendar/libecal/e-cal.c
++++ b/calendar/libecal/e-cal.c
+@@ -1702,7 +1702,9 @@ open_calendar (ECal *ecal, gboolean only_if_exists, GError **error, ECalendarSta
+ 				e_source_peek_name (priv->source), username);
+ 
+ 		auth_type = e_source_get_duped_property (priv->source, "auth-type");
+-		if (auth_type)
++		if (e_source_get_property (priv->source, "auth-key"))
++			key = e_source_get_duped_property (priv->source, "auth-key");
++		else if (auth_type)
+ 			key = build_pass_key (ecal);
+ 		else {
+ 			parent_user = e_source_get_duped_property (priv->source, "parent_id_name");

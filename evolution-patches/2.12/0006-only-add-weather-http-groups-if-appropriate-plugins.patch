@@ -1,0 +1,62 @@
+From 8f056e8176e940b903444d820b61202d22c4f42d Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Sat, 13 Oct 2007 09:53:23 +0200
+Subject: [PATCH] only add weather/http groups if appropriate plugins are enabled
+
+---
+ calendar/gui/calendar-component.c |   25 +++++++++++++++++++++++--
+ 1 files changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/calendar/gui/calendar-component.c b/calendar/gui/calendar-component.c
+index b73d4ec..a545b70 100644
+--- a/calendar/gui/calendar-component.c
++++ b/calendar/gui/calendar-component.c
+@@ -148,6 +148,27 @@ calcomp_vpane_resized (GtkWidget *vpane, GdkEventButton *e, CalendarComponentVie
+ 	return FALSE;
+ }
+ 
++static gboolean
++plugin_is_enabled(const char* id)
++{
++  GSList* plugins = e_plugin_list_plugins();
++  GSList* iter;
++  gboolean enabled = FALSE;
++
++  for (iter = plugins; iter; iter = iter->next)
++  {
++    EPlugin* p = iter->data;
++
++    if (p->enabled && !strcmp(p->id, id))
++      enabled = TRUE;
++
++    g_object_unref(p);
++  }
++
++  g_slist_free(plugins);
++  return enabled;
++}
++
+ static void
+ ensure_sources (CalendarComponent *component)
+ {
+@@ -268,7 +289,7 @@ ensure_sources (CalendarComponent *component)
+ 		e_source_set_color_spec (personal_source, "#BECEDD");
+ 	}
+ 
+-	if (!on_the_web) {
++	if (!on_the_web && plugin_is_enabled("org.gnome.evolution.calendar.http")) {
+ 		/* Create the On the web source group */
+ 		group = e_source_group_new (_("On The Web"), WEB_BASE_URI);
+ 		e_source_list_add_group (source_list, group, -1);
+@@ -303,7 +324,7 @@ ensure_sources (CalendarComponent *component)
+ 	if (e_source_peek_color_spec (birthdays_source) == NULL)
+ 		e_source_set_color_spec (birthdays_source, "#DDBECE");
+ 
+-	if (!weather) {
++	if (!weather && plugin_is_enabled("org.gnome.evolution.calendar.weather")) {
+ 		/* Create the weather group */
+ 		group = e_source_group_new (_("Weather"), WEATHER_BASE_URI);
+ 		e_source_list_add_group (source_list, group, -1);
+-- 
+1.5.4-dirty
+

@@ -1,0 +1,15 @@
+diff --git a/calendar/gui/dialogs/cancel-comp.c b/calendar/gui/dialogs/cancel-comp.c
+index 547f703..4b38c73 100644
+--- a/calendar/gui/dialogs/cancel-comp.c
++++ b/calendar/gui/dialogs/cancel-comp.c
+@@ -67,6 +67,10 @@ is_past_event (ECalComponent *comp)
+ gboolean
+ cancel_component_dialog (GtkWindow *parent, ECal *client, ECalComponent *comp, gboolean deleting)
+ {
++    if (g_str_has_prefix(e_cal_get_uri(client), "eee://"))
++    {
++        return FALSE;
++    }
+    ECalComponentVType vtype;
+    const char *id;
+

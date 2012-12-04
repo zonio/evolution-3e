@@ -1,0 +1,232 @@
+diff --git a/art/Makefile.am b/art/Makefile.am
+index fed6667..aefe23d 100644
+--- a/art/Makefile.am
++++ b/art/Makefile.am
+@@ -16,7 +16,9 @@ images_DATA = \
+ 	category_status_16.png			\
+ 	category_strategies_16.png		\
+ 	category_suppliers_16.png		\
+-	category_time-and-expenses_16.png
++	category_time-and-expenses_16.png       \
++	category_error_16.png			\
++	category_outofsync_16.png
+ 
+ EXTRA_DIST = \
+ 	$(images_DATA)
+diff --git a/calendar/libecal/e-cal-component.c b/calendar/libecal/e-cal-component.c
+index 0caf9b5..288c941 100644
+--- a/calendar/libecal/e-cal-component.c
++++ b/calendar/libecal/e-cal-component.c
+@@ -1717,6 +1717,7 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+ 	const gchar *p;
+ 	const gchar *cat_start;
+ 	gchar *str;
++	const gchar* prop;
+ 
+ 	g_return_if_fail (comp != NULL);
+ 	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
+@@ -1725,8 +1726,18 @@ e_cal_component_get_categories_list (ECalComponent *comp, GSList **categ_list)
+ 	priv = comp->priv;
+ 	g_return_if_fail (priv->icalcomp != NULL);
+ 
++	*categ_list = NULL;
++
++	/*XXX: a little bit hacky, but it is the simplest solution anyway */
++	e_cal_component_get_x_property (comp, "X-EVOLUTION-STATUS", &prop);
++	if (prop)
++		*categ_list = g_slist_prepend (*categ_list, g_strdup("outofsync"));
++
++	e_cal_component_get_x_property (comp, "X-EVOLUTION-ERROR", &prop);
++	if (prop)
++		*categ_list = g_slist_prepend (*categ_list, g_strdup("error"));
++
+ 	if (!priv->categories) {
+-		*categ_list = NULL;
+ 		return;
+ 	}
+ 
+@@ -4709,6 +4720,85 @@ e_cal_component_set_location (ECalComponent *comp, const gchar *location)
+ 	}
+ }
+ 
++/**
++ * e_cal_component_get_x_property:
++ * @comp: A calendar component object
++ * @name: Property name.
++ * @value: Return value for the property value.
++ * 
++ * Queries the location property of a calendar component object.
++ **/
++void
++e_cal_component_get_x_property (ECalComponent *comp, const gchar* name, const gchar **value)
++{
++	ECalComponentPrivate *priv;
++	icalproperty *iter;
++
++	g_return_if_fail (comp != NULL);
++	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
++	g_return_if_fail (name != NULL);
++	g_return_if_fail (value != NULL);
++
++	priv = comp->priv;
++	g_return_if_fail (priv->icalcomp != NULL);
++
++	*value = NULL;
++	for (iter = icalcomponent_get_first_property(priv->icalcomp, ICAL_X_PROPERTY); iter;
++		iter = icalcomponent_get_next_property(priv->icalcomp, ICAL_X_PROPERTY)) {
++		const gchar *str = icalproperty_get_x_name (iter);
++
++		if (str && !strcmp (str, name)) {
++			*value = icalproperty_get_value_as_string (iter);
++			return;
++		}
++	}
++}
++
++/**
++ * e_cal_component_set_x_property:
++ * @comp: A calendar component object
++ * @name: Property name.
++ * @value: Property value.
++ * 
++ * Queries the location property of a calendar component object.
++ **/
++void
++e_cal_component_set_x_property (ECalComponent *comp, const gchar* name, const gchar *value)
++{
++	ECalComponentPrivate *priv;
++	icalproperty *iter;
++
++	g_return_if_fail (comp != NULL);
++	g_return_if_fail (E_IS_CAL_COMPONENT (comp));
++	g_return_if_fail (name != NULL);
++
++	priv = comp->priv;
++	g_return_if_fail (priv->icalcomp != NULL);
++
++again:
++	for (iter = icalcomponent_get_first_property(priv->icalcomp, ICAL_X_PROPERTY); iter;
++		iter = icalcomponent_get_next_property(priv->icalcomp, ICAL_X_PROPERTY)) {
++		const gchar *str = icalproperty_get_x_name (iter);
++
++		if (str && !strcmp (str, name)) {
++			icalcomponent_remove_property(priv->icalcomp, iter);
++			icalproperty_free(iter);
++			goto again;
++		}
++	}
++
++	if (value) {
++		/* XXX: commas are bad (libical does not escape them) */
++		gchar** v = g_strsplit(value, ",", -1);
++		gchar* e_value = g_strjoinv("", v);
++		g_strfreev(v);
++		iter = icalproperty_new_x(e_value);
++		g_free(e_value);
++		icalproperty_set_x_name(iter, name);
++		icalcomponent_add_property(priv->icalcomp, iter);
++	}
++}
++
+ 
+ 
+ /**
+diff --git a/calendar/libecal/e-cal-component.h b/calendar/libecal/e-cal-component.h
+index cfa88c5..ba37407 100644
+--- a/calendar/libecal/e-cal-component.h
++++ b/calendar/libecal/e-cal-component.h
+@@ -331,6 +331,9 @@ gboolean e_cal_component_has_attendees (ECalComponent *comp);
+ void e_cal_component_get_location (ECalComponent *comp, const gchar **location);
+ void e_cal_component_set_location (ECalComponent *comp, const gchar *location);
+ 
++void e_cal_component_get_x_property (ECalComponent *comp, const gchar* name, const gchar **value);
++void e_cal_component_set_x_property (ECalComponent *comp, const gchar* name, const gchar *value);
++
+ /* Attachment handling */
+ void e_cal_component_get_attachment_list (ECalComponent *comp, GSList **attachment_list);
+ void e_cal_component_set_attachment_list (ECalComponent *comp, GSList *attachment_list);
+diff --git a/calendar/libecal/e-cal-util.h b/calendar/libecal/e-cal-util.h
+index 3ee0cdc..f0e9d47 100644
+--- a/calendar/libecal/e-cal-util.h
++++ b/calendar/libecal/e-cal-util.h
+@@ -128,6 +128,7 @@ gboolean e_cal_util_event_dates_match (icalcomponent *icalcomp1, icalcomponent *
+ #define CAL_STATIC_CAPABILITY_DELEGATE_TO_MANY		 "delegate-to-many"
+ #define CAL_STATIC_CAPABILITY_HAS_UNACCEPTED_MEETING     "has-unaccepted-meeting"
+ #define CAL_STATIC_CAPABILITY_REFRESH_SUPPORTED		"refresh-supported"
++#define CAL_STATIC_CAPABILITY_NO_SEND_IMIP		 "no-send-imip"
+ 
+ /* Recurrent events. Management for instances */
+ icalcomponent *e_cal_util_construct_instance (icalcomponent *icalcomp,
+diff --git a/calendar/libecal/e-cal.c b/calendar/libecal/e-cal.c
+index 08181aa..0dc37b4 100644
+--- a/calendar/libecal/e-cal.c
++++ b/calendar/libecal/e-cal.c
+@@ -798,6 +798,14 @@ set_local_attachment_store (ECal *ecal)
+ 		priv->local_attachment_store =
+ 			g_filename_to_uri (filename, NULL, NULL);
+ 		g_free (filename);
++        } else if (g_str_has_prefix (priv->uri, "eee://")) {
++		gchar *filename = g_build_filename (g_get_home_dir (),
++						    ".evolution/cache/calendar",
++						    mangled_uri,
++						    NULL);
++		priv->local_attachment_store =
++			g_filename_to_uri (filename, NULL, NULL);
++		g_free (filename);
+ 	}
+ 
+ 	g_free (mangled_uri);
+@@ -1151,7 +1159,7 @@ open_calendar (ECal *ecal, gboolean only_if_exists, GError **error, ECalendarSta
+ 	}
+ 
+ 	/* see if the backend needs authentication */
+-	if ( (priv->mode !=  CAL_MODE_LOCAL) && e_source_get_property (priv->source, "auth")) {
++	if (e_source_get_property (priv->source, "auth")) {
+ 		gchar *prompt, *key;
+ 		gchar *parent_user;
+ 
+@@ -1174,7 +1182,9 @@ open_calendar (ECal *ecal, gboolean only_if_exists, GError **error, ECalendarSta
+ 				e_source_peek_name (priv->source), username);
+ 
+ 		auth_type = e_source_get_duped_property (priv->source, "auth-type");
+-		if (auth_type)
++		if (e_source_get_property (priv->source, "auth-key"))
++			key = e_source_get_duped_property (priv->source, "auth-key");
++		else if (auth_type)
+ 			key = build_pass_key (ecal);
+ 		else {
+ 			parent_user = e_source_get_duped_property (priv->source, "parent_id_name");
+@@ -1592,15 +1602,11 @@ e_cal_get_local_attachment_store (ECal *ecal)
+ gboolean
+ e_cal_is_read_only (ECal *ecal, gboolean *read_only, GError **error)
+ {
+-	ECalPrivate *priv;
+-
+ 	if (!(ecal && E_IS_CAL (ecal)))
+ 		E_CALENDAR_CHECK_STATUS (E_CALENDAR_STATUS_INVALID_ARG, error);
+ 
+-	priv = ecal->priv;
+-	*read_only = priv->read_only;
+-
+-	return TRUE;
++   ECalPrivate *priv = ecal->priv;
++   return org_gnome_evolution_dataserver_calendar_Cal_is_read_only (priv->proxy, &error);
+ }
+ 
+ /**
+diff --git a/libedataserver/e-categories.c b/libedataserver/e-categories.c
+index 96bdad9..7cc0851 100644
+--- a/libedataserver/e-categories.c
++++ b/libedataserver/e-categories.c
+@@ -446,6 +446,10 @@ initialize_categories (void)
+ 
+ 	g_atexit (finalize_categories);
+ 
++	/*XXX: always add our categories */
++	e_categories_add ("error", NULL, g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_error_16.png", NULL), FALSE);
++	e_categories_add ("outofsync", NULL, g_build_filename (E_DATA_SERVER_IMAGESDIR, "category_outofsync_16.png", NULL), FALSE);
++
+ 	n_added = load_categories ();
+ 	if (n_added > 0) {
+ 		g_debug ("Loaded %d categories", n_added);
+

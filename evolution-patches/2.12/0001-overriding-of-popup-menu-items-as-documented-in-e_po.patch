@@ -1,0 +1,47 @@
+From 4d574203f632958bb2d856cdd94399efc819600b Mon Sep 17 00:00:00 2001
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+Date: Sat, 24 Feb 2007 18:22:38 +0100
+Subject: [PATCH] overriding of popup menu items as documented in e_popup_add_items()
+
+/**
+ * e_popup_add_items:
+ * @emp: An EPopup derived object.
+ * @items: A list of EPopupItem's to add to the current popup menu.
+ * @domain: Translation domain for translating labels.
+ * @freefunc: A function which will be called when the items are no
+ * longer needed.
+ * @data: user-data passed to @freefunc, and passed to all activate
+ * methods.
+ *
+ * Add new EPopupItems to the menus.  Any with the same path
+ * will override previously defined menu items, at menu building
+ * time.  This may be called any number of times before the menu is
+ * built to create a complex heirarchy of menus.
+ **/
+---
+ e-util/e-popup.c |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/e-util/e-popup.c b/e-util/e-popup.c
+index 5492ca1..a8d28e0 100644
+--- a/e-util/e-popup.c
++++ b/e-util/e-popup.c
+@@ -507,9 +507,15 @@ e_popup_create_menu(EPopup *emp, EPopupTarget *target, guint32 mask)
+ 	/* create tree structure */
+ 	for (i=0;i<items->len;i++) {
+ 		struct _item_node *inode = items->pdata[i], *pnode;
++		struct _item_node *nextnode = (i < items->len - 1) ? items->pdata[i+1] : NULL;
+ 		struct _EPopupItem *item = inode->item;
+ 		const char *tmp;
+ 
++		if (nextnode && !strcmp(nextnode->item->path, inode->item->path)) {
++			d(printf("skipping item %s", inode->item->path));
++			continue;
++		}
++
+ 		g_string_truncate(ppath, 0);
+ 		tmp = strrchr(item->path, '/');
+ 		if (tmp) {
+-- 
+1.5.4-dirty
+

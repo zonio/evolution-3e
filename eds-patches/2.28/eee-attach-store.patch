@@ -1,0 +1,31 @@
+From a520239ec3882e5d4d72b68d99ffe4a4903bdbaf Mon Sep 17 00:00:00 2001
+
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+
+Subject: [PATCH] set_local_attachment_store: support eee:// attachments
+---
+
+ calendar/libecal/e-cal.c |    8 ++++++++
+ 1 files changed, 8 insertions(+), 0 deletions(-)
+
+
+diff --git a/calendar/libecal/e-cal.c b/calendar/libecal/e-cal.c
+index 7034af9..db03ad6 100644
+--- a/calendar/libecal/e-cal.c
++++ b/calendar/libecal/e-cal.c
+@@ -1413,6 +1413,14 @@
+ 		priv->local_attachment_store =
+ 			g_filename_to_uri (filename, NULL, NULL);
+ 		g_free (filename);
++        } else if (g_str_has_prefix (priv->uri, "eee://")) {
++		gchar *filename = g_build_filename (g_get_home_dir (),
++						    ".evolution/cache/calendar",
++						    mangled_uri,
++						    NULL);
++		priv->local_attachment_store =
++			g_filename_to_uri (filename, NULL, NULL);
++		g_free (filename);
+ 	}
+ 
+ 	g_free (mangled_uri);
+

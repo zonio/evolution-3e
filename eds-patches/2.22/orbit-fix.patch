@@ -1,0 +1,25 @@
+From 071b30b6c42fea95f5804a529f440003d32c243d Mon Sep 17 00:00:00 2001
+
+From: Ondrej Jirman <ondrej.jirman@zonio.net>
+
+Subject: [PATCH] remove client in listener_died_cb only if reconnection failed
+---
+
+ calendar/libedata-cal/e-cal-backend.c |    3 ++-
+ 1 files changed, 2 insertions(+), 1 deletions(-)
+
+
+diff --git a/calendar/libedata-cal/e-cal-backend.c b/calendar/libedata-cal/e-cal-backend.c
+index debe316..ec2822a 100644
+--- a/calendar/libedata-cal/e-cal-backend.c
++++ b/calendar/libedata-cal/e-cal-backend.c
+@@ -384,7 +384,8 @@ listener_died_cb (gpointer cnx, gpointer data)
+ {
+ 	EDataCal *cal = E_DATA_CAL (data);
+ 
+-	e_cal_backend_remove_client (e_data_cal_get_backend (cal), cal);
++	if (ORBit_small_get_connection_status (e_data_cal_get_listener(cal)) == ORBIT_CONNECTION_DISCONNECTED)
++		e_cal_backend_remove_client (e_data_cal_get_backend (cal), cal);
+ }
+ 
+ static void
