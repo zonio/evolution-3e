@@ -344,6 +344,7 @@ void subscribe_gui_create(EeeAccountsManager *mgr)
 {
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
+    GError *err = NULL;
 
     if (!eee_plugin_online)
     {
