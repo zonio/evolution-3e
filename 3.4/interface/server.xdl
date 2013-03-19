@@ -2512,11 +2512,11 @@ err:
 #ifndef HAVE_GLIB_REGEXP
     regex_t regex;
 
-    regcomp(&regex, "^/attach/[0-9a-f]{40}(/.*)?$", REG_ICASE | REG_EXTENDED);
+    regcomp(&regex, "^/attachments/[0-9a-f]{40}(/.*)?$", REG_ICASE | REG_EXTENDED);
 
     if ( regexec(&regex, path, 0, NULL, 0) == 0 )
 #else
-    if (g_regex_match_simple("|^/attach/[0-9a-fA-F]{40}(/.*)?$|", path, 0, 0))
+    if (g_regex_match_simple("|^/attachments/[0-9a-fA-F]{40}(/.*)?$|", path, 0, 0))
 #endif
     {
         char *sha1 = g_ascii_strdown(path + 8, 40);
@@ -2554,11 +2554,11 @@ err:
 #ifndef HAVE_GLIB_REGEXP
     regex_t regex;
 
-    regcomp(&regex, "^/attach/[0-9a-f]{40}(/.*)?$", REG_ICASE | REG_EXTENDED);
+    regcomp(&regex, "^/attachments/[0-9a-f]{40}(/.*)?$", REG_ICASE | REG_EXTENDED);
 
     if ( regexec(&regex, path, 0, NULL, 0) == 0 )
 #else
-    if (g_regex_match_simple("|^/attach/[0-9a-fA-F]{40}(/.*)?$|", path, 0, 0))
+    if (g_regex_match_simple("|^/attachments/[0-9a-fA-F]{40}(/.*)?$|", path, 0, 0))
 #endif
     {
         char buf[4096];
@@ -2841,7 +2841,7 @@ err:
             FILE *f;
             gssize read_bytes;
             gchar buf[4096];
-            gchar *remote_path = g_strdup_printf("/attach/%s/%s", attach->sha1, attach->filename);
+            gchar *remote_path = g_strdup_printf("/attachments/%s/%s", attach->sha1, attach->filename);
             GError *err = NULL;
 
             if (g_file_test(attachment_path, G_FILE_TEST_IS_REGULAR))

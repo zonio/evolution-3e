@@ -122,7 +122,7 @@ static attachment *get_attacmhent(ECalBackend3e *cb, ECalComponent *comp, const 
         a->filename = g_strdup(filename);
         a->sha1 = sha1;
         a->local_uri = g_strdup(uri);
-        a->eee_uri = g_strdup_printf("eee://%s/attach/%s/%s", cb->priv->owner, sha1, filename = g_uri_escape_string(filename, NULL, FALSE));
+        a->eee_uri = g_strdup_printf("eee://%s/attachments/%s/%s", cb->priv->owner, sha1, filename = g_uri_escape_string(filename, NULL, FALSE));
         a->is_in_cache = g_file_query_exists(file, NULL);
 
         g_object_unref(file);
@@ -203,7 +203,7 @@ static gboolean upload_attachment(ECalBackend3e *cb, attachment *att, GError * *
     xr_client_open(conn, cb->priv->server_uri, &local_err);
     xr_http *http = xr_client_get_http(conn);
 
-    char *resource = g_strdup_printf("/attach/%s/%s", att->sha1, att->filename);
+    char *resource = g_strdup_printf("/attachments/%s/%s", att->sha1, att->filename);
     xr_http_setup_request(http, "POST", resource, "");
     g_free(resource);
     xr_http_set_basic_auth(http, cb->priv->username, cb->priv->password);
@@ -288,7 +288,7 @@ static gboolean download_attachment(ECalBackend3e *cb, attachment *att, GError *
     xr_client_basic_auth(conn, cb->priv->username, cb->priv->password);
     xr_http *http = xr_client_get_http(conn);
 
-    char *resource = g_strdup_printf("/attach/%s/%s", att->sha1, att->filename);
+    char *resource = g_strdup_printf("/attachments/%s/%s", att->sha1, att->filename);
     xr_http_setup_request(http, "GET", resource, "");
     g_free(resource);
     xr_http_write_header(http, &local_err);
